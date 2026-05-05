@@ -1,0 +1,133 @@
+/* Eseven Store Admin Theme - Dark Sidebar */
+
+@import url('https://rsms.me/inter/inter.css');
+
+:root {
+    --color-primary: #f59e0b;
+    --color-primary-50: #fef3c7;
+    --color-primary-100: #fde68a;
+    --color-primary-200: #fcd34d;
+    --color-primary-300: #fbbf24;
+    --color-primary-400: #f59e0b;
+    --color-primary-500: #d97706;
+    --color-primary-600: #b45309;
+    --color-primary-700: #92400e;
+    --color-primary-800: #78350f;
+    --color-primary-900: #451a03;
+
+    --sidebar-background: #1a1a2e;
+    --sidebar-text-color: #ffffff;
+    --sidebar-hover-background: #16213e;
+    --sidebar-active-background: #0f3460;
+    --sidebar-border-color: #0f3460;
+}
+
+/* Dark mode sidebar styling */
+.filament-sidebar {
+    background-color: var(--sidebar-background) !important;
+    color: var(--sidebar-text-color) !important;
+}
+
+.filament-sidebar-group-label {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.filament-sidebar-item {
+    color: var(--sidebar-text-color) !important;
+}
+
+.filament-sidebar-item:hover {
+    background-color: var(--sidebar-hover-background) !important;
+}
+
+.filament-sidebar-item.active,
+.filament-sidebar-item[aria-current="page"] {
+    background-color: var(--sidebar-active-background) !important;
+    color: #f59e0b !important;
+}
+
+.filament-sidebar-collapse-button {
+    color: var(--sidebar-text-color) !important;
+}
+
+.filament-sidebar-collapse-button:hover {
+    background-color: var(--sidebar-hover-background) !important;
+}
+
+/* RTL Support */
+[dir="rtl"] .filament-sidebar {
+    margin-right: 0 !important;
+    margin-left: auto !important;
+}
+
+[dir="rtl"] .filament-main {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+[dir="rtl"] .filament-sidebar-item-icon {
+    margin-left: 0.75rem !important;
+    margin-right: 0 !important;
+}
+
+/* Topbar styling */
+.filament-topbar {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    .filament-topbar {
+        background-color: #1f2937 !important;
+        border-bottom: 1px solid #374151 !important;
+        color: #f3f4f6 !important;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #1f2937;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #4b5563;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #5b6573;
+    }
+}
+
+/* Main content area */
+.filament-main {
+    background-color: #f9fafb !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    .filament-main {
+        background-color: #111827 !important;
+    }
+}
+
+/* Avatar provider styling */
+.filament-avatar {
+    border-radius: 9999px;
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: cover;
+}
+
+/* Font */
+body, .filament {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Brand name styling */
+.filament-brand {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--sidebar-text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+}
