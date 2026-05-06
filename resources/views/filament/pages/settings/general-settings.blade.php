@@ -1,13 +1,11 @@
-@extends('filament-panels::page')
-
-@section('content')
-    <x-filament-panels::form wire:submit="save">
+<x-filament-panels::page>
+    <form wire:submit="save">
         {{ $this->form }}
 
-        <div class="fi-form-actions">
-            <x-filament::button type="submit" color="primary">
+        <div class="mt-6 text-right">
+            <x-filament::button type="submit">
                 💾 Save Settings
             </x-filament::button>
         </div>
-    </x-filament-panels::form>
-@endsection
+    </form>
+</x-filament-panels::page>

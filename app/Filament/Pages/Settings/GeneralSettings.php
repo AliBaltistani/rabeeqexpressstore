@@ -14,7 +14,7 @@ use UnitEnum;
 
 class GeneralSettings extends Page
 {
-    protected static string $view = 'filament.pages.settings.general-settings';
+    protected string $view = 'filament.pages.settings.general-settings';
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 

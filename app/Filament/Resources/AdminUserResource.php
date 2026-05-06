@@ -48,7 +48,7 @@ class AdminUserResource extends Resource
                             Forms\Components\TextInput::make('password_confirmation')->password()->revealable()
                                 ->requiredWith('password')->same('password')->label('Confirm Password'),
                         ]),
-                        Forms\Components\FileUpload::make('avatar')->image()->directory('admins')->circular(),
+                        Forms\Components\FileUpload::make('avatar')->image()->directory('admins')->avatar(),
                         Forms\Components\Select::make('roles')->relationship('roles', 'name')
                             ->preload()->required()->label('Role'),
                     ]),

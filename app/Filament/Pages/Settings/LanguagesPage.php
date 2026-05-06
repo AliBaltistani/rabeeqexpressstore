@@ -20,7 +20,7 @@ class LanguagesPage extends Page implements HasTable
 {
     use InteractsWithTable;
 
-    protected static string $view = 'filament.pages.settings.languages-page';
+    protected string $view = 'filament.pages.settings.languages-page';
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-language';
     protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 2;

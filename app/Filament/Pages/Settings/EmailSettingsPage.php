@@ -13,7 +13,7 @@ use UnitEnum;
 
 class EmailSettingsPage extends Page
 {
-    protected static string $view = 'filament.pages.settings.general-settings';
+    protected string $view = 'filament.pages.settings.general-settings';
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-envelope';
     protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 6;

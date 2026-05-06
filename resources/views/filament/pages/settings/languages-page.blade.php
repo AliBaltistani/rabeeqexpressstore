@@ -1,5 +1,3 @@
-@extends('filament-panels::page')
-
-@section('content')
+<x-filament-panels::page>
     {{ $this->table }}
-@endsection
+</x-filament-panels::page>
