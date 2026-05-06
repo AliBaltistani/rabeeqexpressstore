@@ -20,10 +20,22 @@ class CurrenciesPage extends Page implements HasTable
 
     protected string $view = 'filament.pages.settings.currencies-page';
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 3;
-    protected static ?string $navigationLabel = 'Currencies';
-    protected static ?string $title = 'Currencies';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.settings_pages.currencies');
+    }
+
+    public function getTitle(): string
+    {
+        return __('admin.settings_pages.currencies');
+    }
 
     protected function getTableQuery(): Builder
     {

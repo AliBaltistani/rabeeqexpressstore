@@ -22,11 +22,19 @@ class ReviewResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-star';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sales';
-
     protected static ?int $navigationSort = 3;
 
     protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.sales');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.reviews');
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -105,7 +113,7 @@ class ReviewResource extends Resource
                                                 'rejected' => 'Rejected',
                                             ])
                                             ->required()
-                                            ->default('pending'),
+                                            ->default(fn () => setting('general.reviews_require_approval', true) ? 'pending' : 'approved'),
                                     ]),
                             ])
                             ->columnSpan(1),
@@ -169,7 +177,7 @@ class ReviewResource extends Resource
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
-                    ->dateTime('M d, Y')
+                    ->dateTime(admin_date_format())
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')

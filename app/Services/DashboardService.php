@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\Currency;
 use Illuminate\Support\Carbon;
@@ -33,7 +34,12 @@ class DashboardService
     {
         return Cache::remember('dashboard:default_currency_symbol', self::CACHE_TTL, function () {
             $currency = Currency::getDefault();
-            return $currency ? $currency->symbol : 'SAR';
+            if ($currency) {
+                return $currency->symbol;
+            }
+
+            // Fallback to admin settings currency code
+            return Setting::get('general.default_currency', 'SAR');
         });
     }
 
@@ -59,13 +65,33 @@ class DashboardService
 
     /**
      * Get count of products with stock at or below low stock threshold.
+     *
+     * Uses the product-level threshold first. If a product doesn't have
+     * its own threshold, falls back to the global admin setting.
      */
     public function getLowStockCount(): int
     {
         return Cache::remember('dashboard:low_stock_count', self::CACHE_TTL, function () {
+            $globalThreshold = (int) Setting::get('general.low_stock_threshold', 5);
+
             return Product::withoutGlobalScope('active')
                 ->where('track_stock', true)
-                ->whereColumn('stock_quantity', '<=', 'low_stock_threshold')
+                ->where(function ($query) use ($globalThreshold) {
+                    // Products with their own threshold
+                    $query->where(function ($q) {
+                        $q->whereNotNull('low_stock_threshold')
+                            ->where('low_stock_threshold', '>', 0)
+                            ->whereColumn('stock_quantity', '<=', 'low_stock_threshold');
+                    })
+                    // Products relying on global threshold
+                    ->orWhere(function ($q) use ($globalThreshold) {
+                        $q->where(function ($inner) {
+                            $inner->whereNull('low_stock_threshold')
+                                ->orWhere('low_stock_threshold', 0);
+                        })
+                        ->where('stock_quantity', '<=', $globalThreshold);
+                    });
+                })
                 ->count();
         });
     }
@@ -91,6 +117,11 @@ class DashboardService
                 ->pluck('revenue', 'date')
                 ->toArray();
 
+            // Determine the date format from settings
+            $dateFormat = admin_date_format();
+            // For chart labels, keep it short
+            $chartDateFormat = 'M d';
+
             // Build complete 30-day array with zero-fill for missing dates
             $dates = [];
             $revenue = [];
@@ -98,7 +129,7 @@ class DashboardService
 
             while ($current->lte($endDate)) {
                 $dateStr = $current->toDateString();
-                $dates[] = $current->format('M d');
+                $dates[] = $current->format($chartDateFormat);
                 $revenue[] = (float) ($revenueData[$dateStr] ?? 0);
                 $current->addDay();
             }
@@ -149,9 +180,24 @@ class DashboardService
      */
     public function getLowStockProducts(int $limit = 10)
     {
+        $globalThreshold = (int) Setting::get('general.low_stock_threshold', 5);
+
         return Product::withoutGlobalScope('active')
             ->where('track_stock', true)
-            ->whereColumn('stock_quantity', '<=', 'low_stock_threshold')
+            ->where(function ($query) use ($globalThreshold) {
+                $query->where(function ($q) {
+                    $q->whereNotNull('low_stock_threshold')
+                        ->where('low_stock_threshold', '>', 0)
+                        ->whereColumn('stock_quantity', '<=', 'low_stock_threshold');
+                })
+                ->orWhere(function ($q) use ($globalThreshold) {
+                    $q->where(function ($inner) {
+                        $inner->whereNull('low_stock_threshold')
+                            ->orWhere('low_stock_threshold', 0);
+                    })
+                    ->where('stock_quantity', '<=', $globalThreshold);
+                });
+            })
             ->orderBy('stock_quantity', 'asc')
             ->limit($limit)
             ->get();

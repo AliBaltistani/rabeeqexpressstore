@@ -13,7 +13,15 @@ class Dashboard extends BaseDashboard
 {
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-home';
 
-    protected static ?string $title = 'Dashboard';
+    public function getTitle(): string
+    {
+        return __('admin.dashboard.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.dashboard.title');
+    }
 
     public function getColumns(): int | array
     {

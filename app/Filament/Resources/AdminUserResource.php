@@ -20,13 +20,24 @@ class AdminUserResource extends Resource
 {
     protected static ?string $model = Admin::class;
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 8;
-    protected static ?string $navigationLabel = 'Admin Users';
-    protected static ?string $modelLabel = 'Admin User';
-    protected static ?string $pluralModelLabel = 'Admin Users';
     protected static ?string $slug = 'admin-users';
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.admin_users');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.resources.admin_users');
+    }
 
     public static function form(Schema $form): Schema
     {
@@ -70,7 +81,7 @@ class AdminUserResource extends Resource
             Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('email')->searchable()->sortable()->color('gray'),
             Tables\Columns\TextColumn::make('roles.name')->label('Role')->badge()->color('primary'),
-            Tables\Columns\TextColumn::make('last_login_at')->label('Last Login')->dateTime('M d, Y H:i')->placeholder('Never'),
+            Tables\Columns\TextColumn::make('last_login_at')->label('Last Login')->dateTime(admin_date_format(withTime: true))->placeholder('Never'),
             Tables\Columns\ToggleColumn::make('is_active')->label('Active'),
         ])
         ->defaultSort('created_at', 'desc')

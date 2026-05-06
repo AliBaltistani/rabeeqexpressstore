@@ -23,17 +23,24 @@ class BlogPostResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Content';
-
     protected static ?int $navigationSort = 1;
 
-    protected static ?string $navigationLabel = 'Blog Posts';
-
-    protected static ?string $modelLabel = 'Blog Post';
-
-    protected static ?string $pluralModelLabel = 'Blog Posts';
-
     protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.content');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.blog_posts');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.resources.blog_posts');
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -263,7 +270,7 @@ class BlogPostResource extends Resource
 
                 Tables\Columns\TextColumn::make('published_at')
                     ->label('Published')
-                    ->dateTime('M d, Y')
+                    ->dateTime(admin_date_format())
                     ->placeholder('—')
                     ->sortable(),
 

@@ -16,10 +16,22 @@ class ShippingSettingsPage extends Page
 {
     protected string $view = 'filament.pages.settings.general-settings';
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-truck';
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 5;
-    protected static ?string $navigationLabel = 'Shipping';
-    protected static ?string $title = 'Shipping Settings';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.settings_pages.shipping');
+    }
+
+    public function getTitle(): string
+    {
+        return __('admin.settings_pages.shipping');
+    }
 
     public ?array $data = [];
 
@@ -40,7 +52,7 @@ class ShippingSettingsPage extends Page
                     ->schema([
                         Components\Grid::make(2)->schema([
                             Forms\Components\TextInput::make('free_shipping_threshold')
-                                ->label('Free Shipping Threshold (SAR)')
+                                ->label('Free Shipping Threshold (' . currency_symbol() . ')')
                                 ->numeric()->default(0)
                                 ->helperText('0 = disabled. Orders above this amount get free shipping.'),
                             Forms\Components\Select::make('default_weight_unit')

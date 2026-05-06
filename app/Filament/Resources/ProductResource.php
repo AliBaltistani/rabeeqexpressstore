@@ -6,6 +6,7 @@ use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\Tag;
 use BackedEnum;
 use Filament\Actions;
@@ -25,11 +26,19 @@ class ProductResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-cube';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Catalog';
-
     protected static ?int $navigationSort = 3;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.catalog');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.products');
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -184,14 +193,14 @@ class ProductResource extends Resource
                                                     ->label('Price')
                                                     ->required()
                                                     ->numeric()
-                                                    ->prefix('SAR')
+                                                    ->prefix(currency_symbol())
                                                     ->minValue(0)
                                                     ->step(0.01),
 
                                                 Forms\Components\TextInput::make('compare_price')
                                                     ->label('Compare Price')
                                                     ->numeric()
-                                                    ->prefix('SAR')
+                                                    ->prefix(currency_symbol())
                                                     ->minValue(0)
                                                     ->step(0.01)
                                                     ->helperText('Shown as strikethrough on frontend'),
@@ -199,7 +208,7 @@ class ProductResource extends Resource
                                                 Forms\Components\TextInput::make('cost_price')
                                                     ->label('Cost Price')
                                                     ->numeric()
-                                                    ->prefix('SAR')
+                                                    ->prefix(currency_symbol())
                                                     ->minValue(0)
                                                     ->step(0.01)
                                                     ->helperText('Internal only — not visible to customers'),
@@ -229,11 +238,12 @@ class ProductResource extends Resource
                                                 Forms\Components\TextInput::make('low_stock_threshold')
                                                     ->label('Low Stock Threshold')
                                                     ->numeric()
-                                                    ->default(5)
-                                                    ->minValue(0),
+                                                    ->default(fn () => (int) setting('general.low_stock_threshold', 5))
+                                                    ->minValue(0)
+                                                    ->helperText('Leave at default to use global setting'),
 
                                                 Forms\Components\TextInput::make('weight')
-                                                    ->label('Weight (kg)')
+                                                    ->label('Weight (' . setting('shipping.default_weight_unit', 'kg') . ')')
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->step(0.01),
@@ -294,14 +304,14 @@ class ProductResource extends Resource
                                                     ->label('Price')
                                                     ->numeric()
                                                     ->required()
-                                                    ->prefix('SAR')
+                                                    ->prefix(currency_symbol())
                                                     ->minValue(0)
                                                     ->step(0.01),
 
                                                 Forms\Components\TextInput::make('compare_price')
                                                     ->label('Compare Price')
                                                     ->numeric()
-                                                    ->prefix('SAR')
+                                                    ->prefix(currency_symbol())
                                                     ->minValue(0)
                                                     ->step(0.01),
 
@@ -440,7 +450,8 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('price')
                     ->label('Price')
                     ->formatStateUsing(function (Product $record) {
-                        $price = number_format($record->price, 2) . ' SAR';
+                        $symbol = currency_symbol();
+                        $price = number_format($record->price, 2) . ' ' . $symbol;
                         if ($record->compare_price && $record->compare_price > $record->price) {
                             $price .= ' <span style="text-decoration:line-through;color:#9ca3af;font-size:12px;">' . number_format($record->compare_price, 2) . '</span>';
                         }

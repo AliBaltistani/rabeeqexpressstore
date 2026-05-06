@@ -18,32 +18,39 @@ class GeneralSettings extends Page
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
-
     protected static ?int $navigationSort = 1;
-
-    protected static ?string $navigationLabel = 'General Settings';
-
-    protected static ?string $title = 'General Settings';
 
     public ?array $data = [];
 
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.settings_pages.general');
+    }
+
+    public function getTitle(): string
+    {
+        return __('admin.settings_pages.general');
+    }
+
     public function mount(): void
     {
-        $settings = Setting::getGroup('general');
-        $this->data = [];
-
         $fields = [
             'general.store_name_en', 'general.store_name_ar', 'general.store_tagline_en', 'general.store_tagline_ar',
             'general.store_logo', 'general.store_favicon', 'general.store_email', 'general.store_phone',
             'general.store_whatsapp', 'general.store_address_en', 'general.store_address_ar',
-            'general.default_language', 'general.default_currency', 'general.timezone', 'general.date_format',
+            'general.timezone', 'general.date_format',
             'general.products_per_page', 'general.enable_guest_checkout', 'general.enable_wishlist',
             'general.enable_reviews', 'general.reviews_require_approval', 'general.show_out_of_stock',
             'general.low_stock_threshold',
             'general.maintenance_mode', 'general.maintenance_message_en', 'general.maintenance_message_ar',
         ];
 
+        $this->data = [];
         foreach ($fields as $field) {
             $key = str_replace('general.', '', $field);
             $this->data[$key] = Setting::get($field);
@@ -57,15 +64,15 @@ class GeneralSettings extends Page
         return $form
             ->schema([
                 // Store Information
-                Components\Section::make('Store Information')
+                Components\Section::make(__('admin.settings.store_info'))
                     ->schema([
                         Components\Grid::make(2)
                             ->schema([
                                 Forms\Components\TextInput::make('store_name_en')
-                                    ->label('Store Name (English)')
+                                    ->label(__('admin.settings.store_name_en'))
                                     ->required(),
                                 Forms\Components\TextInput::make('store_name_ar')
-                                    ->label('Store Name (Arabic)')
+                                    ->label(__('admin.settings.store_name_ar'))
                                     ->required()
                                     ->extraInputAttributes(['dir' => 'rtl']),
                             ]),
@@ -73,20 +80,20 @@ class GeneralSettings extends Page
                         Components\Grid::make(2)
                             ->schema([
                                 Forms\Components\TextInput::make('store_tagline_en')
-                                    ->label('Store Tagline (English)'),
+                                    ->label(__('admin.settings.store_tagline_en')),
                                 Forms\Components\TextInput::make('store_tagline_ar')
-                                    ->label('Store Tagline (Arabic)')
+                                    ->label(__('admin.settings.store_tagline_ar'))
                                     ->extraInputAttributes(['dir' => 'rtl']),
                             ]),
 
                         Components\Grid::make(2)
                             ->schema([
                                 Forms\Components\FileUpload::make('store_logo')
-                                    ->label('Store Logo')
+                                    ->label(__('admin.settings.store_logo'))
                                     ->image()
                                     ->directory('settings'),
                                 Forms\Components\FileUpload::make('store_favicon')
-                                    ->label('Store Favicon')
+                                    ->label(__('admin.settings.store_favicon'))
                                     ->image()
                                     ->directory('settings'),
                             ]),
@@ -94,51 +101,41 @@ class GeneralSettings extends Page
                         Components\Grid::make(2)
                             ->schema([
                                 Forms\Components\TextInput::make('store_email')
-                                    ->label('Store Email')
+                                    ->label(__('admin.settings.store_email'))
                                     ->email(),
                                 Forms\Components\TextInput::make('store_phone')
-                                    ->label('Store Phone'),
+                                    ->label(__('admin.settings.store_phone')),
                             ]),
 
                         Forms\Components\TextInput::make('store_whatsapp')
-                            ->label('WhatsApp Number')
-                            ->helperText('Used for the WhatsApp chat button on frontend'),
+                            ->label(__('admin.settings.store_whatsapp')),
 
                         Components\Grid::make(2)
                             ->schema([
                                 Forms\Components\Textarea::make('store_address_en')
-                                    ->label('Store Address (English)')
+                                    ->label(__('admin.settings.store_address_en'))
                                     ->rows(2),
                                 Forms\Components\Textarea::make('store_address_ar')
-                                    ->label('Store Address (Arabic)')
+                                    ->label(__('admin.settings.store_address_ar'))
                                     ->rows(2)
                                     ->extraInputAttributes(['dir' => 'rtl']),
                             ]),
                     ]),
 
-                // Regional Settings
-                Components\Section::make('Regional Settings')
+                // Regional Settings — Language & Currency managed in their own pages
+                Components\Section::make(__('admin.settings.regional'))
+                    ->description(__('admin.settings_pages.languages') . ' & ' . __('admin.settings_pages.currencies') . ' → ' . __('admin.nav.settings'))
                     ->schema([
-                        Components\Grid::make(4)
+                        Components\Grid::make(2)
                             ->schema([
-                                Forms\Components\Select::make('default_language')
-                                    ->label('Default Language')
-                                    ->options(fn() => \App\Models\Language::where('is_active', true)->pluck('name', 'code')->toArray())
-                                    ->default('en'),
-
-                                Forms\Components\Select::make('default_currency')
-                                    ->label('Default Currency')
-                                    ->options(fn() => \App\Models\Currency::where('is_active', true)->pluck('name', 'code')->toArray())
-                                    ->default('SAR'),
-
                                 Forms\Components\Select::make('timezone')
-                                    ->label('Timezone')
+                                    ->label(__('admin.settings.timezone'))
                                     ->options(array_combine(timezone_identifiers_list(), timezone_identifiers_list()))
                                     ->searchable()
                                     ->default('Asia/Riyadh'),
 
                                 Forms\Components\Select::make('date_format')
-                                    ->label('Date Format')
+                                    ->label(__('admin.settings.date_format'))
                                     ->options([
                                         'DD/MM/YYYY' => 'DD/MM/YYYY',
                                         'MM/DD/YYYY' => 'MM/DD/YYYY',
@@ -149,17 +146,17 @@ class GeneralSettings extends Page
                     ]),
 
                 // Storefront
-                Components\Section::make('Storefront')
+                Components\Section::make(__('admin.settings.storefront'))
                     ->schema([
                         Components\Grid::make(3)
                             ->schema([
                                 Forms\Components\TextInput::make('products_per_page')
-                                    ->label('Products Per Page')
+                                    ->label(__('admin.settings.products_per_page'))
                                     ->numeric()
                                     ->default(12),
 
                                 Forms\Components\TextInput::make('low_stock_threshold')
-                                    ->label('Low Stock Threshold')
+                                    ->label(__('admin.settings.low_stock_threshold'))
                                     ->numeric()
                                     ->default(5),
                             ]),
@@ -167,43 +164,43 @@ class GeneralSettings extends Page
                         Components\Grid::make(3)
                             ->schema([
                                 Forms\Components\Toggle::make('enable_guest_checkout')
-                                    ->label('Enable Guest Checkout')
+                                    ->label(__('admin.settings.enable_guest_checkout'))
                                     ->default(true),
                                 Forms\Components\Toggle::make('enable_wishlist')
-                                    ->label('Enable Wishlist')
+                                    ->label(__('admin.settings.enable_wishlist'))
                                     ->default(true),
                                 Forms\Components\Toggle::make('enable_reviews')
-                                    ->label('Enable Product Reviews')
+                                    ->label(__('admin.settings.enable_reviews'))
                                     ->default(true),
                             ]),
 
                         Components\Grid::make(3)
                             ->schema([
                                 Forms\Components\Toggle::make('reviews_require_approval')
-                                    ->label('Reviews Require Approval')
+                                    ->label(__('admin.settings.reviews_require_approval'))
                                     ->default(true),
                                 Forms\Components\Toggle::make('show_out_of_stock')
-                                    ->label('Show Out of Stock Products')
+                                    ->label(__('admin.settings.show_out_of_stock'))
                                     ->default(true),
                             ]),
                     ]),
 
                 // Maintenance Mode
-                Components\Section::make('Maintenance Mode')
+                Components\Section::make(__('admin.settings.maintenance_mode'))
                     ->schema([
                         Forms\Components\Toggle::make('maintenance_mode')
-                            ->label('⚠ Enable Maintenance Mode')
-                            ->helperText('Warning: Enabling this will show maintenance page to all storefront visitors.')
+                            ->label(__('admin.settings.maintenance_mode'))
+                            ->helperText(__('admin.settings.maintenance_warning'))
                             ->default(false),
 
                         Components\Grid::make(2)
                             ->schema([
                                 Forms\Components\Textarea::make('maintenance_message_en')
-                                    ->label('Maintenance Message (English)')
+                                    ->label(__('admin.settings.maintenance_message_en'))
                                     ->rows(2)
                                     ->default('We are currently performing maintenance. Please check back later.'),
                                 Forms\Components\Textarea::make('maintenance_message_ar')
-                                    ->label('Maintenance Message (Arabic)')
+                                    ->label(__('admin.settings.maintenance_message_ar'))
                                     ->rows(2)
                                     ->extraInputAttributes(['dir' => 'rtl']),
                             ]),
@@ -221,8 +218,8 @@ class GeneralSettings extends Page
         }
 
         Notification::make()
-            ->title('Settings Saved')
-            ->body('All settings have been saved and cache cleared.')
+            ->title(__('admin.settings.settings_saved'))
+            ->body(__('admin.settings.settings_saved_body'))
             ->success()
             ->send();
     }
@@ -231,7 +228,7 @@ class GeneralSettings extends Page
     {
         return [
             Action::make('save')
-                ->label('💾 Save Settings')
+                ->label(__('admin.common.save_settings'))
                 ->submit('save'),
         ];
     }

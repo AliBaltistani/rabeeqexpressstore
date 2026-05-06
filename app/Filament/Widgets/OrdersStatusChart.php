@@ -13,7 +13,7 @@ class OrdersStatusChart extends ChartWidget
 
     public function getHeading(): string
     {
-        return 'Orders by Status';
+        return __('admin.dashboard.orders_by_status');
     }
 
     public function getDescription(): ?string

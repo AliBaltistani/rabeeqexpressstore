@@ -22,11 +22,19 @@ class FlashSaleResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-bolt';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Promotions';
-
     protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.promotions');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.flash_sales');
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -109,7 +117,7 @@ class FlashSaleResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0.01)
                                                     ->step(0.01)
-                                                    ->prefix('SAR'),
+                                                    ->prefix(currency_symbol()),
 
                                                 Forms\Components\TextInput::make('original_price')
                                                     ->label('Original Price')
@@ -117,7 +125,7 @@ class FlashSaleResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0.01)
                                                     ->step(0.01)
-                                                    ->prefix('SAR'),
+                                                    ->prefix(currency_symbol()),
 
                                                 Forms\Components\TextInput::make('quantity_limit')
                                                     ->label('Qty Limit')
@@ -212,12 +220,12 @@ class FlashSaleResource extends Resource
 
                 Tables\Columns\TextColumn::make('starts_at')
                     ->label('Start')
-                    ->dateTime('M d, Y H:i')
+                    ->dateTime(admin_date_format(withTime: true))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('ends_at')
                     ->label('End')
-                    ->dateTime('M d, Y H:i')
+                    ->dateTime(admin_date_format(withTime: true))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('products_count')

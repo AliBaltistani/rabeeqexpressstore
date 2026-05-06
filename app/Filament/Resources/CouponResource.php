@@ -24,11 +24,19 @@ class CouponResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-ticket';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Promotions';
-
     protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'code';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.promotions');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.coupons');
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -95,7 +103,7 @@ class CouponResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0.01)
                                                     ->step(0.01)
-                                                    ->prefix(fn(Schemas\Components\Utilities\Get $get) => $get('type') === 'percentage' ? '%' : 'SAR')
+                                                    ->prefix(fn(Schemas\Components\Utilities\Get $get) => $get('type') === 'percentage' ? '%' : currency_symbol())
                                                     ->rules([
                                                         fn(Schemas\Components\Utilities\Get $get) => function (string $attribute, $value, $fail) use ($get) {
                                                             if ($get('type') === 'percentage' && $value > 100) {
@@ -110,7 +118,7 @@ class CouponResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->step(0.01)
-                                                    ->prefix('SAR')
+                                                    ->prefix(currency_symbol())
                                                     ->placeholder('No limit')
                                                     ->visible(fn(Schemas\Components\Utilities\Get $get): bool => $get('type') === 'percentage'),
                                             ]),
@@ -122,7 +130,7 @@ class CouponResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->step(0.01)
-                                                    ->prefix('SAR')
+                                                    ->prefix(currency_symbol())
                                                     ->placeholder('No minimum')
                                                     ->default(0),
 
@@ -242,7 +250,7 @@ class CouponResource extends Resource
                     ->getStateUsing(function (Coupon $record): string {
                         return match ($record->type) {
                             'percentage' => number_format($record->value, 2) . '% OFF',
-                            'fixed' => number_format($record->value, 2) . ' SAR OFF',
+                            'fixed' => number_format($record->value, 2) . ' ' . currency_symbol() . ' OFF',
                             'free_shipping' => 'Free Shipping',
                             default => $record->type,
                         };
@@ -281,7 +289,7 @@ class CouponResource extends Resource
 
                 Tables\Columns\TextColumn::make('expires_at')
                     ->label('Expires')
-                    ->dateTime('M d, Y')
+                    ->dateTime(admin_date_format())
                     ->placeholder('Never')
                     ->sortable(),
             ])

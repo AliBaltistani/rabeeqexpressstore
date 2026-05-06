@@ -13,7 +13,7 @@ class RevenueChart extends ChartWidget
 
     public function getHeading(): string
     {
-        return 'Revenue — Last 30 Days';
+        return __('admin.dashboard.revenue_chart');
     }
 
     public function getDescription(): ?string
@@ -34,7 +34,7 @@ class RevenueChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Revenue',
+                    'label' => __('admin.dashboard.revenue'),
                     'data' => $data['revenue'],
                     'fill' => true,
                     'borderColor' => 'rgb(59, 130, 246)',

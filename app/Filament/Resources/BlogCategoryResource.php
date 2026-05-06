@@ -21,17 +21,24 @@ class BlogCategoryResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-folder';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Content';
-
     protected static ?int $navigationSort = 2;
 
-    protected static ?string $navigationLabel = 'Blog Categories';
-
-    protected static ?string $modelLabel = 'Blog Category';
-
-    protected static ?string $pluralModelLabel = 'Blog Categories';
-
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.content');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.blog_categories');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.resources.blog_categories');
+    }
 
     public static function form(Schema $form): Schema
     {

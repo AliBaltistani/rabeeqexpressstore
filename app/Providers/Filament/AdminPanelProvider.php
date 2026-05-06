@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Http\Middleware\SetLanguageAndRtl;
+use App\Models\Setting;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -22,13 +23,17 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-        return $panel
+        // Dynamic brand name from settings (locale-aware)
+        $brandName = $this->getBrandName();
+
+        $panelConfig = $panel
             ->default()
             ->id('admin')
             ->path('admin')
             ->login()
             ->registration(false)
             ->authGuard('admin')
+            ->brandName($brandName)
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -40,6 +45,18 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
             ])
+            ->renderHook(
+                'panels::user-menu.before',
+                fn (): string => \Livewire\Livewire::mount('language-switcher'),
+            )
+            ->renderHook(
+                'panels::head.end',
+                function (): string {
+                    $isRtl = session('is_rtl', false);
+                    $dir = $isRtl ? 'rtl' : 'ltr';
+                    return "<script>document.documentElement.dir = '{$dir}';document.documentElement.lang = '" . app()->getLocale() . "';</script>";
+                },
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -55,5 +72,54 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
+
+        // Dynamic favicon from settings
+        $favicon = $this->getFavicon();
+        if ($favicon) {
+            $panelConfig->favicon($favicon);
+        }
+
+        return $panelConfig;
+    }
+
+    /**
+     * Get the store name from settings for the panel brand.
+     * Returns locale-aware name.
+     */
+    protected function getBrandName(): string
+    {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('settings')) {
+                $locale = app()->getLocale();
+                if ($locale === 'ar') {
+                    $name = Setting::get('general.store_name_ar');
+                    if ($name) return $name;
+                }
+                return Setting::get('general.store_name_en', 'Eseven Store') ?? 'Eseven Store';
+            }
+        } catch (\Throwable) {
+            // Silently fail during migrations
+        }
+
+        return 'Eseven Store';
+    }
+
+    /**
+     * Get the favicon URL from settings.
+     */
+    protected function getFavicon(): ?string
+    {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('settings')) {
+                $favicon = Setting::get('general.store_favicon');
+                if ($favicon) {
+                    return asset('storage/' . $favicon);
+                }
+            }
+        } catch (\Throwable) {
+            // Silently fail during migrations
+        }
+
+        return null;
     }
 }

@@ -15,10 +15,22 @@ class SeoSocialPage extends Page
 {
     protected string $view = 'filament.pages.settings.general-settings';
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-globe-alt';
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 7;
-    protected static ?string $navigationLabel = 'SEO & Social';
-    protected static ?string $title = 'SEO & Social Settings';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.settings_pages.seo');
+    }
+
+    public function getTitle(): string
+    {
+        return __('admin.settings_pages.seo');
+    }
 
     public ?array $data = [];
 

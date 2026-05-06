@@ -21,11 +21,19 @@ class BrandResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-bookmark';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Catalog';
-
     protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.catalog');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.brands');
+    }
 
     public static function form(Schema $form): Schema
     {
@@ -111,7 +119,7 @@ class BrandResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime('M d, Y')
+                    ->dateTime(admin_date_format())
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

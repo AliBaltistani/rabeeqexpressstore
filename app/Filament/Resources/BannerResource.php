@@ -21,15 +21,22 @@ class BannerResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-photo';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Content';
-
     protected static ?int $navigationSort = 4;
 
-    protected static ?string $navigationLabel = 'Banners & Sliders';
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.content');
+    }
 
-    protected static ?string $modelLabel = 'Banner';
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.banners');
+    }
 
-    protected static ?string $pluralModelLabel = 'Banners';
+    public static function getModelLabel(): string
+    {
+        return __('admin.resources.banners');
+    }
 
     public static function form(Schema $form): Schema
     {

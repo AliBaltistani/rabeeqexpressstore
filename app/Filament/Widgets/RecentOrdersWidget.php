@@ -15,11 +15,14 @@ class RecentOrdersWidget extends BaseWidget
 
     public function getTableHeading(): string
     {
-        return 'Recent Orders';
+        return __('admin.dashboard.recent_orders');
     }
 
     public function table(Table $table): Table
     {
+        $dateFormat = admin_date_format(withTime: true);
+        $defaultCurrency = currency_symbol();
+
         return $table
             ->query(
                 Order::query()
@@ -29,15 +32,15 @@ class RecentOrdersWidget extends BaseWidget
             )
             ->columns([
                 Tables\Columns\TextColumn::make('order_number')
-                    ->label('Order #')
+                    ->label(__('Order #'))
                     ->searchable()
                     ->weight('bold')
                     ->color('primary'),
 
                 Tables\Columns\TextColumn::make('customer_name')
-                    ->label('Customer')
+                    ->label(__('Customer'))
                     ->state(function (Order $record): string {
-                        return $record->user?->name ?? $record->guest_name ?? 'Guest';
+                        return $record->user?->name ?? $record->guest_name ?? __('Guest');
                     }),
 
                 Tables\Columns\TextColumn::make('status')
@@ -51,10 +54,10 @@ class RecentOrdersWidget extends BaseWidget
                         'refunded' => 'danger',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state): string => ucfirst($state)),
+                    ->formatStateUsing(fn (string $state): string => __(ucfirst($state))),
 
                 Tables\Columns\TextColumn::make('payment_status')
-                    ->label('Payment')
+                    ->label(__('Payment'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'paid' => 'success',
@@ -63,22 +66,25 @@ class RecentOrdersWidget extends BaseWidget
                         'partially_refunded' => 'warning',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state): string => ucfirst(str_replace('_', ' ', $state))),
+                    ->formatStateUsing(fn (string $state): string => __(ucfirst(str_replace('_', ' ', $state)))),
 
                 Tables\Columns\TextColumn::make('total')
-                    ->label('Total')
-                    ->money(fn (Order $record): string => strtolower($record->currency_code ?? 'sar'))
+                    ->label(__('Total'))
+                    ->formatStateUsing(function (Order $record) use ($defaultCurrency): string {
+                        $symbol = $record->currency_code ?? $defaultCurrency;
+                        return number_format($record->total, 2) . ' ' . $symbol;
+                    })
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
-                    ->dateTime('M d, Y')
+                    ->label(__('Date'))
+                    ->dateTime($dateFormat)
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->paginated(false)
-            ->emptyStateHeading('No orders yet')
-            ->emptyStateDescription('Orders will appear here once customers start placing them.')
+            ->emptyStateHeading(__('No orders yet'))
+            ->emptyStateDescription(__('Orders will appear here once customers start placing them.'))
             ->emptyStateIcon('heroicon-o-shopping-bag');
     }
 }

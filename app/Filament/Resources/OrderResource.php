@@ -21,11 +21,19 @@ class OrderResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shopping-bag';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sales';
-
     protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'order_number';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.sales');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.orders');
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -78,11 +86,11 @@ class OrderResource extends Resource
 
                                         Forms\Components\Placeholder::make('total_display')
                                             ->label('Total')
-                                            ->content(fn(?Order $record): string => $record ? number_format($record->total, 2) . ' ' . $record->currency_code : '—'),
+                                            ->content(fn(?Order $record): string => $record ? number_format($record->total, 2) . ' ' . ($record->currency_code ?? currency_symbol()) : '—'),
 
                                         Forms\Components\Placeholder::make('placed_at')
                                             ->label('Placed')
-                                            ->content(fn(?Order $record): string => $record?->created_at?->format('M d, Y H:i') ?? '—'),
+                                            ->content(fn(?Order $record): string => $record?->created_at?->format(admin_date_format(withTime: true)) ?? '—'),
                                     ]),
                             ])
                             ->columnSpan(1),
@@ -147,7 +155,7 @@ class OrderResource extends Resource
 
                 Tables\Columns\TextColumn::make('total')
                     ->label('Total')
-                    ->formatStateUsing(fn(Order $record): string => number_format($record->total, 2) . ' ' . $record->currency_code)
+                    ->formatStateUsing(fn(Order $record): string => number_format($record->total, 2) . ' ' . ($record->currency_code ?? currency_symbol()))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('payment_method')
@@ -158,7 +166,7 @@ class OrderResource extends Resource
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Date')
-                    ->dateTime('M d, Y H:i')
+                    ->dateTime(admin_date_format(withTime: true))
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')

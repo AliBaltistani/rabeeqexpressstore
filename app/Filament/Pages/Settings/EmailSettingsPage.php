@@ -15,10 +15,22 @@ class EmailSettingsPage extends Page
 {
     protected string $view = 'filament.pages.settings.general-settings';
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-envelope';
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 6;
-    protected static ?string $navigationLabel = 'Email / Notifications';
-    protected static ?string $title = 'Email & Notification Settings';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.settings_pages.email');
+    }
+
+    public function getTitle(): string
+    {
+        return __('admin.settings_pages.email');
+    }
 
     public ?array $data = [];
 

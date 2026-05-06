@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Settings;
 
 use App\Models\Language;
+use App\Models\Setting;
 use BackedEnum;
 use Filament\Actions;
 use Filament\Forms;
@@ -22,10 +23,22 @@ class LanguagesPage extends Page implements HasTable
 
     protected string $view = 'filament.pages.settings.languages-page';
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-language';
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 2;
-    protected static ?string $navigationLabel = 'Languages';
-    protected static ?string $title = 'Languages';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.settings_pages.languages');
+    }
+
+    public function getTitle(): string
+    {
+        return __('admin.settings_pages.languages');
+    }
 
     protected function getTableQuery(): Builder
     {
@@ -35,14 +48,21 @@ class LanguagesPage extends Page implements HasTable
     protected function getTableColumns(): array
     {
         return [
-            Tables\Columns\TextColumn::make('name')->sortable(),
-            Tables\Columns\TextColumn::make('code')->badge()->color('primary'),
+            Tables\Columns\TextColumn::make('name')
+                ->label(__('admin.common.name'))
+                ->sortable(),
+            Tables\Columns\TextColumn::make('code')
+                ->badge()
+                ->color('primary'),
             Tables\Columns\TextColumn::make('direction')
                 ->badge()
-                ->color(fn(string $state) => $state === 'RTL' ? 'warning' : 'gray')
+                ->color(fn(string $state) => strtoupper($state) === 'RTL' ? 'warning' : 'gray')
                 ->formatStateUsing(fn(string $state) => strtoupper($state)),
-            Tables\Columns\IconColumn::make('is_default')->boolean()->label('Default'),
-            Tables\Columns\ToggleColumn::make('is_active')->label('Active'),
+            Tables\Columns\IconColumn::make('is_default')
+                ->boolean()
+                ->label(__('admin.common.active')),
+            Tables\Columns\ToggleColumn::make('is_active')
+                ->label(__('admin.common.active')),
         ];
     }
 
@@ -53,19 +73,30 @@ class LanguagesPage extends Page implements HasTable
                 ->form([
                     Forms\Components\TextInput::make('name')->required(),
                     Forms\Components\TextInput::make('code')->required()->maxLength(5),
-                    Forms\Components\Select::make('direction')->options(['LTR' => 'LTR', 'RTL' => 'RTL'])->required(),
+                    Forms\Components\Select::make('direction')
+                        ->options(['LTR' => 'LTR (Left to Right)', 'RTL' => 'RTL (Right to Left)'])
+                        ->required(),
                     Forms\Components\Toggle::make('is_active')->default(true),
                 ]),
 
             Actions\Action::make('set_default')
-                ->label('Set Default')
+                ->label(__('admin.common.active'))
                 ->icon('heroicon-o-star')
                 ->color('warning')
                 ->visible(fn(Language $record) => !$record->is_default)
                 ->action(function (Language $record) {
+                    // Unset all other defaults
                     Language::where('is_default', true)->update(['is_default' => false]);
                     $record->update(['is_default' => true, 'is_active' => true]);
-                    Notification::make()->title('Default language updated')->success()->send();
+
+                    // Sync to settings table so AppServiceProvider picks it up
+                    Setting::set('general.default_language', $record->code);
+
+                    Notification::make()
+                        ->title(__('admin.settings.settings_saved'))
+                        ->body("Default language set to {$record->name}")
+                        ->success()
+                        ->send();
                 })
                 ->requiresConfirmation(),
 
@@ -79,11 +110,14 @@ class LanguagesPage extends Page implements HasTable
         return [
             Actions\CreateAction::make()
                 ->model(Language::class)
-                ->label('Add Language')
+                ->label(__('admin.common.create'))
                 ->form([
                     Forms\Components\TextInput::make('name')->required(),
                     Forms\Components\TextInput::make('code')->required()->maxLength(5),
-                    Forms\Components\Select::make('direction')->options(['LTR' => 'LTR', 'RTL' => 'RTL'])->required()->default('LTR'),
+                    Forms\Components\Select::make('direction')
+                        ->options(['LTR' => 'LTR (Left to Right)', 'RTL' => 'RTL (Right to Left)'])
+                        ->required()
+                        ->default('LTR'),
                     Forms\Components\Toggle::make('is_active')->default(true),
                 ]),
         ];

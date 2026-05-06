@@ -21,19 +21,26 @@ class CustomerResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sales';
-
     protected static ?int $navigationSort = 2;
-
-    protected static ?string $navigationLabel = 'Customers';
-
-    protected static ?string $modelLabel = 'Customer';
-
-    protected static ?string $pluralModelLabel = 'Customers';
 
     protected static ?string $slug = 'customers';
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.sales');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.resources.customers');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('admin.resources.customers');
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -91,7 +98,7 @@ class CustomerResource extends Resource
                     ->label('Total Spent')
                     ->getStateUsing(function (User $record): string {
                         $total = $record->orders()->where('payment_status', 'paid')->sum('total');
-                        return number_format($total, 2) . ' SAR';
+                        return number_format($total, 2) . ' ' . currency_symbol();
                     })
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query->withSum(['orders' => fn($q) => $q->where('payment_status', 'paid')], 'total')
@@ -111,7 +118,7 @@ class CustomerResource extends Resource
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Joined')
-                    ->dateTime('M d, Y')
+                    ->dateTime(admin_date_format())
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')

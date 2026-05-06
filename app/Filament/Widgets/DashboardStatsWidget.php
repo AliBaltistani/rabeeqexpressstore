@@ -14,28 +14,29 @@ class DashboardStatsWidget extends StatsOverviewWidget
     {
         $service = new DashboardService();
         $currencySymbol = $service->getDefaultCurrencySymbol();
+        $storeName = setting('general.store_name_en', 'Store');
 
         return [
-            Stat::make("Today's Revenue", $currencySymbol . ' ' . number_format($service->getTodayRevenue(), 2))
-                ->description('Total paid orders today')
+            Stat::make(__('admin.dashboard.today_revenue'), $currencySymbol . ' ' . number_format($service->getTodayRevenue(), 2))
+                ->description(__('admin.dashboard.total_paid_today'))
                 ->descriptionIcon('heroicon-o-currency-dollar')
                 ->color('info')
                 ->chart([0, 0, 0, 0, 0, 0, 0]),
 
-            Stat::make('New Orders Today', $service->getNewOrdersToday())
-                ->description('Orders placed today')
+            Stat::make(__('admin.dashboard.new_orders_today'), $service->getNewOrdersToday())
+                ->description(__('admin.dashboard.orders_placed_today'))
                 ->descriptionIcon('heroicon-o-shopping-bag')
                 ->color('success')
                 ->chart([0, 0, 0, 0, 0, 0, 0]),
 
-            Stat::make('New Customers Today', $service->getNewCustomersToday())
-                ->description('Customers registered today')
+            Stat::make(__('admin.dashboard.new_customers_today'), $service->getNewCustomersToday())
+                ->description(__('admin.dashboard.customers_registered_today'))
                 ->descriptionIcon('heroicon-o-user-plus')
                 ->color('info')
                 ->extraAttributes(['class' => 'text-teal-500']),
 
-            Stat::make('Low Stock Items', $service->getLowStockCount())
-                ->description('Products below threshold')
+            Stat::make(__('admin.dashboard.low_stock_items'), $service->getLowStockCount())
+                ->description(__('admin.dashboard.products_below_threshold') . ' (' . (int) setting('general.low_stock_threshold', 5) . ')')
                 ->descriptionIcon('heroicon-o-exclamation-triangle')
                 ->color('danger'),
         ];

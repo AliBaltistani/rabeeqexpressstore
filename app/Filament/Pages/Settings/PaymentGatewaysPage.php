@@ -16,10 +16,22 @@ class PaymentGatewaysPage extends Page
 {
     protected string $view = 'filament.pages.settings.general-settings';
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-credit-card';
-    protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 4;
-    protected static ?string $navigationLabel = 'Payment Gateways';
-    protected static ?string $title = 'Payment Gateways';
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('admin.settings_pages.payment');
+    }
+
+    public function getTitle(): string
+    {
+        return __('admin.settings_pages.payment');
+    }
 
     public ?array $data = [];
 
@@ -86,7 +98,7 @@ class PaymentGatewaysPage extends Page
                             Forms\Components\Textarea::make('cod_description_en')->label('Description (English)')->rows(2),
                             Forms\Components\Textarea::make('cod_description_ar')->label('Description (Arabic)')->rows(2)->extraInputAttributes(['dir' => 'rtl']),
                         ]),
-                        Forms\Components\TextInput::make('cod_extra_fee')->label('Extra Fee (SAR)')->numeric()->default(0)->helperText('0 = no extra fee'),
+                        Forms\Components\TextInput::make('cod_extra_fee')->label('Extra Fee (' . currency_symbol() . ')')->numeric()->default(0)->helperText('0 = no extra fee'),
                     ])->collapsible(),
 
                 // Bank Transfer
