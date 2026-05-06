@@ -33,7 +33,7 @@ class ReviewController extends Controller
 
         $reviews = $query->paginate(10);
 
-        return $this->paginated($reviews, ReviewResource);
+        return $this->paginated($reviews, ReviewResource::class);
     }
 
     /**

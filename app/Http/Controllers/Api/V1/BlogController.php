@@ -29,7 +29,7 @@ class BlogController extends Controller
 
         $posts = $query->paginate(12);
 
-        return $this->paginated($posts, BlogPostResource);
+        return $this->paginated($posts, BlogPostResource::class);
     }
 
     /**

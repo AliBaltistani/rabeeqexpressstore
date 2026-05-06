@@ -24,7 +24,7 @@ class OrderController extends Controller
             ->orderByDesc('created_at')
             ->paginate(10);
 
-        return $this->paginated($orders, OrderResource);
+        return $this->paginated($orders, OrderResource::class);
     }
 
     /**

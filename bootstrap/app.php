@@ -13,8 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // API rate limiting: 60/min guests, 120/min authenticated
-        $middleware->throttleApi('120:1');
+        // API rate limiting
+        $middleware->throttleApi('api');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Return JSON for API requests

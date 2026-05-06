@@ -34,7 +34,7 @@ class ProductController extends Controller
 
         $products = $query->paginate($perPage);
 
-        return $this->paginated($products, ProductResource);
+        return $this->paginated($products, ProductResource::class);
     }
 
     /**
@@ -125,7 +125,7 @@ class ProductController extends Controller
             })
             ->paginate($perPage);
 
-        return $this->paginated($products, ProductResource);
+        return $this->paginated($products, ProductResource::class);
     }
 
     protected function applyFilters(Builder $query, Request $request): void
