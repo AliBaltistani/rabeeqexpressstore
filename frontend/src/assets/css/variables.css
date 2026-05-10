@@ -1,0 +1,113 @@
+/* ═══════════════════════════════════════════
+   Design System — CSS Custom Properties
+   Extracted from eseven-store Selia theme
+   ═══════════════════════════════════════════ */
+
+:root {
+  /* ── Typography ── */
+  --font-main: 'PingARLT', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+  /* ── Brand Colors ── */
+  --color-primary: #858585;
+  --color-primary-dark: #5f5f5f;
+  --color-primary-light: #ababab;
+  --color-primary-reverse: #060606;
+
+  /* ── Backgrounds ── */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+
+  /* ── Header ── */
+  --header-bg: #ffffff;
+  --header-text-color: #111827;
+
+  /* ── Store Text ── */
+  --store-text-primary: #111827;
+  --store-text-secondary: #000000;
+
+  /* ── Product ── */
+  --product-bg: #ffffff;
+  --product-image-height: 20rem;
+  --product-border-color: #eeeeee;
+  --product-enhanced-btn-bg: #ffffff;
+  --product-enhanced-btn-color: var(--color-primary);
+  --products-per-row: 5;
+
+  /* ── Footer ── */
+  --footer-bg: #f3f4f6;
+  --footer-text-color: #374151;
+  --bottom-footer-bg: #F9FAFB;
+
+  /* ── Countdown ── */
+  --countdown-bg: #f3f4f6;
+  --countdown-color: #111827;
+  --countdown-border-color: #f3f4f6;
+
+  /* ── Bottom Nav (Mobile) ── */
+  --bottom-nav-bg: #ffffff;
+  --bottom-nav-text-color: #111827;
+
+  /* ── WhatsApp Button ── */
+  --wa-btn-bg: #22c55e;
+  --wa-btn-text-color: #ffffff;
+
+  /* ── Promotion Banner ── */
+  --promotion-bg: #ff0000;
+  --promotion-text: #ffffff;
+
+  /* ── Spacing Scale ── */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4rem;
+
+  /* ── Border Radius ── */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  /* ── Transitions ── */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
+
+  /* ── Container ── */
+  --container-max: 1280px;
+  --container-padding: 1rem;
+
+  /* ── Z-Index Scale ── */
+  --z-dropdown: 50;
+  --z-sticky: 100;
+  --z-fixed: 200;
+  --z-modal-backdrop: 300;
+  --z-modal: 400;
+  --z-tooltip: 500;
+  --z-loading: 9999;
+}
+
+/* ── Dark Mode ── */
+.dark {
+  --bg-primary: #1d1f1f;
+  --bg-secondary: #0e0f0f;
+  --header-bg: #0e0f0f;
+  --header-text-color: #ffffff;
+  --store-text-primary: #ffffff;
+  --store-text-secondary: #cccccc;
+  --product-bg: #1d1f1f;
+  --footer-bg: #0e0f0f;
+  --footer-text-color: #ffffff;
+  --bottom-footer-bg: #0e0f0f;
+  --bottom-nav-bg: #1d1f1f;
+  --bottom-nav-text-color: #ffffff;
+}

@@ -1,0 +1,148 @@
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    component: () => import('@/layouts/DefaultLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'home',
+        component: () => import('@/pages/HomePage.vue'),
+        meta: { title: 'E-SEVEN STORE' },
+      },
+      {
+        path: 'products',
+        name: 'shop',
+        component: () => import('@/pages/ShopPage.vue'),
+        meta: { title: 'Shop - E-SEVEN STORE' },
+      },
+      {
+        path: 'category/:slug',
+        name: 'category',
+        component: () => import('@/pages/CategoryPage.vue'),
+        meta: { title: 'Category - E-SEVEN STORE' },
+      },
+      {
+        path: 'brand/:slug',
+        name: 'brand',
+        component: () => import('@/pages/CategoryPage.vue'),
+        meta: { title: 'Brand - E-SEVEN STORE' },
+      },
+      {
+        path: 'products/:slug',
+        name: 'product',
+        component: () => import('@/pages/ProductDetailPage.vue'),
+        meta: { title: 'Product - E-SEVEN STORE' },
+      },
+      {
+        path: 'search',
+        name: 'search',
+        component: () => import('@/pages/SearchResultsPage.vue'),
+        meta: { title: 'Search - E-SEVEN STORE' },
+      },
+      {
+        path: 'flash-sale',
+        name: 'flash-sale',
+        component: () => import('@/pages/FlashSalePage.vue'),
+        meta: { title: 'Flash Sale - E-SEVEN STORE' },
+      },
+      {
+        path: 'cart',
+        name: 'cart',
+        component: () => import('@/pages/CartPage.vue'),
+        meta: { title: 'Cart - E-SEVEN STORE' },
+      },
+      {
+        path: 'checkout',
+        name: 'checkout',
+        component: () => import('@/pages/CheckoutPage.vue'),
+        meta: { title: 'Checkout - E-SEVEN STORE' },
+      },
+      {
+        path: 'checkout/success/:orderNumber',
+        name: 'order-success',
+        component: () => import('@/pages/OrderSuccessPage.vue'),
+        meta: { title: 'Order Success - E-SEVEN STORE' },
+      },
+      {
+        path: 'login',
+        name: 'login',
+        component: () => import('@/pages/LoginPage.vue'),
+        meta: { title: 'Login - E-SEVEN STORE', guest: true },
+      },
+      {
+        path: 'register',
+        name: 'register',
+        component: () => import('@/pages/RegisterPage.vue'),
+        meta: { title: 'Register - E-SEVEN STORE', guest: true },
+      },
+      {
+        path: 'forgot-password',
+        name: 'forgot-password',
+        component: () => import('@/pages/ForgotPasswordPage.vue'),
+        meta: { title: 'Forgot Password - E-SEVEN STORE', guest: true },
+      },
+      {
+        path: 'account',
+        name: 'account',
+        component: () => import('@/pages/AccountDashboardPage.vue'),
+        meta: { title: 'My Account - E-SEVEN STORE', requiresAuth: true },
+      },
+      {
+        path: 'account/profile',
+        name: 'profile',
+        component: () => import('@/pages/ProfilePage.vue'),
+        meta: { title: 'Profile - E-SEVEN STORE', requiresAuth: true },
+      },
+      {
+        path: 'account/orders',
+        name: 'orders',
+        component: () => import('@/pages/OrdersListPage.vue'),
+        meta: { title: 'Orders - E-SEVEN STORE', requiresAuth: true },
+      },
+      {
+        path: 'account/orders/:orderNumber',
+        name: 'order-detail',
+        component: () => import('@/pages/OrderDetailPage.vue'),
+        meta: { title: 'Order Detail - E-SEVEN STORE', requiresAuth: true },
+      },
+      {
+        path: 'account/wishlist',
+        name: 'wishlist',
+        component: () => import('@/pages/WishlistPage.vue'),
+        meta: { title: 'Wishlist - E-SEVEN STORE', requiresAuth: true },
+      },
+      {
+        path: 'account/addresses',
+        name: 'addresses',
+        component: () => import('@/pages/AddressesPage.vue'),
+        meta: { title: 'Addresses - E-SEVEN STORE', requiresAuth: true },
+      },
+      {
+        path: ':slug',
+        name: 'cms-page',
+        component: () => import('@/pages/CmsPage.vue'),
+        meta: { title: 'E-SEVEN STORE' },
+      },
+    ],
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(_to, _from, savedPosition) {
+    if (savedPosition) return savedPosition
+    return { top: 0, behavior: 'smooth' }
+  },
+})
+
+// Dynamic page titles
+router.beforeEach((to, _from, next) => {
+  const title = to.meta.title as string
+  if (title) document.title = title
+  next()
+})
+
+export default router
