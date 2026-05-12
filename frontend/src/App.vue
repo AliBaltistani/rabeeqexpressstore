@@ -1,7 +1,8 @@
 <template>
   <router-view />
+  <QuickViewModal />
 </template>
 
 <script setup lang="ts">
-// App root — layout is handled by each page/layout component
+import QuickViewModal from '@/components/product/QuickViewModal.vue'
 </script>

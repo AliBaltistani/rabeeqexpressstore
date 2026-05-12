@@ -30,7 +30,7 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Brand - E-SEVEN STORE' },
       },
       {
-        path: 'products/:slug',
+        path: 'product/:slug',
         name: 'product',
         component: () => import('@/pages/ProductDetailPage.vue'),
         meta: { title: 'Product - E-SEVEN STORE' },

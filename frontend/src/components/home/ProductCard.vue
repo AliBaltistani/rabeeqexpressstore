@@ -19,7 +19,7 @@
       <button class="product-card__icon-btn" aria-label="Add to wishlist" @click.prevent="toggleWishlist">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
       </button>
-      <button class="product-card__icon-btn" aria-label="Quick view" @click.prevent="$emit('quickView', product)">
+      <button class="product-card__icon-btn" aria-label="Quick view" @click.prevent="openQuickView">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
     </div>
@@ -48,6 +48,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useQuickView } from '@/composables/useQuickView'
 
 interface Product {
   id: number
@@ -65,7 +66,11 @@ const props = defineProps<{
   product: Product
 }>()
 
-defineEmits(['quickView'])
+const { open: openQuickView_ } = useQuickView()
+
+function openQuickView() {
+  openQuickView_(props.product)
+}
 
 function formatPrice(price: number): string {
   const cur = props.product.currency || 'SAR'
