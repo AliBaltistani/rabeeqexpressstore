@@ -68,9 +68,10 @@ export async function fetchProducts(params?: ProductsParams) {
   return unwrapPaginated<Product>(await apiClient.get('/products', { params }))
 }
 
-export async function fetchProductBySlug(slug: string): Promise<ProductDetail> {
-  return unwrap(await apiClient.get(`/products/${slug}`))
+export async function fetchProductBySlug(slug: string) {
+  return unwrap<ProductDetail>(await apiClient.get(`/products/${slug}`))
 }
+
 
 export async function fetchFeaturedProducts(limit = 8): Promise<Product[]> {
   return unwrap(await apiClient.get('/products/featured', { params: { limit } }))
@@ -118,7 +119,7 @@ export async function fetchCart(): Promise<CartData> {
 }
 
 export async function addCartItem(productId: number, quantity: number, variantId?: number | null) {
-  return unwrap(await apiClient.post('/cart/items', { product_id: productId, quantity, variant_id: variantId }))
+  return unwrap(await apiClient.post('/cart/items', { productId, quantity, variantId }))
 }
 
 export async function updateCartItem(id: number, quantity: number) {
@@ -232,15 +233,15 @@ export async function removeWishlistItem(productId: number) {
 // CHECKOUT
 // ═══════════════════════════════════════════
 export async function fetchShippingRates(addressData: any) {
-  return unwrap(await apiClient.post('/checkout/shipping-rates', addressData))
+  return unwrap<any[]>(await apiClient.post('/checkout/shipping-rates', addressData))
 }
 
 export async function placeOrder(data: any) {
-  return unwrap(await apiClient.post('/checkout/place-order', data))
+  return unwrap<any>(await apiClient.post('/checkout/place-order', data))
 }
 
 export async function fetchOrderSuccess(orderNumber: string) {
-  return unwrap(await apiClient.get(`/checkout/order-success/${orderNumber}`))
+  return unwrap<any>(await apiClient.get(`/checkout/order-success/${orderNumber}`))
 }
 
 // ═══════════════════════════════════════════

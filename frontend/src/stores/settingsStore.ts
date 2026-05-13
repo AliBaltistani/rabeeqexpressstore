@@ -60,7 +60,7 @@ export const useSettingsStore = defineStore('settings', () => {
       appstore: 'https://apps.apple.com/sa/app/eseven-store/id6453605018',
       googleplay: 'https://play.google.com/store/apps/details?id=com.salla.esevenstore&pli=1',
     },
-    paymentMethods: [] as { id: string; name: string; fee?: number }[],
+    paymentMethods: [] as { id: string; name: string; fee?: number; logo?: string }[],
     features: {
       guestCheckout: true,
       wishlist: true,

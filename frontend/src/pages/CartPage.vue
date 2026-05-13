@@ -29,14 +29,14 @@
           >
             <!-- Product Image -->
             <div class="cart-item__image">
-              <img :src="item.image" :alt="item.name" />
+              <img :src="item.image || ''" :alt="item.productName" />
             </div>
 
             <!-- Product Details -->
             <div class="cart-item__details">
               <div class="cart-item__top-row">
                 <div class="cart-item__info">
-                  <h3 class="cart-item__name">{{ item.productName || item.name }}</h3>
+                  <h3 class="cart-item__name">{{ item.productName }}</h3>
                   <p v-if="item.variantName" class="cart-item__variant">{{ item.variantName }}</p>
                   <p class="cart-item__unit-price">{{ formatPrice(item.unitPrice) }}</p>
                 </div>
@@ -60,15 +60,7 @@
                 </button>
               </div>
 
-              <!-- Options row -->
-              <div v-if="item.variant" class="cart-item__options-row">
-                <div class="cart-item__option">
-                  <label class="cart-item__option-label">حجم المنتج المطلوب <span class="required">*</span></label>
-                  <select class="cart-item__option-select" :value="item.variant?.size">
-                    <option v-for="s in ['حجم']" :key="s">{{ item.variant?.size || s }}</option>
-                  </select>
-                </div>
-              </div>
+
             </div>
           </div>
         </div>

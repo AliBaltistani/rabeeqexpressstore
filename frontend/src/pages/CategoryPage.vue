@@ -229,20 +229,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
 import TestimonialsSlider from '@/components/home/TestimonialsSlider.vue'
 import { fetchProducts, fetchCategories, fetchBrands, fetchCategoryBySlug } from '@/api/services'
 import type { Product, Category, Brand } from '@/types'
 
+const props = defineProps<{ isShop?: boolean }>()
+
 const route = useRoute()
+const { t } = useI18n()
 
 // ─── Category Title (from API or slug fallback) ───
 const categoryData = ref<Category | null>(null)
 const categoryTitle = computed(() => {
+  if (props.isShop) return t('header.allProducts') || 'Shop'
   if (categoryData.value) return categoryData.value.name
-  const slug = (route.params.slug as string) || 'unisex-shoes'
+  const slug = (route.params.slug as string) || 'category'
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 })
 
@@ -341,7 +346,10 @@ function mapProduct(p: Product) {
 async function loadProducts(append = false) {
   isLoading.value = true
   try {
-    const categorySlug = (route.params.slug as string) || undefined
+    const categorySlug = props.isShop 
+      ? (selectedCategory.value ? categories.value.find(c => c.id === selectedCategory.value)?.slug : undefined)
+      : (route.params.slug as string)
+    
     const brandSlug = selectedBrand.value
       ? brands.value.find(b => b.id === selectedBrand.value)?.slug
       : undefined
@@ -410,12 +418,14 @@ watch(() => route.params.slug, () => {
 
 // ─── Load page data ───
 async function loadPageData() {
-  const slug = route.params.slug as string
-  if (slug) {
-    try {
-      categoryData.value = await fetchCategoryBySlug(slug)
-    } catch {
-      categoryData.value = null
+  if (!props.isShop) {
+    const slug = route.params.slug as string
+    if (slug) {
+      try {
+        categoryData.value = await fetchCategoryBySlug(slug)
+      } catch {
+        categoryData.value = null
+      }
     }
   }
 

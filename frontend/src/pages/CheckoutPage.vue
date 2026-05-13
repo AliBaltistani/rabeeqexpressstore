@@ -1,33 +1,33 @@
-﻿<template>
+<template>
   <div class="checkout-page">
     <!-- ====== ORDER HEADER ====== -->
     <div class="checkout-header">
       <div class="checkout-header__inner container">
         <div class="checkout-header__left">
           <div class="checkout-header__logo">
-            <img src="https://cdn.salla.sa/RvPxw/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png" alt="Eseven Store" class="checkout-header__logo-img" />
-            <span class="checkout-header__logo-label">Eseven Store</span>
+            <img :src="settings.storeSettings.logo || 'https://cdn.salla.sa/RvPxw/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png'" :alt="settings.storeSettings.storeName" class="checkout-header__logo-img" />
+            <span class="checkout-header__logo-label">{{ settings.storeSettings.storeName }}</span>
           </div>
           <div class="checkout-header__thumbs">
-            <img v-for="item in cart.items" :key="item.id" :src="item.image" :alt="item.name" class="checkout-header__thumb" />
+            <img v-for="item in cart.items" :key="item.id" :src="item.image || ''" :alt="item.productName" class="checkout-header__thumb" />
           </div>
         </div>
         <div class="checkout-header__right">
-          <div class="checkout-header__title">Total Order</div>
-          <div class="checkout-header__total">{{ cart.total }} <span class="checkout-header__currency">ر.س</span></div>
-          <button class="checkout-header__coupon-btn" @click="showCoupon = !showCoupon">Use Coupon?</button>
+          <div class="checkout-header__title">{{ $t('checkout.totalOrder') }}</div>
+          <div class="checkout-header__total">{{ cart.total?.formatted || '' }}</div>
+          <button class="checkout-header__coupon-btn" @click="showCoupon = !showCoupon">{{ $t('checkout.useCoupon') }}</button>
         </div>
       </div>
       <!-- Coupon Dropdown -->
       <div v-if="showCoupon" class="checkout-coupon container">
         <div class="checkout-coupon__row">
-          <input type="text" v-model="couponCode" placeholder="Enter coupon code" class="checkout-coupon__input" />
-          <button class="checkout-coupon__apply" @click="applyCoupon">Apply</button>
+          <input type="text" v-model="couponCode" :placeholder="$t('checkout.' + 'Enter coupon code')" class="checkout-coupon__input" />
+          <button class="checkout-coupon__apply" @click="applyCoupon">{{ $t('checkout.apply') }}</button>
         </div>
       </div>
       <!-- Order Details toggle -->
       <div class="checkout-header__details-toggle container">
-        <button class="checkout-details-btn" @click="showOrderDetails = !showOrderDetails">Order Details</button>
+        <button class="checkout-details-btn" @click="showOrderDetails = !showOrderDetails">{{ $t('checkout.orderDetails') }}</button>
       </div>
     </div>
 
@@ -41,21 +41,21 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
           <div class="checkout-step__title-wrap">
-            <h2 class="checkout-step__title" v-if="currentStep === 1 && !isGuest">Login / Register</h2>
-            <h2 class="checkout-step__title" v-else-if="currentStep === 1 && isGuest">Welcome, Dear Guest</h2>
-            <h2 class="checkout-step__title" v-else>Welcome, {{ guestForm.firstName || 'Tes' }} {{ guestForm.lastName || 'Ss' }}!</h2>
-            <p class="checkout-step__subtitle" v-if="currentStep === 1 && !isGuest">Log In Or Create A New Account To Complete Your Order.</p>
-            <p class="checkout-step__subtitle" v-else-if="currentStep === 1 && isGuest">Please Add Your Contact Information</p>
-            <p class="checkout-step__subtitle" v-else>{{ guestForm.phone || '+923488092160' }}</p>
+            <h2 class="checkout-step__title" v-if="currentStep === 1 && !isGuest">{{ $t('checkout.loginRegister') }}</h2>
+            <h2 class="checkout-step__title" v-else-if="currentStep === 1 && isGuest">{{ $t('checkout.welcomeGuest') }}</h2>
+            <h2 class="checkout-step__title" v-else>{{ $t('checkout.welcomeGuest') }} {{ guestForm.firstName }} {{ guestForm.lastName }}!</h2>
+            <p class="checkout-step__subtitle" v-if="currentStep === 1 && !isGuest">{{ $t('checkout.loginSubtitle') }}</p>
+            <p class="checkout-step__subtitle" v-else-if="currentStep === 1 && isGuest">{{ $t('checkout.guestSubtitle') }}</p>
+            <p class="checkout-step__subtitle" v-else>{{ guestForm.phone }}</p>
           </div>
-          <button v-if="currentStep === 1 && !isGuest" class="checkout-step__side-btn" @click="isGuest = true">Purchase as guest ›</button>
+          <button v-if="currentStep === 1 && !isGuest" class="checkout-step__side-btn" @click="isGuest = true">{{ $t('checkout.purchaseAsGuest') }}</button>
         </div>
 
         <!-- Login form -->
         <div v-if="currentStep === 1 && !isGuest" class="checkout-step__content">
-          <label class="checkout-label">Email Address</label>
-          <input type="email" v-model="loginEmail" placeholder="your@email.com" class="checkout-input" />
-          <button class="checkout-btn" @click="submitLogin">Enter</button>
+          <label class="checkout-label">{{ $t('checkout.emailAddress') }}</label>
+          <input type="email" v-model="loginEmail" :placeholder="$t('checkout.emailAddress')" class="checkout-input" />
+          <button class="checkout-btn" @click="submitLogin">{{ $t('checkout.enter') }}</button>
         </div>
 
         <!-- Guest form -->
@@ -63,15 +63,15 @@
           <div class="checkout-form-grid">
             <div class="checkout-field">
               <label class="checkout-label">First Name <span class="req">*</span></label>
-              <input type="text" v-model="guestForm.firstName" placeholder="Enter your first name" class="checkout-input" />
+              <input type="text" v-model="guestForm.firstName" :placeholder="$t('checkout.firstName')" class="checkout-input" />
             </div>
             <div class="checkout-field">
               <label class="checkout-label">Last Name <span class="req">*</span></label>
-              <input type="text" v-model="guestForm.lastName" placeholder="Enter your last name" class="checkout-input" />
+              <input type="text" v-model="guestForm.lastName" :placeholder="$t('checkout.lastName')" class="checkout-input" />
             </div>
             <div class="checkout-field">
               <label class="checkout-label">Email <span class="req">*</span></label>
-              <input type="email" v-model="guestForm.email" placeholder="example@mail.com" class="checkout-input" />
+              <input type="email" v-model="guestForm.email" :placeholder="$t('checkout.email')" class="checkout-input" />
             </div>
             <div class="checkout-field">
               <label class="checkout-label">Phone Number <span class="req">*</span></label>
@@ -84,7 +84,7 @@
               </div>
             </div>
           </div>
-          <button class="checkout-btn" @click="submitGuest">Continue As Guest</button>
+          <button class="checkout-btn" @click="submitGuest">{{ $t('checkout.continueAsGuest') }}</button>
           <p class="checkout-alt-text">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
             Already have an account?
@@ -101,10 +101,10 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 0 0-16 0c0 3 2.7 7 8 11.7z"/></svg>
           </div>
           <div class="checkout-step__title-wrap">
-            <h2 class="checkout-step__title">Shipping Address</h2>
-            <p class="checkout-step__subtitle" v-if="currentStep < 2">Ensure The Delivery Address Is Accurate For Timely Delivery.</p>
+            <h2 class="checkout-step__title">{{ $t('checkout.shippingAddress') }}</h2>
+            <p class="checkout-step__subtitle" v-if="currentStep < 2">{{ $t('checkout.ensureAddress') }}</p>
             <p class="checkout-step__subtitle" v-else-if="currentStep > 2">- {{ addressForm.country }} - {{ addressForm.city }} - {{ addressForm.street }}</p>
-            <p class="checkout-step__subtitle" v-else>Ensure The Delivery Address Is Accurate For Timely Delivery.</p>
+            <p class="checkout-step__subtitle" v-else>{{ $t('checkout.ensureAddress') }}</p>
           </div>
           <button v-if="currentStep > 2" class="checkout-edit-btn" @click="currentStep = 2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -151,20 +151,20 @@
             </div>
             <div class="checkout-field">
               <label class="checkout-label">Postal Code <span class="req">*</span></label>
-              <input type="text" v-model="addressForm.postalCode" placeholder="Postal Code" class="checkout-input" />
+              <input type="text" v-model="addressForm.postalCode" :placeholder="$t('checkout.' + 'Postal Code')" class="checkout-input" />
             </div>
             <div class="checkout-field">
-              <label class="checkout-label">Building Number (Optional)</label>
+              <label class="checkout-label">{{ $t('checkout.buildingNo') }}</label>
               <input type="text" v-model="addressForm.buildingNo" placeholder="286" class="checkout-input" />
             </div>
             <div class="checkout-field">
-              <label class="checkout-label">Building Description (Optional)</label>
+              <label class="checkout-label">{{ $t('checkout.buildingDesc') }}</label>
               <input type="text" v-model="addressForm.buildingDesc" placeholder="Building Description" class="checkout-input" />
             </div>
           </div>
           <label class="checkout-checkbox">
             <input type="checkbox" v-model="deliverToOther" />
-            <span>Deliver order to someone else?</span>
+            <span>{{ $t('checkout.deliverToOther') }}</span>
           </label>
           <!-- Recipient fields -->
           <div v-if="deliverToOther" class="checkout-recipient">
@@ -190,10 +190,10 @@
             </div>
             <label class="checkout-checkbox">
               <input type="checkbox" v-model="smsUpdates" />
-              <span>Get order updates via SMS</span>
+              <span>{{ $t('checkout.smsUpdates') }}</span>
             </label>
           </div>
-          <button class="checkout-btn" @click="submitAddress">Save</button>
+          <button class="checkout-btn" @click="submitAddress">{{ $t('checkout.save') }}</button>
         </div>
       </section>
 
@@ -206,8 +206,8 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           </div>
           <div class="checkout-step__title-wrap">
-            <h2 class="checkout-step__title">Shipping Company</h2>
-            <p class="checkout-step__subtitle" v-if="currentStep <= 3">Select A Shipping Option That Works Best For You.</p>
+            <h2 class="checkout-step__title">{{ $t('checkout.shippingCompany') }}</h2>
+            <p class="checkout-step__subtitle" v-if="currentStep <= 3">{{ $t('checkout.selectShipping') }}</p>
             <p class="checkout-step__subtitle" v-else>{{ selectedShipping?.name }}, {{ selectedShipping?.time }}</p>
           </div>
           <button v-if="currentStep > 3" class="checkout-edit-btn" @click="currentStep = 3">
@@ -228,12 +228,12 @@
               <img :src="opt.logo" :alt="opt.name" class="checkout-shipping-logo" />
               <div class="checkout-shipping-info">
                 <span class="checkout-shipping-name">{{ opt.name }}</span>
-                <span class="checkout-shipping-time">{{ opt.time }}</span>
+                <span class="checkout-shipping-time" v-if="opt.time">{{ opt.time }}</span>
               </div>
-              <span class="checkout-shipping-price">{{ opt.price }} ر.س</span>
+              <span class="checkout-shipping-price">{{ typeof opt.price === 'object' ? (opt.price as any).formatted : opt.price }}</span>
             </label>
           </div>
-          <button class="checkout-btn" @click="submitShipping">Confirm Shipping Company</button>
+          <button class="checkout-btn" @click="submitShipping">{{ $t('checkout.confirmShipping') }}</button>
         </div>
       </section>
 
@@ -246,7 +246,7 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
           </div>
           <div class="checkout-step__title-wrap">
-            <h2 class="checkout-step__title">Additional Information And Preferences</h2>
+            <h2 class="checkout-step__title">{{ $t('checkout.additionalInfo') }}</h2>
           </div>
           <button v-if="currentStep > 4" class="checkout-edit-btn" @click="currentStep = 4">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -265,7 +265,7 @@
               <input type="tel" v-model="additionalPhone" placeholder="0301 2345678" class="checkout-input checkout-input--phone" />
             </div>
           </div>
-          <button class="checkout-btn" @click="submitAdditional">Confirm Information</button>
+          <button class="checkout-btn" @click="submitAdditional">{{ $t('checkout.confirmInfo') }}</button>
         </div>
       </section>
 
@@ -278,8 +278,8 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
           </div>
           <div class="checkout-step__title-wrap">
-            <h2 class="checkout-step__title">Payment</h2>
-            <p class="checkout-step__subtitle">Mada</p>
+            <h2 class="checkout-step__title">{{ $t('checkout.payment') }}</h2>
+            <p class="checkout-step__subtitle">{{ selectedPaymentName }}</p>
           </div>
         </div>
 
@@ -287,7 +287,7 @@
           <!-- Payment Methods -->
           <div class="checkout-payment-methods">
             <label
-              v-for="pm in paymentMethods"
+              v-for="pm in settings.storeSettings.paymentMethods"
               :key="pm.id"
               class="checkout-payment-card"
               :class="{ selected: selectedPayment === pm.id }"
@@ -312,22 +312,22 @@
               </div>
               <div class="checkout-field">
                 <label class="checkout-label">Card Holder Name <span class="req">*</span></label>
-                <input type="text" v-model="cardName" placeholder="Enter Name" class="checkout-input" />
+                <input type="text" v-model="cardName" :placeholder="$t('checkout.cardHolderName')" class="checkout-input" />
               </div>
             </div>
             <label class="checkout-checkbox">
               <input type="checkbox" v-model="saveCard" checked />
-              <span>Save my card details for future orders</span>
+              <span>{{ $t('checkout.saveCard') }}</span>
             </label>
           </div>
 
           <!-- T&C -->
           <label class="checkout-checkbox checkout-checkbox--terms">
             <input type="checkbox" v-model="agreeTerms" />
-            <span>By making this payment, I acknowledge that I have read and agree to the terms and conditions of the site and acknowledge that I am 18 years old or over.</span>
+            <span>{{ $t('checkout.agreeTerms') }}</span>
           </label>
 
-          <button class="checkout-btn" @click="confirmPayment" :disabled="!agreeTerms">Confirm Payment</button>
+          <button class="checkout-btn" @click="confirmPayment" :disabled="!agreeTerms">{{ $t('checkout.confirmPayment') }}</button>
         </div>
       </section>
     </div>
@@ -335,12 +335,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useSettingsStore } from '@/stores/settingsStore'
+import { fetchShippingRates, placeOrder } from '@/api/services'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const cart = useCartStore()
+const auth = useAuthStore()
+const settings = useSettingsStore()
+const { t } = useI18n()
 
 // ─── State ───
 const currentStep = ref(1)
@@ -389,14 +396,11 @@ const selectedShipping = computed(() => shippingOptions.find(s => s.id === selec
 const additionalPhone = ref('')
 
 // Step 5: Payment
-const selectedPayment = ref('mada')
-const paymentMethods = [
-  { id: 'mada', name: 'Mada', logo: 'https://cdn.salla.sa/pQnGr/Znhz2GnX9rGvBEHSYYPfPXm0jXBfNsqVdlYCOO40.png' },
-  { id: 'visa', name: 'Visa', logo: 'https://cdn.salla.sa/pQnGr/PJTQBJ4gMaJnbaNd9hAXDTMu1gPWqnlG6t9MQRuX.png' },
-  { id: 'stc', name: 'STC Pay', logo: 'https://cdn.salla.sa/pQnGr/FD0sMPBgzsMV2He3rlVNJr46gkVfrH7aNefqzeDT.png' },
-  { id: 'tamara', name: 'Tamara', logo: 'https://cdn.salla.sa/pQnGr/HKJolI8ZGxTIpOVnqhXpHbRWEfPSnHIQTYd9t5XP.png' },
-  { id: 'tabby', name: 'Tabby', logo: 'https://cdn.salla.sa/pQnGr/v15gfaJKXfhsBxVgCJxcwAD4xWAEh2SUFHhbV6Ah.png' },
-]
+const selectedPayment = ref('stripe')
+const selectedPaymentName = computed(() => {
+  const pm = settings.storeSettings.paymentMethods?.find(p => p.id === selectedPayment.value)
+  return pm?.name || selectedPayment.value
+})
 const cardNumber = ref('')
 const cardName = ref('')
 const saveCard = ref(true)
@@ -412,6 +416,7 @@ function applyCoupon() {
 
 function submitLogin() {
   if (loginEmail.value.trim()) {
+    // In a real app, this might trigger a magic link or password prompt
     currentStep.value = 2
   }
 }
@@ -422,9 +427,22 @@ function submitGuest() {
   }
 }
 
-function submitAddress() {
+async function submitAddress() {
   if (addressForm.value.street || addressForm.value.city) {
-    currentStep.value = 3
+    try {
+      const rates = await fetchShippingRates({
+        country: addressForm.value.country,
+        state: addressForm.value.region,
+      })
+      if (rates && rates.length) {
+        shippingOptions.splice(0, shippingOptions.length, ...rates)
+        selectedShippingId.value = rates[0].id
+      }
+      currentStep.value = 3
+    } catch (e) {
+      console.error('Failed to fetch shipping rates', e)
+      currentStep.value = 3 // fallback to default
+    }
   }
 }
 
@@ -438,11 +456,48 @@ function submitAdditional() {
   currentStep.value = 5
 }
 
-function confirmPayment() {
+async function confirmPayment() {
   if (agreeTerms.value) {
-    router.push('/checkout/success/ORD-' + Date.now())
+    try {
+      const payload = {
+        shippingAddress: {
+          firstName: isGuest.value ? guestForm.value.firstName : (auth.user?.name?.split(' ')[0] || 'User'),
+          lastName: isGuest.value ? guestForm.value.lastName : (auth.user?.name?.split(' ')[1] || 'Name'),
+          phone: isGuest.value ? guestForm.value.phone : (auth.user?.phone || additionalPhone.value),
+          addressLine1: addressForm.value.street,
+          city: addressForm.value.city,
+          country: addressForm.value.country,
+          state: addressForm.value.region,
+          postalCode: addressForm.value.postalCode
+        },
+        paymentMethod: selectedPayment.value,
+        shippingRateId: selectedShippingId.value,
+        couponCode: couponCode.value || cart.couponCode || undefined,
+        notes: '',
+        currency: settings.currentCurrencyCode,
+        guestEmail: isGuest.value ? guestForm.value.email : undefined,
+        guestName: isGuest.value ? `${guestForm.value.firstName} ${guestForm.value.lastName}` : undefined,
+        guestPhone: isGuest.value ? guestForm.value.phone : undefined
+      }
+      const response = await placeOrder(payload)
+      cart.clearCart() // locally
+      router.push('/checkout/success/' + response.orderNumber)
+    } catch (e: any) {
+      console.error(e)
+      alert(t('common.error'))
+    }
   }
 }
+
+onMounted(() => {
+  if (auth.isAuthenticated) {
+    isGuest.value = false
+    currentStep.value = 2 // skip login if auth
+  }
+  if (settings.storeSettings.paymentMethods?.length) {
+    selectedPayment.value = settings.storeSettings.paymentMethods[0].id
+  }
+})
 </script>
 
 <style scoped>

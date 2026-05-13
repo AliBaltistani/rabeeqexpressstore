@@ -31,7 +31,7 @@
               :class="{ active: selectedImage === img }"
               @click="selectedImage = img"
             >
-              <img :src="img" :alt="`${product.name} view ${i + 1}`" />
+              <img :src="img" :alt="`${product.name} view ${Number(i) + 1}`" />
             </button>
           </div>
         </div>
@@ -98,33 +98,33 @@
           </div>
 
           <!-- SKU & Weight -->
-          <div class="pdp-info__meta-row">
+          <div class="pdp-info__meta-row" v-if="product.sku">
             <div class="pdp-info__meta">
               <span class="pdp-info__meta-icon">☰</span>
-              <span class="pdp-info__meta-label">Sku</span>
+              <span class="pdp-info__meta-label">{{ $t('product.sku') }}</span>
               <span class="pdp-info__meta-value">{{ product.sku }}</span>
             </div>
           </div>
-          <div class="pdp-info__meta-row">
+          <div class="pdp-info__meta-row" v-if="product.weight">
             <div class="pdp-info__meta">
               <span class="pdp-info__meta-icon">⚖</span>
-              <span class="pdp-info__meta-label">Weight</span>
+              <span class="pdp-info__meta-label">{{ $t('product.weight') }}</span>
               <span class="pdp-info__meta-value">{{ product.weight }}</span>
             </div>
           </div>
 
           <!-- Price (repeated for sticky area) -->
           <div class="pdp-info__price-section">
-            <span class="pdp-info__price-label">Price</span>
+            <span class="pdp-info__price-label">{{ $t('product.price') }}</span>
             <div class="pdp-info__price-values">
-              <span class="pdp-info__price pdp-info__price--red">{{ product.salePrice }} SAR</span>
-              <span v-if="product.oldPrice" class="pdp-info__old-price">{{ product.oldPrice }} SAR</span>
+              <span class="pdp-info__price pdp-info__price--red">{{ product.priceFormatted || product.salePrice }}</span>
+              <span v-if="product.oldPrice" class="pdp-info__old-price">{{ product.oldPriceFormatted || product.oldPrice }}</span>
             </div>
           </div>
 
           <!-- Quantity -->
           <div class="pdp-info__quantity-row">
-            <span class="pdp-info__quantity-label">Quantity</span>
+            <span class="pdp-info__quantity-label">{{ $t('product.quantity') }}</span>
             <div class="pdp-info__quantity-control">
               <button class="pdp-qty-btn" @click="incrementQty" aria-label="Increase">+</button>
               <input type="number" v-model.number="quantity" min="1" class="pdp-qty-input" />
@@ -136,11 +136,11 @@
           <div class="pdp-info__buttons">
             <button class="pdp-btn pdp-btn--cart" @click="addToCart">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-              Add to cart
+              {{ $t('product.addToCart') }}
             </button>
             <button class="pdp-btn pdp-btn--buy" @click="buyNow">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-              BUY NOW
+              {{ $t('product.buyNow') }}
             </button>
           </div>
         </div>
@@ -161,20 +161,38 @@
         <!-- Product Details -->
         <div v-show="activeTab === 'details'" class="pdp-tab-content">
           <h3 class="pdp-details__title">{{ product.name }}</h3>
-          <p class="pdp-details__tagline"><strong>Effortless Style. Unmatched Comfort. Everyday Performance.</strong></p>
           <div class="pdp-details__description" v-html="product.description"></div>
         </div>
 
         <!-- Product Rating -->
         <div v-show="activeTab === 'rating'" class="pdp-tab-content">
-          <p class="pdp-details__empty">No reviews yet.</p>
+          <div v-if="reviews.length > 0" class="pdp-reviews-list">
+            <div v-for="review in reviews" :key="review.id || review.createdAt" class="pdp-review-item">
+              <div class="pdp-review-header">
+                <span class="pdp-review-author">{{ review.customerName }}</span>
+                <span class="pdp-review-date">{{ new Date(review.createdAt).toLocaleDateString() }}</span>
+              </div>
+              <div class="pdp-review-stars">
+                <svg v-for="s in 5" :key="s" width="16" height="16" viewBox="0 0 24 24" :fill="s <= review.rating ? '#fbbf24' : 'none'" :stroke="s <= review.rating ? '#fbbf24' : '#d1d5db'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <h4 v-if="review.title" class="pdp-review-title">{{ review.title }}</h4>
+              <p class="pdp-review-body">{{ review.body }}</p>
+              <div v-if="review.adminReply" class="pdp-review-reply">
+                <strong>Admin Reply:</strong> {{ review.adminReply }}
+              </div>
+            </div>
+            <button v-if="reviewsHasMore" class="pdp-btn pdp-btn--load-more" @click="loadMoreReviews">
+              {{ $t('category.loadMore') }}
+            </button>
+          </div>
+          <p v-else class="pdp-details__empty">{{ $t('product.noReviews') }}</p>
         </div>
       </div>
 
       <!-- ======== RELATED PRODUCTS ======== -->
-      <div class="pdp-related">
+      <div class="pdp-related" v-if="relatedProducts.length > 0">
         <div class="pdp-related__header">
-          <h2 class="pdp-related__title">It is usually purchased with</h2>
+          <h2 class="pdp-related__title">{{ $t('product.relatedProducts') }}</h2>
           <div class="pdp-related__arrows">
             <button class="pdp-arrow-btn" @click="scrollRelated(-1)" aria-label="Previous"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
             <button class="pdp-arrow-btn" @click="scrollRelated(1)" aria-label="Next"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
@@ -195,7 +213,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
-import { fetchProductBySlug, fetchProducts } from '@/api/services'
+import { fetchProductBySlug, fetchProducts, fetchProductReviews } from '@/api/services'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import type { ProductDetail } from '@/types'
@@ -260,6 +278,25 @@ function scrollRelated(dir: number) {
 }
 const relatedProducts = ref<any[]>([])
 
+// ─── Reviews ───
+const reviews = ref<any[]>([])
+const reviewsPage = ref(1)
+const reviewsHasMore = ref(false)
+
+async function loadMoreReviews() {
+  if (!product.value.slug || !reviewsHasMore.value) return
+  try {
+    const res = await fetchProductReviews(product.value.slug, reviewsPage.value + 1)
+    if (res.data && res.meta) {
+      reviews.value.push(...res.data)
+      reviewsPage.value = res.meta.page
+      reviewsHasMore.value = res.meta.page < res.meta.lastPage
+    }
+  } catch (error) {
+    console.error('Failed to fetch more reviews:', error)
+  }
+}
+
 // ─── Fetch Product from API ───
 async function loadProduct(slug: string) {
   isLoading.value = true
@@ -313,6 +350,16 @@ async function loadProduct(slug: string) {
       } catch {
         relatedProducts.value = []
       }
+    }
+
+    // Fetch initial reviews
+    try {
+      reviewsPage.value = 1
+      const res = await fetchProductReviews(slug, 1)
+      reviews.value = res.data || []
+      reviewsHasMore.value = res.meta ? res.meta.page < res.meta.lastPage : false
+    } catch (e) {
+      reviews.value = []
     }
   } catch (error) {
     console.error('Failed to load product:', error)
@@ -819,6 +866,68 @@ watch(() => route.params.slug, (newSlug) => {
 .pdp-details__empty {
   color: #9ca3af;
   font-size: 0.875rem;
+}
+
+/* Reviews List */
+.pdp-reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.pdp-review-item {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1.5rem;
+}
+.pdp-review-item:last-child {
+  border-bottom: none;
+}
+.pdp-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.pdp-review-author {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--store-text-primary, #111827);
+}
+.pdp-review-date {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+.pdp-review-stars {
+  display: flex;
+  gap: 0.125rem;
+  margin-bottom: 0.5rem;
+}
+.pdp-review-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  color: var(--store-text-primary, #111827);
+}
+.pdp-review-body {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin: 0;
+  line-height: 1.5;
+}
+.pdp-review-reply {
+  margin-top: 1rem;
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  color: #374151;
+  border-left: 3px solid var(--color-primary, #858585);
+}
+.pdp-btn--load-more {
+  background: transparent;
+  border: 1px solid var(--color-primary, #858585);
+  color: var(--color-primary, #858585);
+  margin: 1rem auto 0;
+  width: max-content;
 }
 
 /* ─── Related Products ─── */

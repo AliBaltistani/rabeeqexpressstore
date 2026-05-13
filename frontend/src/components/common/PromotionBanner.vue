@@ -1,6 +1,6 @@
 <template>
   <div
-    v-if="!isHidden"
+    v-if="!isHidden && text"
     class="promotion-banner"
     :style="{ backgroundColor: bgColor }"
   >
@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useSettingsStore } from '@/stores/settingsStore'
 
 const settings = useSettingsStore()
@@ -35,8 +35,8 @@ const isHidden = ref(false)
 
 const bgColor = '#ff0000'
 const textColor = '#ffffff'
-const text = settings.storeSettings.announcementText
-const link = settings.storeSettings.announcementLink || '#'
+const text = computed(() => settings.storeSettings.announcementText)
+const link = computed(() => settings.storeSettings.announcementLink || '#')
 
 onMounted(() => {
   const stored = localStorage.getItem('promotionBanner')
