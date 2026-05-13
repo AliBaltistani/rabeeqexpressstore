@@ -8,14 +8,15 @@ const apiClient = axios.create({
   },
 })
 
-// Request interceptor — attach auth token & language
+// Request interceptor — attach auth token, language & currency
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   const lang = localStorage.getItem('language') || 'en'
-  config.params = { ...config.params, lang }
+  const currency = localStorage.getItem('currency') || 'SAR'
+  config.params = { ...config.params, lang, currency }
   return config
 })
 
@@ -25,7 +26,10 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token')
-      window.location.href = '/login'
+      // Don't redirect if already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -138,10 +139,27 @@ const router = createRouter({
   },
 })
 
-// Dynamic page titles
+// Dynamic page titles + auth guards
 router.beforeEach((to, _from, next) => {
   const title = to.meta.title as string
   if (title) document.title = title
+
+  // Auth guard
+  if (to.meta.requiresAuth) {
+    const auth = useAuthStore()
+    if (!auth.isAuthenticated) {
+      return next({ name: 'login', query: { redirect: to.fullPath } })
+    }
+  }
+
+  // Guest guard (prevent authenticated users from accessing login/register)
+  if (to.meta.guest) {
+    const auth = useAuthStore()
+    if (auth.isAuthenticated) {
+      return next({ name: 'account' })
+    }
+  }
+
   next()
 })
 

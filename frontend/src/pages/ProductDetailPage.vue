@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="pdp">
     <!-- Breadcrumb -->
     <nav class="pdp-breadcrumbs container">
@@ -191,48 +191,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
+import { fetchProductBySlug, fetchProducts } from '@/api/services'
+import { useCartStore } from '@/stores/cartStore'
+import { useWishlistStore } from '@/stores/wishlistStore'
+import type { ProductDetail } from '@/types'
 
 const route = useRoute()
+const router = useRouter()
+const { t } = useI18n()
+const cart = useCartStore()
+const wishlist = useWishlistStore()
 
-// ─── Product Data (hardcoded to match template) ───
-const product = ref({
-  id: 771440136,
-  name: 'On Cloudtilt Sneakers – White/Black',
-  slug: 'on-cloudtilt-sneakers-white-black',
-  salePrice: 540,
-  oldPrice: 620,
+// ─── Product Data (API-driven) ───
+const product = ref<any>({
+  id: 0,
+  name: '',
+  slug: '',
+  salePrice: 0,
+  oldPrice: null,
   currency: 'SAR',
-  sku: 'BD-103354',
-  weight: '0.5 KG',
-  soldCount: 553,
-  tags: ['On Running', 'On Cloudtilt', 'On Cloud', 'Unisex shoes', 'Trend Shoes'],
-  sizes: ['38', '39', '40', '41', '42', '43', '44', '45'],
-  images: [
-    'https://cdn.salla.sa/RvPxw/5a274588-7108-44b1-b1c1-16eefa73aa8e-1000x1000-S4IHULraG1RlmHuTgIZjVrny8iP5YxOSAXy6rDTU.png',
-    'https://cdn.salla.sa/RvPxw/45d5fda3-ff02-438b-8382-d29d533cfa03-1000x1000-EWXMSVTOevoiHdWowm1tRaVKgCBBGgAqclTgTrlw.png',
-    'https://cdn.salla.sa/RvPxw/4ddc8cc6-1494-4c14-a06f-5b9e436c65ef-500x500-S4IHULraG1RlmHuTgIZjVrny8iP5YxOSAXy6rDTU.png',
-  ],
-  description: `<p>Elevate your look and comfort with the <strong>On Cloudtilt White/Black Sneakers</strong>, a perfect blend of modern design and high-performance innovation. Featuring a sleek white and black colorway, this sneaker brings timeless style that transitions effortlessly from workouts to daily wear.</p>
-<ul>
-  <li><strong>Key Features:CloudTec® Cushioning Technology:</strong> Equipped with On's signature CloudTec® for superior shock absorption and soft landings, delivering all-day comfort and responsiveness in every step.</li>
-  <li><strong>Lightweight, Breathable Upper:</strong> Engineered from lightweight and breathable materials, the upper promotes optimal airflow to keep your feet cool and dry throughout the day.</li>
-  <li><strong>Timeless Two-Tone Design:</strong> The classic white and black palette adds a refined, versatile touch—perfect for casual outfits, gym sessions, or active commutes.</li>
-  <li><strong>Durable Rubber Outsole:</strong> Designed for grip and stability across various surfaces, the sturdy outsole ensures confident movement, whether you're walking, training, or on the go.</li>
-</ul>`,
+  sku: '',
+  weight: '',
+  soldCount: 0,
+  tags: [],
+  sizes: [],
+  images: [],
+  description: '',
 })
+const isLoading = ref(true)
 
-const selectedImage = ref(product.value.images[0])
+const selectedImage = ref('')
 const selectedSize = ref('')
+const selectedVariantId = ref<number | null>(null)
 const quantity = ref(1)
 const activeTab = ref('details')
 
-const tabs = [
-  { key: 'details', label: 'Product Details' },
-  { key: 'rating', label: 'Product Rating' },
-]
+const tabs = computed(() => [
+  { key: 'details', label: t('product.productDetails') },
+  { key: 'rating', label: t('product.productRating') },
+])
 
 function incrementQty() {
   quantity.value++
@@ -241,13 +242,14 @@ function decrementQty() {
   if (quantity.value > 1) quantity.value--
 }
 function addToCart() {
-  console.log('Add to cart:', product.value.id, 'size:', selectedSize.value, 'qty:', quantity.value)
+  cart.addItem(product.value.id, quantity.value, selectedVariantId.value)
 }
 function buyNow() {
-  console.log('Buy now:', product.value.id)
+  cart.addItem(product.value.id, quantity.value, selectedVariantId.value)
+  router.push('/checkout')
 }
 function toggleWishlist() {
-  console.log('Toggle wishlist:', product.value.id)
+  wishlist.toggleItem(product.value.id)
 }
 
 // ─── Related Products ───
@@ -256,14 +258,83 @@ function scrollRelated(dir: number) {
   if (!relatedTrackRef.value) return
   relatedTrackRef.value.scrollBy({ left: dir * 300, behavior: 'smooth' })
 }
+const relatedProducts = ref<any[]>([])
 
-const relatedProducts = [
-  { id: 101, slug: 'on-cloud-5-olive', name: 'حذاء كلاود بوقا اون رانينج بنفسجي فاتح', subtitle: 'شوزات للجنسين', image: 'https://cdn.salla.sa/RvPxw/5a274588-7108-44b1-b1c1-16eefa73aa8e-1000x1000-S4IHULraG1RlmHuTgIZjVrny8iP5YxOSAXy6rDTU.png', price: 488, currency: 'SAR' },
-  { id: 102, slug: 'on-running-cloud-coast', name: 'On Running Cloud Coast Shoes in White and Grey', subtitle: 'On Cloud Unisex', image: 'https://cdn.salla.sa/RvPxw/45d5fda3-ff02-438b-8382-d29d533cfa03-1000x1000-EWXMSVTOevoiHdWowm1tRaVKgCBBGgAqclTgTrlw.png', price: 480, currency: 'SAR' },
-  { id: 103, slug: 'on-cloud-olive-green', name: 'حذاء كلاود اون رانينج اوليفي اخضر', subtitle: 'شوزات نسائي - شالي', image: 'https://cdn.salla.sa/RvPxw/4ddc8cc6-1494-4c14-a06f-5b9e436c65ef-500x500-S4IHULraG1RlmHuTgIZjVrny8iP5YxOSAXy6rDTU.png', price: 488, currency: 'SAR' },
-  { id: 104, slug: 'on-cloud-white', name: 'On Running - حذاء اون رانينج كلاود - حريه ابيض', subtitle: 'شوزات للجنسين', image: 'https://cdn.salla.sa/RvPxw/5a274588-7108-44b1-b1c1-16eefa73aa8e-1000x1000-S4IHULraG1RlmHuTgIZjVrny8iP5YxOSAXy6rDTU.png', price: 540, currency: 'SAR' },
-  { id: 105, slug: 'on-cloud-pink', name: 'اون كلاود وايت - حريه ابيض وردي', subtitle: 'شوزات نسائي', image: 'https://cdn.salla.sa/RvPxw/45d5fda3-ff02-438b-8382-d29d533cfa03-1000x1000-EWXMSVTOevoiHdWowm1tRaVKgCBBGgAqclTgTrlw.png', price: 488, currency: 'SAR' },
-]
+// ─── Fetch Product from API ───
+async function loadProduct(slug: string) {
+  isLoading.value = true
+  try {
+    const data = await fetchProductBySlug(slug)
+
+    // Map API response to component shape
+    const images = (data.images || []).map((img: any) => img.url).filter(Boolean)
+    const variants = data.variants || []
+    const sizes = variants.map((v: any) => v.name || v.sku).filter(Boolean)
+
+    product.value = {
+      id: data.id,
+      name: data.name,
+      slug: data.slug,
+      salePrice: data.flashSalePrice?.raw ?? data.price?.raw ?? 0,
+      oldPrice: data.comparePrice?.raw || null,
+      currency: data.currency || 'SAR',
+      sku: data.sku || '',
+      weight: data.weight || '',
+      soldCount: data.reviewCount || 0,
+      tags: (data.tags || []).map((t: any) => typeof t === 'string' ? t : t.name),
+      sizes,
+      images: images.length ? images : [data.primaryImage].filter(Boolean),
+      description: data.description || data.shortDescription || '',
+      priceFormatted: data.flashSalePrice?.formatted ?? data.price?.formatted ?? '',
+      oldPriceFormatted: data.comparePrice?.formatted || '',
+      inStock: data.inStock,
+      category: data.category,
+      brand: data.brand,
+    }
+
+    selectedImage.value = product.value.images[0] || ''
+
+    // Fetch related products from the same category
+    if (data.category?.slug) {
+      try {
+        const related = await fetchProducts({ category: data.category.slug, perPage: 6 })
+        relatedProducts.value = (related.data || [])
+          .filter((p: any) => p.id !== data.id)
+          .slice(0, 5)
+          .map((p: any) => ({
+            id: p.id,
+            slug: p.slug,
+            name: p.name,
+            subtitle: p.category?.name || '',
+            image: p.primaryImage || '',
+            price: p.flashSalePrice?.raw ?? p.price?.raw ?? 0,
+            currency: p.currency || 'SAR',
+          }))
+      } catch {
+        relatedProducts.value = []
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load product:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => {
+  const slug = route.params.slug as string
+  if (slug) loadProduct(slug)
+})
+
+// Re-fetch when route slug changes (for related product navigation)
+watch(() => route.params.slug, (newSlug) => {
+  if (newSlug && typeof newSlug === 'string') {
+    loadProduct(newSlug)
+    quantity.value = 1
+    selectedSize.value = ''
+    selectedVariantId.value = null
+  }
+})
 </script>
 
 <style scoped>

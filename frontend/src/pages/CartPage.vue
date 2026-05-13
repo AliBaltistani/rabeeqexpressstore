@@ -1,11 +1,11 @@
-﻿<template>
+<template>
   <div class="cart-page">
     <!-- Breadcrumb -->
     <nav class="container cart-breadcrumbs">
       <ol class="breadcrumb-list">
-        <li><router-link to="/">Home</router-link></li>
+        <li><router-link to="/">{{ $t('breadcrumb.home') }}</router-link></li>
         <li class="breadcrumb-sep"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M11.438 22.479l6.125-6.125-6.125-6.125 1.875-1.875 8 8-8 8z" fill="currentColor"/></svg></li>
-        <li class="breadcrumb-current">Shopping Cart</li>
+        <li class="breadcrumb-current">{{ $t('cart.shoppingCart') }}</li>
       </ol>
     </nav>
 
@@ -13,9 +13,9 @@
       <!-- Empty Cart -->
       <div v-if="cart.items.length === 0" class="cart-empty">
         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        <h2 class="cart-empty__title">Your cart is empty</h2>
-        <p class="cart-empty__text">Looks like you haven't added anything to your cart yet.</p>
-        <router-link to="/" class="cart-empty__btn">Continue Shopping</router-link>
+        <h2 class="cart-empty__title">{{ $t('cart.emptyTitle') }}</h2>
+        <p class="cart-empty__text">{{ $t('cart.emptyText') }}</p>
+        <router-link to="/" class="cart-empty__btn">{{ $t('cart.continueShopping') }}</router-link>
       </div>
 
       <!-- Cart Content -->
@@ -36,9 +36,9 @@
             <div class="cart-item__details">
               <div class="cart-item__top-row">
                 <div class="cart-item__info">
-                  <h3 class="cart-item__name">{{ item.name }}</h3>
-                  <p v-if="item.variant?.size" class="cart-item__variant">{{ item.variant.size }}</p>
-                  <p class="cart-item__unit-price">{{ formatPrice(item.price) }}</p>
+                  <h3 class="cart-item__name">{{ item.productName || item.name }}</h3>
+                  <p v-if="item.variantName" class="cart-item__variant">{{ item.variantName }}</p>
+                  <p class="cart-item__unit-price">{{ formatPrice(item.unitPrice) }}</p>
                 </div>
 
                 <!-- Quantity + Total + Remove -->
@@ -49,8 +49,8 @@
                     <button class="cart-qty-btn" @click="cart.updateQuantity(item.id, item.quantity - 1)" aria-label="Decrease">−</button>
                   </div>
                   <div class="cart-item__total">
-                    <span class="cart-item__total-label">Total:</span>
-                    <span class="cart-item__total-price">{{ formatPrice(item.price * item.quantity) }}</span>
+                    <span class="cart-item__total-label">{{ $t('cart.total') }}</span>
+                    <span class="cart-item__total-price">{{ formatPrice(item.lineTotal) }}</span>
                   </div>
                 </div>
 
@@ -75,16 +75,16 @@
 
         <!-- ====== RIGHT: ORDER SUMMARY ====== -->
         <aside class="cart-summary">
-          <h2 class="cart-summary__title">Order Summary</h2>
+          <h2 class="cart-summary__title">{{ $t('cart.orderSummary') }}</h2>
 
           <div class="cart-summary__row">
-            <span>Total Products cost</span>
+            <span>{{ $t('cart.totalProductsCost') }}</span>
             <span class="cart-summary__amount">{{ formatPrice(cart.subtotal) }}</span>
           </div>
 
           <!-- Coupon -->
           <div class="cart-summary__coupon">
-            <p class="cart-summary__coupon-label">Do you have a coupon code?</p>
+            <p class="cart-summary__coupon-label">{{ $t('cart.couponQuestion') }}</p>
             <div class="cart-summary__coupon-row">
               <input
                 type="text"
@@ -92,7 +92,7 @@
                 placeholder="Coupon code"
                 class="cart-summary__coupon-input"
               />
-              <button class="cart-summary__coupon-btn" @click="applyCoupon">Apply</button>
+              <button class="cart-summary__coupon-btn" @click="applyCoupon">{{ $t('cart.apply') }}</button>
             </div>
           </div>
 
@@ -101,19 +101,19 @@
 
           <!-- Final Total -->
           <div class="cart-summary__row cart-summary__row--total">
-            <span>Final total amount</span>
+            <span>{{ $t('cart.finalTotal') }}</span>
             <span class="cart-summary__total-amount">{{ formatPrice(cart.total) }}</span>
           </div>
 
           <!-- Submit Order -->
-          <router-link to="/checkout" class="cart-summary__submit-btn">Submit Order</router-link>
+          <router-link to="/checkout" class="cart-summary__submit-btn">{{ $t('cart.submitOrder') }}</router-link>
         </aside>
       </div>
 
       <!-- ====== RELATED PRODUCTS ====== -->
       <div class="cart-related" v-if="cart.items.length > 0">
         <div class="cart-related__header">
-          <h2 class="cart-related__title">هل تريد اضافة شي آخر؟</h2>
+          <h2 class="cart-related__title">{{ $t('cart.addMore') }}</h2>
           <div class="cart-related__arrows">
             <button class="cart-arrow-btn" @click="scrollRelated(-1)" aria-label="Previous">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -136,36 +136,28 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useCartStore } from '@/stores/cartStore'
+import { fetchFeaturedProducts } from '@/api/services'
 import ProductCard from '@/components/home/ProductCard.vue'
 
 const cart = useCartStore()
 const couponInput = ref('')
 
-function formatPrice(price: number): string {
-  return `${price.toFixed(0)} SAR`
+function formatPrice(price: any): string {
+  // Support API PriceValue objects
+  if (price && typeof price === 'object' && price.formatted) {
+    return price.formatted
+  }
+  return `${Number(price || 0).toFixed(0)} SAR`
 }
 
-function applyCoupon() {
+async function applyCoupon() {
   if (couponInput.value.trim()) {
-    cart.applyCoupon(couponInput.value.trim())
+    const result = await cart.applyCoupon(couponInput.value.trim())
+    if (!result.success) {
+      alert(result.message)
+    }
   }
 }
-
-// Seed demo cart items if empty
-onMounted(() => {
-  if (cart.items.length === 0) {
-    cart.addItem({
-      id: 1,
-      productId: 201,
-      name: 'Maiso men\'s bracelet (mooi, in diamond)',
-      image: 'https://cdn.salla.sa/RvPxw/086fec69-45c4-4455-ba6e-2feb05b55bd0-500x500-ewOakK3feXpxYkdichrfR1Y7Rz7kFrbGBHZslSVu.png',
-      price: 315,
-      comparePrice: 350,
-      variant: { size: 'حجم' },
-      maxQuantity: 10,
-    }, 1)
-  }
-})
 
 // ─── Related Products ───
 const relatedTrackRef = ref<HTMLElement | null>(null)
@@ -174,13 +166,24 @@ function scrollRelated(dir: number) {
   relatedTrackRef.value.scrollBy({ left: dir * 300, behavior: 'smooth' })
 }
 
-const relatedProducts = [
-  { id: 301, slug: 'nike-mind-001-multi', name: 'Nike Mind 001 shoes Multi Shoes Inline', subtitle: 'شوز رجالي RM سير', image: 'https://cdn.salla.sa/RvPxw/66ca527f-6b33-4789-b61c-26656df04678-500x500-YSQQShayDkZ31YdxOeWr88KMEWLuNC2TSvIEKAss.png', price: 480, oldPrice: 520, currency: 'SAR' },
-  { id: 302, slug: 'nike-mind-001-blue', name: 'Nike Mind 001 slides in w slides and navy blue', subtitle: 'شوز رجالي RM سير', image: 'https://cdn.salla.sa/RvPxw/086fec69-45c4-4455-ba6e-2feb05b55bd0-500x500-ewOakK3feXpxYkdichrfR1Y7Rz7kFrbGBHZslSVu.png', price: 480, currency: 'SAR' },
-  { id: 303, slug: 'maiso-bracelet-mooi', name: 'Maiso men\'s bracelet (mooi, in diamond)', subtitle: 'شوز رجالي ساعات', image: 'https://cdn.salla.sa/RvPxw/51ab9cf7-127d-4f55-b4ea-df153473c194-500x500-N6pv0aEMA0fWqJGzSnzIAURAMZOZMrPqLBjcyQDZ.png', price: 152, oldPrice: 399, currency: 'SAR' },
-  { id: 304, slug: 'new-mind-001-mink', name: 'New Mind 001 shoes Mink Shoes in luxe white', subtitle: 'شوز نسائي للجنسين', image: 'https://cdn.salla.sa/RvPxw/66ca527f-6b33-4789-b61c-26656df04678-500x500-YSQQShayDkZ31YdxOeWr88KMEWLuNC2TSvIEKAss.png', price: 480, oldPrice: 575, currency: 'SAR' },
-  { id: 305, slug: 'nike-mind-slides-pink', name: 'Nike Min slides in pink and white premium', subtitle: 'شوز نسائي', image: 'https://cdn.salla.sa/RvPxw/086fec69-45c4-4455-ba6e-2feb05b55bd0-500x500-ewOakK3feXpxYkdichrfR1Y7Rz7kFrbGBHZslSVu.png', price: 480, currency: 'SAR' },
-]
+const relatedProducts = ref<any[]>([])
+
+onMounted(async () => {
+  // Load related/suggested products
+  try {
+    const featured = await fetchFeaturedProducts(6)
+    relatedProducts.value = featured.map(p => ({
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      subtitle: p.category?.name || '',
+      image: p.primaryImage || '',
+      price: p.flashSalePrice?.raw ?? p.price?.raw ?? 0,
+      oldPrice: p.comparePrice?.raw || undefined,
+      currency: p.currency || 'SAR',
+    }))
+  } catch {}
+})
 </script>
 
 <style scoped>

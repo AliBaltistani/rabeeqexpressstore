@@ -20,7 +20,7 @@
           <!-- Loaded Content -->
           <div v-else class="modal-content">
             <!-- Language Section -->
-            <h3 class="modal-section-title">Language</h3>
+            <h3 class="modal-section-title">{{ $t('common.language') }}</h3>
             <div class="modal-options">
               <label
                 v-for="(lang, key) in languages"
@@ -43,7 +43,7 @@
             </div>
 
             <!-- Currency Section -->
-            <h3 class="modal-section-title" style="margin-top: 1.5rem;">Currency</h3>
+            <h3 class="modal-section-title" style="margin-top: 1.5rem;">{{ $t('common.currency') }}</h3>
             <div class="modal-options">
               <label
                 v-for="(currency, key) in currencies"
@@ -67,7 +67,7 @@
             </div>
 
             <!-- OK Button -->
-            <button class="modal-ok-btn" @click="apply">Ok</button>
+            <button class="modal-ok-btn" @click="apply">{{ $t('common.ok') }}</button>
           </div>
         </div>
       </div>
@@ -78,13 +78,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useLanguage } from '@/composables/useLanguage'
 
 const props = defineProps<{ isOpen: boolean }>()
 const emit = defineEmits(['close'])
 
 const settings = useSettingsStore()
-const languages = computed(() => settings.languages)
-const currencies = computed(() => settings.currencies)
+const { switchLanguage } = useLanguage()
+const languages = computed(() => settings.languageList)
+const currencies = computed(() => settings.currencyList)
 
 const selectedLanguage = ref(settings.currentLanguageCode)
 const selectedCurrency = ref(settings.currentCurrencyCode)
@@ -108,9 +110,11 @@ function close() {
 }
 
 function apply() {
-  settings.setLanguage(selectedLanguage.value)
+  switchLanguage(selectedLanguage.value)
   settings.setCurrency(selectedCurrency.value)
   close()
+  // Reload page to refetch all API data with new lang/currency
+  window.location.reload()
 }
 </script>
 

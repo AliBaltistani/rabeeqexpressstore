@@ -1,65 +1,120 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import {
+  fetchCart, addCartItem, updateCartItem, removeCartItem,
+  clearCartApi, applyCouponApi, removeCouponApi,
+} from '@/api/services'
+import type { CartItem, CartData, PriceValue } from '@/types'
 
-export interface CartItem {
-  id: number
-  productId: number
-  name: string
-  image: string
-  price: number
-  comparePrice?: number
-  quantity: number
-  variant?: { size?: string; color?: string }
-  maxQuantity: number
-}
+const emptyPrice: PriceValue = { raw: 0, formatted: '0.00 SAR' }
 
 export const useCartStore = defineStore('cart', () => {
+  // ─── State ───
   const items = ref<CartItem[]>([])
-  const coupon = ref<string | null>(null)
-  const discount = ref(0)
+  const couponCode = ref<string | null>(null)
+  const subtotalValue = ref<PriceValue>(emptyPrice)
+  const discountValue = ref<PriceValue>(emptyPrice)
+  const shippingValue = ref<PriceValue>(emptyPrice)
+  const totalValue = ref<PriceValue>(emptyPrice)
+  const currency = ref('SAR')
+  const isLoading = ref(false)
 
+  // ─── Getters ───
   const itemCount = computed(() => items.value.reduce((sum, i) => sum + i.quantity, 0))
-  const subtotal = computed(() => items.value.reduce((sum, i) => sum + i.price * i.quantity, 0))
-  const total = computed(() => Math.max(0, subtotal.value - discount.value))
+  const subtotal = computed(() => subtotalValue.value)
+  const discount = computed(() => discountValue.value)
+  const total = computed(() => totalValue.value)
 
-  function addItem(item: Omit<CartItem, 'quantity'>, qty = 1) {
-    const existing = items.value.find(
-      (i) => i.productId === item.productId && JSON.stringify(i.variant) === JSON.stringify(item.variant)
-    )
-    if (existing) {
-      existing.quantity = Math.min(existing.quantity + qty, existing.maxQuantity)
-    } else {
-      items.value.push({ ...item, quantity: qty })
+  // ─── Sync from API response ───
+  function syncFromApi(data: CartData) {
+    items.value = data.items || []
+    subtotalValue.value = data.subtotal || emptyPrice
+    discountValue.value = data.discountAmount || emptyPrice
+    shippingValue.value = data.shippingAmount || emptyPrice
+    totalValue.value = data.total || emptyPrice
+    couponCode.value = data.couponCode || null
+    currency.value = data.currency || 'SAR'
+  }
+
+  // ─── Actions ───
+  async function loadCart() {
+    isLoading.value = true
+    try {
+      const data = await fetchCart()
+      syncFromApi(data)
+    } catch (error) {
+      console.error('Failed to load cart:', error)
+    } finally {
+      isLoading.value = false
     }
   }
 
-  function removeItem(id: number) {
-    items.value = items.value.filter((i) => i.id !== id)
+  async function addItem(productId: number, quantity = 1, variantId?: number | null) {
+    isLoading.value = true
+    try {
+      const data = await addCartItem(productId, quantity, variantId)
+      syncFromApi(data)
+    } finally {
+      isLoading.value = false
+    }
   }
 
-  function updateQuantity(id: number, quantity: number) {
-    const item = items.value.find((i) => i.id === id)
-    if (item) item.quantity = Math.max(1, Math.min(quantity, item.maxQuantity))
+  async function updateQuantity(id: number, quantity: number) {
+    if (quantity < 1) return
+    try {
+      const data = await updateCartItem(id, quantity)
+      syncFromApi(data)
+    } catch (error) {
+      console.error('Failed to update quantity:', error)
+    }
   }
 
-  function clearCart() {
-    items.value = []
-    coupon.value = null
-    discount.value = 0
+  async function removeItem(id: number) {
+    try {
+      const data = await removeCartItem(id)
+      syncFromApi(data)
+    } catch (error) {
+      console.error('Failed to remove item:', error)
+    }
   }
 
-  function applyCoupon(code: string) {
-    coupon.value = code
-    // discount will be calculated from API response
+  async function clearCart() {
+    try {
+      const data = await clearCartApi()
+      syncFromApi(data)
+    } catch (error) {
+      items.value = []
+      subtotalValue.value = emptyPrice
+      discountValue.value = emptyPrice
+      totalValue.value = emptyPrice
+      couponCode.value = null
+    }
   }
 
-  function removeCoupon() {
-    coupon.value = null
-    discount.value = 0
+  async function applyCoupon(code: string) {
+    try {
+      const data = await applyCouponApi(code)
+      syncFromApi(data)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, message: error.response?.data?.message || 'Failed to apply coupon' }
+    }
+  }
+
+  async function removeCoupon() {
+    try {
+      const data = await removeCouponApi()
+      syncFromApi(data)
+    } catch (error) {
+      couponCode.value = null
+      discountValue.value = emptyPrice
+    }
   }
 
   return {
-    items, coupon, discount, itemCount, subtotal, total,
-    addItem, removeItem, updateQuantity, clearCart, applyCoupon, removeCoupon,
+    items, couponCode, subtotal, discount, total, itemCount,
+    currency, isLoading, shippingValue,
+    loadCart, addItem, updateQuantity, removeItem, clearCart,
+    applyCoupon, removeCoupon, syncFromApi,
   }
 })

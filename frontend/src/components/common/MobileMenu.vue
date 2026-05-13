@@ -32,7 +32,7 @@
               <!-- Offers -->
               <li class="mobile-menu__item">
                 <router-link to="/products?offers=true" class="mobile-menu__link mobile-menu__link--offers" @click="close">
-                  <span>{{ isRtl ? 'العروض' : 'Offers' }}</span>
+                  <span>{{ $t('nav.offers') }}</span>
                 </router-link>
               </li>
               <!-- Categories -->
@@ -56,7 +56,7 @@
               <!-- View all -->
               <li class="mobile-menu__item">
                 <router-link :to="'/category/' + currentParent?.slug" class="mobile-menu__link mobile-menu__link--viewall" @click="close">
-                  <span>{{ isRtl ? 'عرض الكل' : 'View all' }}</span>
+                  <span>{{ $t('common.viewAll') }}</span>
                 </router-link>
               </li>
               <li v-for="child in currentParent?.children" :key="child.slug" class="mobile-menu__item">
@@ -79,7 +79,7 @@
               <!-- View all -->
               <li class="mobile-menu__item">
                 <router-link :to="'/category/' + currentChild?.slug" class="mobile-menu__link mobile-menu__link--viewall" @click="close">
-                  <span>{{ isRtl ? 'عرض الكل' : 'View all' }}</span>
+                  <span>{{ $t('common.viewAll') }}</span>
                 </router-link>
               </li>
               <li v-for="sub in currentChild?.children" :key="sub.slug" class="mobile-menu__item">
@@ -109,7 +109,7 @@ const props = defineProps<{ isOpen: boolean; menuCategories: Category[] }>()
 const emit = defineEmits(['close'])
 
 const settings = useSettingsStore()
-const isRtl = computed(() => settings.isRtl)
+
 
 const currentLevel = ref(0)
 const currentParent = ref<Category | null>(null)

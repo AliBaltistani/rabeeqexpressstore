@@ -20,7 +20,7 @@
               <!-- Offers -->
               <li class="root-level">
                 <router-link to="/products?offers=true" class="nav-link offers-link" aria-label="Offers">
-                  <span>{{ isRtl ? 'العروض' : 'Offers' }}</span>
+                  <span>{{ $t('nav.offers') }}</span>
                 </router-link>
               </li>
 
@@ -115,14 +115,14 @@ import logoImage from '@/assets/images/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.
 
 const settings = useSettingsStore()
 const cart = useCartStore()
-const { desktopMenuCategories: menuCategories, menuCategories: mobileMenuCats } = useMenuCategories()
-const mobileCategories = mobileMenuCats.value
+const { menuItems } = useMenuCategories()
+const menuCategories = menuItems
+const mobileCategories = menuItems.value
 
-const isRtl = computed(() => settings.isRtl)
 const cartCount = computed(() => cart.itemCount)
 const isSticky = ref(false)
 const showMobileMenu = ref(false)
-const logoSrc = logoImage
+const logoSrc = settings.storeSettings.logo || logoImage
 const activeDropdown = ref<string | null>(null)
 const activeSubmenu = ref<string | null>(null)
 

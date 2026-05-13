@@ -1,10 +1,10 @@
-﻿<template>
+<template>
   <div class="category-page">
     <!-- Breadcrumb -->
     <nav class="breadcrumbs container">
       <ol class="breadcrumb-list">
         <li class="breadcrumb-item">
-          <router-link to="/">Home</router-link>
+          <router-link to="/">{{ $t('breadcrumb.home') }}</router-link>
         </li>
         <li class="breadcrumb-arrow">
           <svg width="16" height="16" viewBox="0 0 32 32"><path d="M11.438 22.479l6.125-6.125-6.125-6.125 1.875-1.875 8 8-8 8z" fill="currentColor"/></svg>
@@ -30,7 +30,7 @@
           <!-- Categories -->
           <div class="filter-widget">
             <h3 class="filter-widget__title" @click="toggleWidget('categories')">
-              <span>Categories</span>
+              <span>{{ $t('category.categories') }}</span>
               <span class="filter-widget__toggle" :class="{ active: widgetOpen.categories }"></span>
             </h3>
             <div class="filter-widget__content" v-show="widgetOpen.categories">
@@ -59,7 +59,7 @@
           <!-- Brands -->
           <div class="filter-widget">
             <h3 class="filter-widget__title" @click="toggleWidget('brands')">
-              <span>Brands</span>
+              <span>{{ $t('category.brands') }}</span>
               <span class="filter-widget__toggle" :class="{ active: widgetOpen.brands }"></span>
             </h3>
             <div class="filter-widget__content" v-show="widgetOpen.brands">
@@ -88,7 +88,7 @@
           <!-- Rating -->
           <div class="filter-widget">
             <h3 class="filter-widget__title" @click="toggleWidget('rating')">
-              <span>Rating</span>
+              <span>{{ $t('category.rating') }}</span>
               <span class="filter-widget__toggle" :class="{ active: widgetOpen.rating }"></span>
             </h3>
             <div class="filter-widget__content" v-show="widgetOpen.rating">
@@ -124,7 +124,7 @@
           <!-- Price -->
           <div class="filter-widget">
             <h3 class="filter-widget__title" @click="toggleWidget('price')">
-              <span>Price</span>
+              <span>{{ $t('category.priceFilter') }}</span>
               <span class="filter-widget__toggle" :class="{ active: widgetOpen.price }"></span>
             </h3>
             <div class="filter-widget__content" v-show="widgetOpen.price">
@@ -167,7 +167,7 @@
 
           <!-- Reset -->
           <div class="filters-footer">
-            <button class="filters-reset-btn" @click="resetFilters">Reset</button>
+            <button class="filters-reset-btn" @click="resetFilters">{{ $t('category.reset') }}</button>
           </div>
         </aside>
 
@@ -192,13 +192,13 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
               </button>
               <div class="sort-wrapper">
-                <label class="sort-label" for="product-filter">Sort By</label>
+                <label class="sort-label" for="product-filter">{{ $t('category.sortBy') }}</label>
                 <select id="product-filter" v-model="sortBy" class="sort-select">
-                  <option value="ourSuggest">Our Suggestions</option>
-                  <option value="bestSell">Best seller</option>
-                  <option value="topRated">Top rated</option>
-                  <option value="priceFromTopToLow">Price high to low</option>
-                  <option value="priceFromLowToTop">Price low to high</option>
+                  <option value="ourSuggest">{{ $t('category.ourSuggestions') }}</option>
+                  <option value="bestSell">{{ $t('category.bestSeller') }}</option>
+                  <option value="topRated">{{ $t('category.topRated') }}</option>
+                  <option value="priceFromTopToLow">{{ $t('category.priceHighToLow') }}</option>
+                  <option value="priceFromLowToTop">{{ $t('category.priceLowToHigh') }}</option>
                 </select>
               </div>
             </div>
@@ -214,9 +214,9 @@
           </div>
 
           <!-- Load More -->
-          <div class="load-more-wrapper" v-if="visibleCount < allProducts.length">
+          <div class="load-more-wrapper" v-if="hasMore">
             <button class="load-more-btn" @click="loadMore">
-              <span>Load more</span>
+              <span>{{ $t('category.loadMore') }}</span>
             </button>
           </div>
         </div>
@@ -224,20 +224,24 @@
     </div>
 
     <!-- Testimonials Section -->
-    <TestimonialsSlider title="Customers Reviews" :reviews="customerReviews" />
+    <TestimonialsSlider :title="$t('common.customersReviews')" :reviews="customerReviews" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ProductCard from '@/components/home/ProductCard.vue'
 import TestimonialsSlider from '@/components/home/TestimonialsSlider.vue'
+import { fetchProducts, fetchCategories, fetchBrands, fetchCategoryBySlug } from '@/api/services'
+import type { Product, Category, Brand } from '@/types'
 
 const route = useRoute()
 
-// ─── Category Title ───
+// ─── Category Title (from API or slug fallback) ───
+const categoryData = ref<Category | null>(null)
 const categoryTitle = computed(() => {
+  if (categoryData.value) return categoryData.value.name
   const slug = (route.params.slug as string) || 'unisex-shoes'
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 })
@@ -256,51 +260,22 @@ function toggleWidget(key: keyof typeof widgetOpen.value) {
 // ─── Mobile filters ───
 const showMobileFilters = ref(false)
 
-// ─── Category filter ───
+// ─── Category filter (API-driven) ───
 const categorySearch = ref('')
 const selectedCategory = ref<number | null>(null)
-const categories = [
-  { id: 1, name: 'Unisex shoes' },
-  { id: 2, name: 'Nike' },
-  { id: 3, name: 'Asics shoes' },
-  { id: 4, name: 'Adidas' },
-  { id: 5, name: "Nike Men's" },
-  { id: 6, name: 'Hermes' },
-  { id: 7, name: 'New Balance' },
-  { id: 8, name: 'On Running (Cloud)' },
-  { id: 9, name: 'Asics' },
-  { id: 10, name: 'Loro Piana' },
-  { id: 11, name: 'kids shoes' },
-  { id: 12, name: 'Air Force' },
-  { id: 13, name: 'Louis Vuitton' },
-  { id: 14, name: 'onitsuka tiger' },
-]
+const categories = ref<{ id: number; name: string; slug: string }[]>([])
 const filteredCategories = computed(() =>
-  categories.filter(c =>
+  categories.value.filter(c =>
     c.name.toLowerCase().includes(categorySearch.value.toLowerCase())
   )
 )
 
-// ─── Brand filter ───
+// ─── Brand filter (API-driven) ───
 const brandSearch = ref('')
 const selectedBrand = ref<number | null>(null)
-const brands = [
-  { id: 1, name: 'NIKE' },
-  { id: 2, name: 'adidas' },
-  { id: 3, name: 'New balance' },
-  { id: 4, name: 'Chanel' },
-  { id: 5, name: 'LOUIS VUITION' },
-  { id: 6, name: 'Dior' },
-  { id: 7, name: 'GUCCI' },
-  { id: 8, name: 'PRADA' },
-  { id: 9, name: 'Valentino' },
-  { id: 10, name: 'Saint Laurent' },
-  { id: 11, name: 'FENDI' },
-  { id: 12, name: 'Rene Caovilla' },
-  { id: 13, name: 'Converse' },
-]
+const brands = ref<{ id: number; name: string; slug: string }[]>([])
 const filteredBrands = computed(() =>
-  brands.filter(b =>
+  brands.value.filter(b =>
     b.name.toLowerCase().includes(brandSearch.value.toLowerCase())
   )
 )
@@ -322,6 +297,13 @@ const priceRanges = [
 
 // ─── Sort ───
 const sortBy = ref('ourSuggest')
+const sortMap: Record<string, string> = {
+  ourSuggest: 'newest',
+  bestSell: 'best_seller',
+  topRated: 'name_asc',
+  priceFromTopToLow: 'price_desc',
+  priceFromLowToTop: 'price_asc',
+}
 
 // ─── Reset ───
 function resetFilters() {
@@ -333,173 +315,140 @@ function resetFilters() {
   priceTo.value = undefined
   categorySearch.value = ''
   brandSearch.value = ''
+  loadProducts()
 }
 
-// ─── Product Data ───
-interface Product {
-  id: number
-  slug: string
-  name: string
-  subtitle?: string
-  image: string
-  price: number
-  oldPrice?: number
-  discount?: number
-  currency?: string
+// ─── Product Data (API-driven) ───
+const allProducts = ref<any[]>([])
+const isLoading = ref(false)
+const currentPage = ref(1)
+const hasMore = ref(false)
+
+function mapProduct(p: Product) {
+  return {
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    subtitle: p.category?.name || undefined,
+    image: p.primaryImage || '',
+    price: p.flashSalePrice?.raw ?? p.price?.raw ?? 0,
+    oldPrice: p.comparePrice?.raw || undefined,
+    discount: p.discountPercent || undefined,
+    currency: p.currency || 'SAR',
+  }
 }
 
-const allProducts = ref<Product[]>([
-  {
-    id: 1,
-    slug: 'nike-mind-001-slides',
-    name: 'Nike Mind 001 slides in a sleek black and navy blue',
-    subtitle: 'nike mind 001 ksa',
-    image: 'https://cdn.salla.sa/RvPxw/66ca527f-6b33-4789-b61c-26656df04678-500x500-YSQQShayDkZ31YdxOeWr88KMEWLuNC2TSvIEKAss.png',
-    price: 480,
-    currency: 'SAR',
-  },
-  {
-    id: 2,
-    slug: 'nb-1906lae-olive',
-    name: 'New Balance 1906LAE Mesh Slip-On Shoes Olive Green with Navy',
-    subtitle: 'Unisex shoes',
-    image: 'https://cdn.salla.sa/RvPxw/086fec69-45c4-4455-ba6e-2feb05b55bd0-500x500-ewOakK3feXpxYkdichrfR1Y7Rz7kFrbGBHZslSVu.png',
-    price: 600,
-    oldPrice: 690,
-    currency: 'SAR',
-  },
-  {
-    id: 3,
-    slug: 'nb-1906lae-silver-pink',
-    name: 'New Balance 1906LAE Mesh Slip-On Silver Pink',
-    subtitle: "Women's shoes",
-    image: 'https://cdn.salla.sa/RvPxw/51ab9cf7-127d-4f55-b4ea-df153473c194-500x500-N6pv0aEMA0fWqJGzSnzIAURAMZOZMrPqLBjcyQDZ.png',
-    price: 600,
-    currency: 'SAR',
-  },
-  {
-    id: 4,
-    slug: 'adidas-yeezy-slide-green',
-    name: 'Adidas Yeezy Slide Flax Green Comfort',
-    subtitle: 'Unisex shoes',
-    image: 'https://cdn.salla.sa/RvPxw/086fec69-45c4-4455-ba6e-2feb05b55bd0-500x500-ewOakK3feXpxYkdichrfR1Y7Rz7kFrbGBHZslSVu.png',
-    price: 350,
-    oldPrice: 420,
-    currency: 'SAR',
-  },
-  {
-    id: 5,
-    slug: 'asics-gel-kayano-14',
-    name: 'ASICS Gel-Kayano 14 Silver Grey Running Shoes',
-    subtitle: 'Unisex shoes',
-    image: 'https://cdn.salla.sa/RvPxw/51ab9cf7-127d-4f55-b4ea-df153473c194-500x500-N6pv0aEMA0fWqJGzSnzIAURAMZOZMrPqLBjcyQDZ.png',
-    price: 520,
-    oldPrice: 650,
-    currency: 'SAR',
-  },
-  {
-    id: 6,
-    slug: 'on-cloud-monster-black',
-    name: 'On Running Cloudmonster Triple Black',
-    subtitle: 'On Running (Cloud)',
-    image: 'https://cdn.salla.sa/RvPxw/66ca527f-6b33-4789-b61c-26656df04678-500x500-YSQQShayDkZ31YdxOeWr88KMEWLuNC2TSvIEKAss.png',
-    price: 780,
-    currency: 'SAR',
-  },
-  {
-    id: 7,
-    slug: 'nike-vomero-5-white',
-    name: 'Nike Zoom Vomero 5 Triple White Sneakers',
-    subtitle: 'Nike',
-    image: 'https://cdn.salla.sa/RvPxw/086fec69-45c4-4455-ba6e-2feb05b55bd0-500x500-ewOakK3feXpxYkdichrfR1Y7Rz7kFrbGBHZslSVu.png',
-    price: 655,
-    oldPrice: 799,
-    currency: 'SAR',
-  },
-  {
-    id: 8,
-    slug: 'nb-530-white-silver',
-    name: 'New Balance 530 White Silver Running',
-    subtitle: 'New Balance',
-    image: 'https://cdn.salla.sa/RvPxw/51ab9cf7-127d-4f55-b4ea-df153473c194-500x500-N6pv0aEMA0fWqJGzSnzIAURAMZOZMrPqLBjcyQDZ.png',
-    price: 490,
-    currency: 'SAR',
-  },
-  {
-    id: 9,
-    slug: 'adidas-samba-og-black',
-    name: 'Adidas Samba OG Classic Black White Gum',
-    subtitle: 'Adidas',
-    image: 'https://cdn.salla.sa/RvPxw/66ca527f-6b33-4789-b61c-26656df04678-500x500-YSQQShayDkZ31YdxOeWr88KMEWLuNC2TSvIEKAss.png',
-    price: 450,
-    oldPrice: 550,
-    currency: 'SAR',
-  },
-  {
-    id: 10,
-    slug: 'nike-air-max-dn-olive',
-    name: 'Nike Air Max Dn Olive Green Lifestyle Shoes',
-    subtitle: 'Nike',
-    image: 'https://cdn.salla.sa/RvPxw/086fec69-45c4-4455-ba6e-2feb05b55bd0-500x500-ewOakK3feXpxYkdichrfR1Y7Rz7kFrbGBHZslSVu.png',
-    price: 720,
-    currency: 'SAR',
-  },
-  {
-    id: 11,
-    slug: 'adidas-ultraboost-black',
-    name: 'Adidas Ultraboost Light Core Black',
-    subtitle: 'Adidas',
-    image: 'https://cdn.salla.sa/RvPxw/51ab9cf7-127d-4f55-b4ea-df153473c194-500x500-N6pv0aEMA0fWqJGzSnzIAURAMZOZMrPqLBjcyQDZ.png',
-    price: 690,
-    oldPrice: 850,
-    currency: 'SAR',
-  },
-  {
-    id: 12,
-    slug: 'on-cloud-5-sand',
-    name: 'On Cloud 5 Sand Rose Running Shoes',
-    subtitle: 'On Running (Cloud)',
-    image: 'https://cdn.salla.sa/RvPxw/66ca527f-6b33-4789-b61c-26656df04678-500x500-YSQQShayDkZ31YdxOeWr88KMEWLuNC2TSvIEKAss.png',
-    price: 699,
-    currency: 'SAR',
-  },
-  {
-    id: 13,
-    slug: 'nike-dunk-low-panda',
-    name: 'Nike Dunk Low Retro Panda Black White',
-    subtitle: 'Nike',
-    image: 'https://cdn.salla.sa/RvPxw/086fec69-45c4-4455-ba6e-2feb05b55bd0-500x500-ewOakK3feXpxYkdichrfR1Y7Rz7kFrbGBHZslSVu.png',
-    price: 549,
-    oldPrice: 699,
-    currency: 'SAR',
-  },
-  {
-    id: 14,
-    slug: 'asics-gel-1130-cream',
-    name: 'ASICS Gel-1130 Cream Birch Retro',
-    subtitle: 'Asics',
-    image: 'https://cdn.salla.sa/RvPxw/51ab9cf7-127d-4f55-b4ea-df153473c194-500x500-N6pv0aEMA0fWqJGzSnzIAURAMZOZMrPqLBjcyQDZ.png',
-    price: 580,
-    currency: 'SAR',
-  },
-  {
-    id: 15,
-    slug: 'nb-2002r-protection-pack',
-    name: 'New Balance 2002R Protection Pack Rain Cloud',
-    subtitle: 'New Balance',
-    image: 'https://cdn.salla.sa/RvPxw/66ca527f-6b33-4789-b61c-26656df04678-500x500-YSQQShayDkZ31YdxOeWr88KMEWLuNC2TSvIEKAss.png',
-    price: 750,
-    oldPrice: 899,
-    currency: 'SAR',
-  },
-])
+async function loadProducts(append = false) {
+  isLoading.value = true
+  try {
+    const categorySlug = (route.params.slug as string) || undefined
+    const brandSlug = selectedBrand.value
+      ? brands.value.find(b => b.id === selectedBrand.value)?.slug
+      : undefined
+
+    let minPrice: number | undefined
+    let maxPrice: number | undefined
+    if (selectedPrice.value !== null) {
+      const range = priceRanges[selectedPrice.value]
+      if (range) {
+        minPrice = range.min
+        maxPrice = range.max === Infinity ? undefined : range.max
+      }
+    } else if (priceFrom.value || priceTo.value) {
+      minPrice = priceFrom.value
+      maxPrice = priceTo.value
+    }
+
+    const result = await fetchProducts({
+      category: categorySlug,
+      brand: brandSlug,
+      minPrice,
+      maxPrice,
+      rating: selectedRating.value || undefined,
+      sortBy: sortMap[sortBy.value] || 'newest',
+      page: currentPage.value,
+      perPage: 12,
+    })
+
+    const mapped = result.data.map(mapProduct)
+    if (append) {
+      allProducts.value = [...allProducts.value, ...mapped]
+    } else {
+      allProducts.value = mapped
+    }
+
+    if (result.meta) {
+      hasMore.value = currentPage.value < result.meta.lastPage
+    }
+  } catch (error) {
+    console.error('Failed to load products:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
 
 // ─── Pagination ───
-const visibleCount = ref(9)
-const visibleProducts = computed(() => allProducts.value.slice(0, visibleCount.value))
+const visibleCount = computed(() => allProducts.value.length)
+const visibleProducts = computed(() => allProducts.value)
 function loadMore() {
-  visibleCount.value = Math.min(visibleCount.value + 6, allProducts.value.length)
+  if (hasMore.value) {
+    currentPage.value++
+    loadProducts(true)
+  }
 }
+
+// ─── Watch filters and re-fetch ───
+watch([selectedCategory, selectedBrand, selectedRating, selectedPrice, sortBy], () => {
+  currentPage.value = 1
+  loadProducts()
+})
+
+watch(() => route.params.slug, () => {
+  currentPage.value = 1
+  loadPageData()
+})
+
+// ─── Load page data ───
+async function loadPageData() {
+  const slug = route.params.slug as string
+  if (slug) {
+    try {
+      categoryData.value = await fetchCategoryBySlug(slug)
+    } catch {
+      categoryData.value = null
+    }
+  }
+
+  await Promise.allSettled([
+    loadProducts(),
+    loadFilterData(),
+  ])
+}
+
+async function loadFilterData() {
+  try {
+    const [catsData, brandsData] = await Promise.allSettled([
+      fetchCategories(),
+      fetchBrands(),
+    ])
+    if (catsData.status === 'fulfilled') {
+      const flatCats: { id: number; name: string; slug: string }[] = []
+      function flattenCats(cats: Category[]) {
+        cats.forEach(c => {
+          flatCats.push({ id: c.id, name: c.name, slug: c.slug })
+          if (c.children) flattenCats(c.children)
+        })
+      }
+      flattenCats(catsData.value)
+      categories.value = flatCats
+    }
+    if (brandsData.status === 'fulfilled') {
+      brands.value = brandsData.value.map(b => ({ id: b.id, name: b.name, slug: b.slug }))
+    }
+  } catch {}
+}
+
+onMounted(loadPageData)
 
 // ─── Testimonials ───
 const customerReviews = [
@@ -512,6 +461,7 @@ const customerReviews = [
   { name: 'Layla Fahad', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_female.png', rating: 5, text: 'Your journey to comfort is HERE' },
   { name: 'أحمد', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_male.png', rating: 5, text: 'ممتاز جداً وسريع التوصيل' },
 ]
+
 </script>
 
 <style scoped>

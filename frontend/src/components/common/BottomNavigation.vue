@@ -2,22 +2,22 @@
   <div class="bottom-nav">
     <router-link to="/" class="bottom-nav__item" :class="{ 'bottom-nav__item--active': $route.name === 'home' }">
       <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-      <span>{{ isRtl ? 'الرئيسية' : 'Home' }}</span>
+      <span>{{ $t('nav.home') }}</span>
     </router-link>
     <router-link to="/products" class="bottom-nav__item" :class="{ 'bottom-nav__item--active': $route.name === 'shop' }">
       <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-      <span>{{ isRtl ? 'التصنيفات' : 'Categories' }}</span>
+      <span>{{ $t('nav.categories') }}</span>
     </router-link>
     <router-link to="/cart" class="bottom-nav__item" :class="{ 'bottom-nav__item--active': $route.name === 'cart' }">
       <div style="position: relative;">
         <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
         <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
       </div>
-      <span>{{ isRtl ? 'السلة' : 'Cart' }}</span>
+      <span>{{ $t('nav.cart') }}</span>
     </router-link>
     <router-link to="/account" class="bottom-nav__item" :class="{ 'bottom-nav__item--active': $route.name === 'account' }">
       <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-      <span>{{ isRtl ? 'حسابي' : 'Account' }}</span>
+      <span>{{ $t('nav.myAccount') }}</span>
     </router-link>
   </div>
 </template>
@@ -29,7 +29,7 @@ import { useCartStore } from '@/stores/cartStore'
 
 const settings = useSettingsStore()
 const cart = useCartStore()
-const isRtl = computed(() => settings.isRtl)
+
 const cartCount = computed(() => cart.itemCount)
 </script>
 

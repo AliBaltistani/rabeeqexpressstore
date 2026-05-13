@@ -33,7 +33,7 @@
     <div v-if="viewAllLink" class="product-slider__view-all">
       <span class="product-slider__line"></span>
       <router-link :to="viewAllLink" class="product-slider__view-all-btn">
-        <span>View all</span>
+        <span>{{ $t('common.viewAll') }}</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </router-link>
       <span class="product-slider__line"></span>

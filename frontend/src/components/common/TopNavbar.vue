@@ -5,9 +5,9 @@
       <div class="top-navbar__left">
         <!-- Page Links (desktop only) -->
         <ul class="top-navbar__links">
-          <router-link to="/about-us" class="topnav-link-item">{{ isRtl ? 'من نحن' : 'About us' }}</router-link>
-          <router-link to="/privacy-policy" class="topnav-link-item">{{ isRtl ? 'سياسة الخصوصية' : 'Privacy Policy' }}</router-link>
-          <router-link to="/exchange-return-policy" class="topnav-link-item">{{ isRtl ? 'سياسة الاستبدال والاسترجاع' : 'Exchange and Return Policy' }}</router-link>
+          <router-link to="/about-us" class="topnav-link-item">{{ $t('nav.aboutUs') }}</router-link>
+          <router-link to="/privacy-policy" class="topnav-link-item">{{ $t('nav.privacyPolicy') }}</router-link>
+          <router-link to="/exchange-return-policy" class="topnav-link-item">{{ $t('nav.exchangeReturnPolicy') }}</router-link>
         </ul>
 
         <!-- Language & Currency Switchers -->
@@ -46,7 +46,6 @@ import { useSettingsStore } from '@/stores/settingsStore'
 const settings = useSettingsStore()
 const currentLanguage = computed(() => settings.currentLanguage)
 const currentCurrency = computed(() => settings.currentCurrency)
-const isRtl = computed(() => settings.isRtl)
 
 const emit = defineEmits(['open-localization'])
 

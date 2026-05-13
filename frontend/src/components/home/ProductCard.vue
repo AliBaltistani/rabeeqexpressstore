@@ -40,7 +40,7 @@
     <div class="product-card__footer">
       <button class="product-card__add-btn" @click.prevent="addToCart">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        <span>Add to cart</span>
+        <span>{{ $t('product.addToCart') }}</span>
       </button>
     </div>
   </div>
@@ -49,40 +49,37 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useQuickView } from '@/composables/useQuickView'
-
-interface Product {
-  id: number
-  slug: string
-  name: string
-  subtitle?: string
-  image: string
-  price: number
-  oldPrice?: number
-  discount?: number
-  currency?: string
-}
+import { useCartStore } from '@/stores/cartStore'
+import { useWishlistStore } from '@/stores/wishlistStore'
+import type { Product } from '@/types'
 
 const props = defineProps<{
-  product: Product
+  product: any
 }>()
 
 const { open: openQuickView_ } = useQuickView()
+const cart = useCartStore()
+const wishlist = useWishlistStore()
 
 function openQuickView() {
   openQuickView_(props.product)
 }
 
-function formatPrice(price: number): string {
+function formatPrice(price: any): string {
+  // Support both API PriceValue objects and raw numbers
+  if (price && typeof price === 'object' && price.formatted) {
+    return price.formatted
+  }
   const cur = props.product.currency || 'SAR'
-  return `${price.toFixed(0)} ${cur}`
+  return `${Number(price).toFixed(0)} ${cur}`
 }
 
 function addToCart() {
-  console.log('Add to cart:', props.product.id)
+  cart.addItem(props.product.id, 1)
 }
 
 function toggleWishlist() {
-  console.log('Toggle wishlist:', props.product.id)
+  wishlist.toggleItem(props.product.id)
 }
 </script>
 
