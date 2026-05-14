@@ -1,11 +1,11 @@
 <template>
   <div class="checkout-page">
-    <!-- ====== ORDER HEADER ====== -->
+    <!-- ORDER HEADER -->
     <div class="checkout-header">
       <div class="checkout-header__inner container">
         <div class="checkout-header__left">
           <div class="checkout-header__logo">
-            <img :src="settings.storeSettings.logo || 'https://cdn.salla.sa/RvPxw/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png'" :alt="settings.storeSettings.storeName" class="checkout-header__logo-img" />
+            <img :src="settings.storeSettings.logo || ''" :alt="settings.storeSettings.storeName" class="checkout-header__logo-img" />
             <span class="checkout-header__logo-label">{{ settings.storeSettings.storeName }}</span>
           </div>
           <div class="checkout-header__thumbs">
@@ -18,214 +18,219 @@
           <button class="checkout-header__coupon-btn" @click="showCoupon = !showCoupon">{{ $t('checkout.useCoupon') }}</button>
         </div>
       </div>
-      <!-- Coupon Dropdown -->
       <div v-if="showCoupon" class="checkout-coupon container">
         <div class="checkout-coupon__row">
-          <input type="text" v-model="couponCode" :placeholder="$t('checkout.' + 'Enter coupon code')" class="checkout-coupon__input" />
-          <button class="checkout-coupon__apply" @click="applyCoupon">{{ $t('checkout.apply') }}</button>
+          <input type="text" v-model="couponCode" :placeholder="$t('checkout.enterCouponCode')" class="checkout-coupon__input" />
+          <button class="checkout-coupon__apply" @click="applyCoupon" :disabled="couponLoading">{{ $t('checkout.apply') }}</button>
         </div>
+        <p v-if="couponMsg" class="checkout-coupon__msg" :class="{ error: couponError }">{{ couponMsg }}</p>
       </div>
-      <!-- Order Details toggle -->
       <div class="checkout-header__details-toggle container">
         <button class="checkout-details-btn" @click="showOrderDetails = !showOrderDetails">{{ $t('checkout.orderDetails') }}</button>
       </div>
     </div>
 
-    <!-- ====== STEPS ====== -->
+    <!-- STEPS -->
     <div class="container checkout-body">
 
-      <!-- ─── STEP 1: Login / Register ─── -->
+      <!-- STEP 1: Auth / Guest -->
       <section class="checkout-step" :class="{ completed: currentStep > 1 }">
         <div class="checkout-step__header">
-          <div class="checkout-step__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
+          <div class="checkout-step__num" :class="{ done: currentStep > 1 }">{{ currentStep > 1 ? '✓' : '1' }}</div>
           <div class="checkout-step__title-wrap">
-            <h2 class="checkout-step__title" v-if="currentStep === 1 && !isGuest">{{ $t('checkout.loginRegister') }}</h2>
-            <h2 class="checkout-step__title" v-else-if="currentStep === 1 && isGuest">{{ $t('checkout.welcomeGuest') }}</h2>
-            <h2 class="checkout-step__title" v-else>{{ $t('checkout.welcomeGuest') }} {{ guestForm.firstName }} {{ guestForm.lastName }}!</h2>
-            <p class="checkout-step__subtitle" v-if="currentStep === 1 && !isGuest">{{ $t('checkout.loginSubtitle') }}</p>
-            <p class="checkout-step__subtitle" v-else-if="currentStep === 1 && isGuest">{{ $t('checkout.guestSubtitle') }}</p>
-            <p class="checkout-step__subtitle" v-else>{{ guestForm.phone }}</p>
+            <h2 class="checkout-step__title" v-if="currentStep === 1 && authMode !== 'guest'">{{ $t('checkout.loginRegister') }}</h2>
+            <h2 class="checkout-step__title" v-else-if="currentStep === 1 && authMode === 'guest'">{{ $t('checkout.welcomeGuest') }}</h2>
+            <h2 class="checkout-step__title" v-else>{{ step1Summary }}</h2>
+            <p class="checkout-step__subtitle" v-if="currentStep === 1 && authMode !== 'guest'">{{ $t('checkout.loginSubtitle') }}</p>
+            <p class="checkout-step__subtitle" v-else-if="currentStep === 1 && authMode === 'guest'">{{ $t('checkout.guestSubtitle') }}</p>
           </div>
-          <button v-if="currentStep === 1 && !isGuest" class="checkout-step__side-btn" @click="isGuest = true">{{ $t('checkout.purchaseAsGuest') }}</button>
+          <button v-if="currentStep === 1 && authMode !== 'guest' && settings.storeSettings.features.guestCheckout" class="checkout-step__side-btn" @click="authMode = 'guest'">{{ $t('checkout.purchaseAsGuest') }}</button>
+          <button v-if="currentStep > 1" class="checkout-edit-btn" @click="currentStep = 1">{{ $t('checkout.edit') }}</button>
         </div>
 
-        <!-- Login form -->
-        <div v-if="currentStep === 1 && !isGuest" class="checkout-step__content">
-          <label class="checkout-label">{{ $t('checkout.emailAddress') }}</label>
-          <input type="email" v-model="loginEmail" :placeholder="$t('checkout.emailAddress')" class="checkout-input" />
-          <button class="checkout-btn" @click="submitLogin">{{ $t('checkout.enter') }}</button>
-        </div>
-
-        <!-- Guest form -->
-        <div v-if="currentStep === 1 && isGuest" class="checkout-step__content">
-          <div class="checkout-form-grid">
-            <div class="checkout-field">
-              <label class="checkout-label">First Name <span class="req">*</span></label>
-              <input type="text" v-model="guestForm.firstName" :placeholder="$t('checkout.firstName')" class="checkout-input" />
-            </div>
-            <div class="checkout-field">
-              <label class="checkout-label">Last Name <span class="req">*</span></label>
-              <input type="text" v-model="guestForm.lastName" :placeholder="$t('checkout.lastName')" class="checkout-input" />
-            </div>
-            <div class="checkout-field">
-              <label class="checkout-label">Email <span class="req">*</span></label>
-              <input type="email" v-model="guestForm.email" :placeholder="$t('checkout.email')" class="checkout-input" />
-            </div>
-            <div class="checkout-field">
-              <label class="checkout-label">Phone Number <span class="req">*</span></label>
-              <div class="checkout-phone-input">
-                <div class="checkout-phone-prefix">
-                  <span class="checkout-phone-arrow">˅</span>
-                  <span class="checkout-phone-flag">🇵🇰</span>
-                </div>
-                <input type="tel" v-model="guestForm.phone" placeholder="+92 301 2345678" class="checkout-input checkout-input--phone" />
-              </div>
-            </div>
+        <div v-if="currentStep === 1" class="checkout-step__content">
+          <!-- Auth mode tabs -->
+          <div v-if="authMode !== 'guest'" class="auth-tabs">
+            <button class="auth-tab" :class="{ active: authMode === 'login' }" @click="authMode = 'login'">{{ $t('auth.login') }}</button>
+            <button class="auth-tab" :class="{ active: authMode === 'register' }" @click="authMode = 'register'">{{ $t('auth.register') }}</button>
           </div>
-          <button class="checkout-btn" @click="submitGuest">{{ $t('checkout.continueAsGuest') }}</button>
-          <p class="checkout-alt-text">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-            Already have an account?
-          </p>
-        </div>
-      </section>
 
-      <div class="checkout-divider" v-if="currentStep >= 1"></div>
+          <!-- Login Form -->
+          <form v-if="authMode === 'login'" @submit.prevent="handleLogin" class="checkout-auth-form">
+            <div class="checkout-field">
+              <label class="checkout-label">{{ $t('auth.email') }} <span class="req">*</span></label>
+              <input type="email" v-model="loginForm.email" class="checkout-input" :class="{ 'input-error': errors.loginEmail }" />
+              <span v-if="errors.loginEmail" class="field-error">{{ errors.loginEmail }}</span>
+            </div>
+            <div class="checkout-field">
+              <label class="checkout-label">{{ $t('auth.password') }} <span class="req">*</span></label>
+              <input type="password" v-model="loginForm.password" class="checkout-input" :class="{ 'input-error': errors.loginPassword }" />
+              <span v-if="errors.loginPassword" class="field-error">{{ errors.loginPassword }}</span>
+            </div>
+            <p v-if="authError" class="auth-error-msg">{{ authError }}</p>
+            <button type="submit" class="checkout-btn" :disabled="authLoading">{{ authLoading ? $t('common.loading') : $t('auth.login') }}</button>
+            <p class="checkout-alt-text"><router-link to="/forgot-password">{{ $t('auth.forgotPassword') }}</router-link></p>
+          </form>
 
-      <!-- ─── STEP 2: Shipping Address ─── -->
-      <section class="checkout-step" :class="{ locked: currentStep < 2, completed: currentStep > 2 }">
-        <div class="checkout-step__header">
-          <div class="checkout-step__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 0 0-16 0c0 3 2.7 7 8 11.7z"/></svg>
-          </div>
-          <div class="checkout-step__title-wrap">
-            <h2 class="checkout-step__title">{{ $t('checkout.shippingAddress') }}</h2>
-            <p class="checkout-step__subtitle" v-if="currentStep < 2">{{ $t('checkout.ensureAddress') }}</p>
-            <p class="checkout-step__subtitle" v-else-if="currentStep > 2">- {{ addressForm.country }} - {{ addressForm.city }} - {{ addressForm.street }}</p>
-            <p class="checkout-step__subtitle" v-else>{{ $t('checkout.ensureAddress') }}</p>
-          </div>
-          <button v-if="currentStep > 2" class="checkout-edit-btn" @click="currentStep = 2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit
-          </button>
-        </div>
-
-        <div v-if="currentStep === 2" class="checkout-step__content">
-          <div class="checkout-form-grid">
+          <!-- Register Form -->
+          <form v-if="authMode === 'register'" @submit.prevent="handleRegister" class="checkout-auth-form">
             <div class="checkout-field">
-              <label class="checkout-label">Country <span class="req">*</span></label>
-              <select v-model="addressForm.country" class="checkout-select">
-                <option>Saudi Arabia</option>
-                <option>Pakistan</option>
-                <option>Bahrain</option>
-                <option>UAE</option>
-                <option>Kuwait</option>
-              </select>
+              <label class="checkout-label">{{ $t('auth.name') }} <span class="req">*</span></label>
+              <input type="text" v-model="registerForm.name" class="checkout-input" :class="{ 'input-error': errors.regName }" />
+              <span v-if="errors.regName" class="field-error">{{ errors.regName }}</span>
             </div>
             <div class="checkout-field">
-              <label class="checkout-label">Region <span class="req">*</span></label>
-              <select v-model="addressForm.region" class="checkout-select">
-                <option value="">Search for a region...</option>
-                <option>Riyadh</option>
-                <option>Jeddah</option>
-                <option>Islamabad</option>
-              </select>
-            </div>
-            <div class="checkout-field">
-              <label class="checkout-label">City <span class="req">*</span></label>
-              <select v-model="addressForm.city" class="checkout-select">
-                <option>ISLAMABAD</option>
-                <option>RIYADH</option>
-                <option>JEDDAH</option>
-              </select>
-            </div>
-            <div class="checkout-field">
-              <label class="checkout-label">District <span class="req">*</span></label>
-              <input type="text" v-model="addressForm.district" placeholder="E-7" class="checkout-input" />
-            </div>
-            <div class="checkout-field">
-              <label class="checkout-label">Street <span class="req">*</span></label>
-              <input type="text" v-model="addressForm.street" placeholder="Aurangzeb Road,286" class="checkout-input" />
-            </div>
-            <div class="checkout-field">
-              <label class="checkout-label">Postal Code <span class="req">*</span></label>
-              <input type="text" v-model="addressForm.postalCode" :placeholder="$t('checkout.' + 'Postal Code')" class="checkout-input" />
-            </div>
-            <div class="checkout-field">
-              <label class="checkout-label">{{ $t('checkout.buildingNo') }}</label>
-              <input type="text" v-model="addressForm.buildingNo" placeholder="286" class="checkout-input" />
-            </div>
-            <div class="checkout-field">
-              <label class="checkout-label">{{ $t('checkout.buildingDesc') }}</label>
-              <input type="text" v-model="addressForm.buildingDesc" placeholder="Building Description" class="checkout-input" />
-            </div>
-          </div>
-          <label class="checkout-checkbox">
-            <input type="checkbox" v-model="deliverToOther" />
-            <span>{{ $t('checkout.deliverToOther') }}</span>
-          </label>
-          <!-- Recipient fields -->
-          <div v-if="deliverToOther" class="checkout-recipient">
-            <div class="checkout-field">
-              <label class="checkout-label">Recipient's Name <span class="req">*</span></label>
-              <input type="text" v-model="recipientName" class="checkout-input" />
+              <label class="checkout-label">{{ $t('auth.email') }} <span class="req">*</span></label>
+              <input type="email" v-model="registerForm.email" class="checkout-input" :class="{ 'input-error': errors.regEmail }" />
+              <span v-if="errors.regEmail" class="field-error">{{ errors.regEmail }}</span>
             </div>
             <div class="checkout-form-grid">
               <div class="checkout-field">
-                <label class="checkout-label">Phone Number <span class="req">*</span></label>
-                <div class="checkout-phone-input">
-                  <div class="checkout-phone-prefix">
-                    <span class="checkout-phone-arrow">˅</span>
-                    <span class="checkout-phone-flag">🇵🇰</span>
-                  </div>
-                  <input type="tel" v-model="recipientPhone" placeholder="+92 301 2345678" class="checkout-input checkout-input--phone" />
-                </div>
+                <label class="checkout-label">{{ $t('auth.password') }} <span class="req">*</span></label>
+                <input type="password" v-model="registerForm.password" class="checkout-input" :class="{ 'input-error': errors.regPassword }" />
+                <span v-if="errors.regPassword" class="field-error">{{ errors.regPassword }}</span>
               </div>
               <div class="checkout-field">
-                <label class="checkout-label">Email (Optional)</label>
-                <input type="email" v-model="recipientEmail" class="checkout-input" />
+                <label class="checkout-label">{{ $t('auth.confirmPassword') }} <span class="req">*</span></label>
+                <input type="password" v-model="registerForm.password_confirmation" class="checkout-input" :class="{ 'input-error': errors.regConfirm }" />
+                <span v-if="errors.regConfirm" class="field-error">{{ errors.regConfirm }}</span>
               </div>
             </div>
-            <label class="checkout-checkbox">
-              <input type="checkbox" v-model="smsUpdates" />
-              <span>{{ $t('checkout.smsUpdates') }}</span>
-            </label>
-          </div>
-          <button class="checkout-btn" @click="submitAddress">{{ $t('checkout.save') }}</button>
+            <p v-if="authError" class="auth-error-msg">{{ authError }}</p>
+            <button type="submit" class="checkout-btn" :disabled="authLoading">{{ authLoading ? $t('common.loading') : $t('auth.register') }}</button>
+          </form>
+
+          <!-- Guest Form -->
+          <form v-if="authMode === 'guest'" @submit.prevent="handleGuest" class="checkout-auth-form">
+            <div class="checkout-form-grid">
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.firstName') }} <span class="req">*</span></label>
+                <input type="text" v-model="guestForm.firstName" class="checkout-input" :class="{ 'input-error': errors.gFirstName }" />
+                <span v-if="errors.gFirstName" class="field-error">{{ errors.gFirstName }}</span>
+              </div>
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.lastName') }} <span class="req">*</span></label>
+                <input type="text" v-model="guestForm.lastName" class="checkout-input" :class="{ 'input-error': errors.gLastName }" />
+                <span v-if="errors.gLastName" class="field-error">{{ errors.gLastName }}</span>
+              </div>
+            </div>
+            <div class="checkout-form-grid">
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.email') }} <span class="req">*</span></label>
+                <input type="email" v-model="guestForm.email" class="checkout-input" :class="{ 'input-error': errors.gEmail }" />
+                <span v-if="errors.gEmail" class="field-error">{{ errors.gEmail }}</span>
+              </div>
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
+                <input type="tel" v-model="guestForm.phone" class="checkout-input" :class="{ 'input-error': errors.gPhone }" />
+                <span v-if="errors.gPhone" class="field-error">{{ errors.gPhone }}</span>
+              </div>
+            </div>
+            <button type="submit" class="checkout-btn">{{ $t('checkout.continueAsGuest') }}</button>
+            <p class="checkout-alt-text">{{ $t('checkout.alreadyHaveAccount') }} <a href="#" @click.prevent="authMode = 'login'">{{ $t('auth.login') }}</a></p>
+          </form>
         </div>
       </section>
 
-      <div class="checkout-divider" v-if="currentStep >= 2"></div>
+      <div class="checkout-divider"></div>
 
-      <!-- ─── STEP 3: Shipping Company ─── -->
+      <!-- STEP 2: Shipping Address -->
+      <section class="checkout-step" :class="{ locked: currentStep < 2, completed: currentStep > 2 }">
+        <div class="checkout-step__header">
+          <div class="checkout-step__num" :class="{ done: currentStep > 2 }">{{ currentStep > 2 ? '✓' : '2' }}</div>
+          <div class="checkout-step__title-wrap">
+            <h2 class="checkout-step__title">{{ $t('checkout.shippingAddress') }}</h2>
+            <p class="checkout-step__subtitle" v-if="currentStep > 2">{{ addressForm.city }}, {{ addressForm.street }}</p>
+            <p class="checkout-step__subtitle" v-else>{{ $t('checkout.ensureAddress') }}</p>
+          </div>
+          <button v-if="currentStep > 2" class="checkout-edit-btn" @click="currentStep = 2">{{ $t('checkout.edit') }}</button>
+        </div>
+        <div v-if="currentStep === 2" class="checkout-step__content">
+          <form @submit.prevent="submitAddress">
+            <div class="checkout-form-grid">
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.firstName') }} <span class="req">*</span></label>
+                <input type="text" v-model="addressForm.firstName" class="checkout-input" :class="{ 'input-error': errors.addrFirstName }" />
+                <span v-if="errors.addrFirstName" class="field-error">{{ errors.addrFirstName }}</span>
+              </div>
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.lastName') }} <span class="req">*</span></label>
+                <input type="text" v-model="addressForm.lastName" class="checkout-input" :class="{ 'input-error': errors.addrLastName }" />
+                <span v-if="errors.addrLastName" class="field-error">{{ errors.addrLastName }}</span>
+              </div>
+            </div>
+            <div class="checkout-field">
+              <label class="checkout-label">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
+              <input type="tel" v-model="addressForm.phone" class="checkout-input" :class="{ 'input-error': errors.addrPhone }" />
+              <span v-if="errors.addrPhone" class="field-error">{{ errors.addrPhone }}</span>
+            </div>
+            <div class="checkout-form-grid">
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.country') }} <span class="req">*</span></label>
+                <input type="text" v-model="addressForm.country" class="checkout-input" :class="{ 'input-error': errors.addrCountry }" />
+                <span v-if="errors.addrCountry" class="field-error">{{ errors.addrCountry }}</span>
+              </div>
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.region') }}</label>
+                <input type="text" v-model="addressForm.state" class="checkout-input" />
+              </div>
+            </div>
+            <div class="checkout-form-grid">
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.city') }} <span class="req">*</span></label>
+                <input type="text" v-model="addressForm.city" class="checkout-input" :class="{ 'input-error': errors.addrCity }" />
+                <span v-if="errors.addrCity" class="field-error">{{ errors.addrCity }}</span>
+              </div>
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.district') }}</label>
+                <input type="text" v-model="addressForm.district" class="checkout-input" />
+              </div>
+            </div>
+            <div class="checkout-form-grid">
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.street') }} <span class="req">*</span></label>
+                <input type="text" v-model="addressForm.street" class="checkout-input" :class="{ 'input-error': errors.addrStreet }" />
+                <span v-if="errors.addrStreet" class="field-error">{{ errors.addrStreet }}</span>
+              </div>
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.postalCode') }}</label>
+                <input type="text" v-model="addressForm.postalCode" class="checkout-input" />
+              </div>
+            </div>
+            <div class="checkout-field">
+              <label class="checkout-label">{{ $t('checkout.buildingNo') }}</label>
+              <input type="text" v-model="addressForm.buildingNo" class="checkout-input" />
+            </div>
+            <p v-if="addressError" class="auth-error-msg">{{ addressError }}</p>
+            <button type="submit" class="checkout-btn" :disabled="shippingLoading">{{ shippingLoading ? $t('common.loading') : $t('checkout.save') }}</button>
+          </form>
+        </div>
+      </section>
+
+      <div class="checkout-divider"></div>
+
+      <!-- STEP 3: Shipping Company -->
       <section class="checkout-step" :class="{ locked: currentStep < 3, completed: currentStep > 3 }">
         <div class="checkout-step__header">
-          <div class="checkout-step__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-          </div>
+          <div class="checkout-step__num" :class="{ done: currentStep > 3 }">{{ currentStep > 3 ? '✓' : '3' }}</div>
           <div class="checkout-step__title-wrap">
             <h2 class="checkout-step__title">{{ $t('checkout.shippingCompany') }}</h2>
-            <p class="checkout-step__subtitle" v-if="currentStep <= 3">{{ $t('checkout.selectShipping') }}</p>
-            <p class="checkout-step__subtitle" v-else>{{ selectedShipping?.name }}, {{ selectedShipping?.time }}</p>
+            <p class="checkout-step__subtitle" v-if="currentStep > 3">{{ selectedShipping?.name }}</p>
+            <p class="checkout-step__subtitle" v-else>{{ $t('checkout.selectShipping') }}</p>
           </div>
-          <button v-if="currentStep > 3" class="checkout-edit-btn" @click="currentStep = 3">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit
-          </button>
+          <button v-if="currentStep > 3" class="checkout-edit-btn" @click="currentStep = 3">{{ $t('checkout.edit') }}</button>
         </div>
-
         <div v-if="currentStep === 3" class="checkout-step__content">
-          <div class="checkout-shipping-options">
-            <label
-              v-for="opt in shippingOptions"
-              :key="opt.id"
-              class="checkout-shipping-card"
-              :class="{ selected: selectedShippingId === opt.id }"
-            >
+          <div v-if="shippingLoading" class="empty-shipping">
+            <p>{{ $t('common.loading') }}...</p>
+          </div>
+          <div v-else-if="shippingRatesFetched && shippingOptions.length === 0" class="empty-shipping">
+            <p>{{ $t('checkout.noShippingRates') }}</p>
+            <button class="checkout-btn" @click="currentStep = 4">{{ $t('search.next') || 'Next' }} →</button>
+          </div>
+          <div v-else class="checkout-shipping-options">
+            <label v-for="opt in shippingOptions" :key="opt.id" class="checkout-shipping-card" :class="{ selected: selectedShippingId === opt.id }">
               <input type="radio" name="shipping" :value="opt.id" v-model="selectedShippingId" class="checkout-radio" />
-              <img :src="opt.logo" :alt="opt.name" class="checkout-shipping-logo" />
               <div class="checkout-shipping-info">
                 <span class="checkout-shipping-name">{{ opt.name }}</span>
                 <span class="checkout-shipping-time" v-if="opt.time">{{ opt.time }}</span>
@@ -233,92 +238,61 @@
               <span class="checkout-shipping-price">{{ typeof opt.price === 'object' ? (opt.price as any).formatted : opt.price }}</span>
             </label>
           </div>
-          <button class="checkout-btn" @click="submitShipping">{{ $t('checkout.confirmShipping') }}</button>
+          <span v-if="errors.shipping" class="field-error">{{ errors.shipping }}</span>
+          <button v-if="shippingOptions.length > 0" class="checkout-btn" @click="submitShipping">{{ $t('checkout.confirmShipping') }}</button>
         </div>
       </section>
 
-      <div class="checkout-divider" v-if="currentStep >= 3"></div>
+      <div class="checkout-divider"></div>
 
-      <!-- ─── STEP 4: Additional Information ─── -->
-      <section class="checkout-step" :class="{ locked: currentStep < 4, completed: currentStep > 4 }">
+      <!-- STEP 4: Payment -->
+      <section class="checkout-step" :class="{ locked: currentStep < 4 }">
         <div class="checkout-step__header">
-          <div class="checkout-step__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
-          </div>
-          <div class="checkout-step__title-wrap">
-            <h2 class="checkout-step__title">{{ $t('checkout.additionalInfo') }}</h2>
-          </div>
-          <button v-if="currentStep > 4" class="checkout-edit-btn" @click="currentStep = 4">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit
-          </button>
-        </div>
-
-        <div v-if="currentStep === 4" class="checkout-step__content">
-          <div class="checkout-field">
-            <label class="checkout-label">Mobile Number <span class="req">*</span></label>
-            <div class="checkout-phone-input">
-              <div class="checkout-phone-prefix">
-                <span class="checkout-phone-arrow">˅</span>
-                <span class="checkout-phone-flag">🇵🇰</span>
-              </div>
-              <input type="tel" v-model="additionalPhone" placeholder="0301 2345678" class="checkout-input checkout-input--phone" />
-            </div>
-          </div>
-          <button class="checkout-btn" @click="submitAdditional">{{ $t('checkout.confirmInfo') }}</button>
-        </div>
-      </section>
-
-      <div class="checkout-divider" v-if="currentStep >= 4"></div>
-
-      <!-- ─── STEP 5: Payment ─── -->
-      <section class="checkout-step" :class="{ locked: currentStep < 5 }">
-        <div class="checkout-step__header">
-          <div class="checkout-step__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-          </div>
+          <div class="checkout-step__num">4</div>
           <div class="checkout-step__title-wrap">
             <h2 class="checkout-step__title">{{ $t('checkout.payment') }}</h2>
             <p class="checkout-step__subtitle">{{ selectedPaymentName }}</p>
           </div>
         </div>
-
-        <div v-if="currentStep === 5" class="checkout-step__content">
-          <!-- Payment Methods -->
+        <div v-if="currentStep === 4" class="checkout-step__content">
+          <!-- Payment Methods from admin -->
           <div class="checkout-payment-methods">
-            <label
-              v-for="pm in settings.storeSettings.paymentMethods"
-              :key="pm.id"
-              class="checkout-payment-card"
-              :class="{ selected: selectedPayment === pm.id }"
-            >
+            <label v-for="pm in paymentMethods" :key="pm.id" class="checkout-payment-card" :class="{ selected: selectedPayment === pm.id }">
               <input type="radio" name="payment" :value="pm.id" v-model="selectedPayment" class="checkout-radio" />
-              <img :src="pm.logo" :alt="pm.name" class="checkout-payment-logo" />
+              <span class="checkout-payment-name">{{ pm.name }}</span>
+              <span v-if="pm.fee" class="checkout-payment-fee">+{{ pm.fee }}</span>
             </label>
           </div>
+          <span v-if="errors.payment" class="field-error">{{ errors.payment }}</span>
 
-          <!-- Card Details -->
-          <div v-if="selectedPayment === 'mada' || selectedPayment === 'visa'" class="checkout-card-form">
+          <!-- Stripe Card Details -->
+          <div v-if="selectedPayment === 'stripe'" class="checkout-card-form">
+            <p class="card-form-note">{{ $t('checkout.cardDetails') }}</p>
             <div class="checkout-form-grid">
               <div class="checkout-field">
-                <label class="checkout-label">Card Details <span class="req">*</span></label>
-                <div class="checkout-card-input-wrap">
-                  <input type="text" v-model="cardNumber" placeholder="Card Number" class="checkout-input" />
-                  <div class="checkout-card-expiry">
-                    <span class="checkout-card-hint">MM / YY</span>
-                    <span class="checkout-card-hint">CVV</span>
-                  </div>
-                </div>
+                <label class="checkout-label">Card Number <span class="req">*</span></label>
+                <input type="text" v-model="cardNumber" placeholder="4242 4242 4242 4242" class="checkout-input" maxlength="19" />
               </div>
               <div class="checkout-field">
-                <label class="checkout-label">Card Holder Name <span class="req">*</span></label>
-                <input type="text" v-model="cardName" :placeholder="$t('checkout.cardHolderName')" class="checkout-input" />
+                <label class="checkout-label">{{ $t('checkout.cardHolderName') }} <span class="req">*</span></label>
+                <input type="text" v-model="cardName" class="checkout-input" />
               </div>
             </div>
-            <label class="checkout-checkbox">
-              <input type="checkbox" v-model="saveCard" checked />
-              <span>{{ $t('checkout.saveCard') }}</span>
-            </label>
+            <div class="checkout-form-grid">
+              <div class="checkout-field">
+                <label class="checkout-label">MM/YY <span class="req">*</span></label>
+                <input type="text" v-model="cardExpiry" placeholder="12/28" class="checkout-input" maxlength="5" />
+              </div>
+              <div class="checkout-field">
+                <label class="checkout-label">CVV <span class="req">*</span></label>
+                <input type="text" v-model="cardCvv" placeholder="123" class="checkout-input" maxlength="4" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Bank Transfer Info -->
+          <div v-if="selectedPayment === 'bank_transfer'" class="checkout-card-form">
+            <p class="card-form-note">{{ $t('checkout.bankTransferNote') || 'You will receive bank details after placing your order. Your order will be confirmed once payment is received.' }}</p>
           </div>
 
           <!-- T&C -->
@@ -326,8 +300,20 @@
             <input type="checkbox" v-model="agreeTerms" />
             <span>{{ $t('checkout.agreeTerms') }}</span>
           </label>
+          <span v-if="errors.terms" class="field-error">{{ errors.terms }}</span>
 
-          <button class="checkout-btn" @click="confirmPayment" :disabled="!agreeTerms">{{ $t('checkout.confirmPayment') }}</button>
+          <!-- Order Summary -->
+          <div class="checkout-order-summary">
+            <div class="summary-row"><span>{{ $t('cart.totalProductsCost') }}</span><span>{{ cart.subtotal?.formatted }}</span></div>
+            <div v-if="cart.discountAmount?.raw" class="summary-row discount"><span>{{ $t('checkout.discount') || 'Discount' }}</span><span>-{{ cart.discountAmount?.formatted }}</span></div>
+            <div class="summary-row"><span>{{ $t('checkout.shippingCompany') }}</span><span>{{ selectedShipping ? (typeof selectedShipping.price === 'object' ? (selectedShipping.price as any).formatted : selectedShipping.price) : '—' }}</span></div>
+            <div class="summary-row total"><span>{{ $t('checkout.totalOrder') }}</span><span>{{ cart.total?.formatted }}</span></div>
+          </div>
+
+          <button class="checkout-btn checkout-btn--pay" @click="confirmPayment" :disabled="orderLoading">
+            {{ orderLoading ? $t('common.loading') : $t('checkout.confirmPayment') }}
+          </button>
+          <p v-if="orderError" class="auth-error-msg">{{ orderError }}</p>
         </div>
       </section>
     </div>
@@ -335,7 +321,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -349,612 +335,363 @@ const auth = useAuthStore()
 const settings = useSettingsStore()
 const { t } = useI18n()
 
-// ─── State ───
+// ── State ──
 const currentStep = ref(1)
 const showCoupon = ref(false)
 const showOrderDetails = ref(false)
 const couponCode = ref('')
-const isGuest = ref(false)
+const couponLoading = ref(false)
+const couponMsg = ref('')
+const couponError = ref(false)
 
-// Step 1: Login
-const loginEmail = ref('')
+const authMode = ref<'login' | 'register' | 'guest'>('login')
+const authLoading = ref(false)
+const authError = ref('')
 
-// Step 1: Guest
-const guestForm = ref({
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
-})
+const errors = reactive<Record<string, string>>({})
 
-// Step 2: Address
-const addressForm = ref({
-  country: 'Pakistan',
-  region: '',
-  city: 'ISLAMABAD',
-  district: '',
-  street: '',
-  postalCode: '',
-  buildingNo: '',
-  buildingDesc: '',
-})
-const deliverToOther = ref(false)
-const recipientName = ref('')
-const recipientPhone = ref('')
-const recipientEmail = ref('')
-const smsUpdates = ref(false)
+// Login
+const loginForm = ref({ email: '', password: '' })
 
-// Step 3: Shipping
-const selectedShippingId = ref(2)
-const shippingOptions = [
-  { id: 1, name: 'Smsa', time: '4 - 12 أيام عمل', price: 40, logo: 'https://cdn.salla.sa/RvPxw/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png' },
-  { id: 2, name: 'مدة الشحن', time: 'المتوقع ( من 4 ايام الى 12 ايام )', price: 45, logo: 'https://cdn.salla.sa/RvPxw/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png' },
-]
-const selectedShipping = computed(() => shippingOptions.find(s => s.id === selectedShippingId.value))
+// Register
+const registerForm = ref({ name: '', email: '', password: '', password_confirmation: '' })
 
-// Step 4: Additional
-const additionalPhone = ref('')
+// Guest
+const guestForm = ref({ firstName: '', lastName: '', email: '', phone: '' })
 
-// Step 5: Payment
-const selectedPayment = ref('stripe')
+// Address
+const addressForm = ref({ firstName: '', lastName: '', phone: '', country: '', state: '', city: '', district: '', street: '', postalCode: '', buildingNo: '' })
+const addressError = ref('')
+const shippingLoading = ref(false)
+const shippingRatesFetched = ref(false)
+
+// Shipping
+const shippingOptions = ref<any[]>([])
+const selectedShippingId = ref<number | null>(null)
+const selectedShipping = computed(() => shippingOptions.value.find((s: any) => s.id === selectedShippingId.value))
+
+// Payment
+const selectedPayment = ref('')
 const selectedPaymentName = computed(() => {
-  const pm = settings.storeSettings.paymentMethods?.find(p => p.id === selectedPayment.value)
-  return pm?.name || selectedPayment.value
+  const pm = paymentMethods.value.find((p: any) => p.id === selectedPayment.value)
+  return pm?.name || ''
 })
+const paymentMethods = computed(() => settings.storeSettings.paymentMethods || [])
 const cardNumber = ref('')
 const cardName = ref('')
-const saveCard = ref(true)
-const agreeTerms = ref(true)
+const cardExpiry = ref('')
+const cardCvv = ref('')
+const agreeTerms = ref(false)
+const orderLoading = ref(false)
+const orderError = ref('')
 
-// ─── Actions ───
-function applyCoupon() {
-  if (couponCode.value.trim()) {
-    cart.applyCoupon(couponCode.value.trim())
-    showCoupon.value = false
-  }
-}
+// Step 1 summary
+const step1Summary = computed(() => {
+  if (auth.isAuthenticated && auth.user) return `${auth.user.name} (${auth.user.email})`
+  if (authMode.value === 'guest') return `${guestForm.value.firstName} ${guestForm.value.lastName} (${guestForm.value.email})`
+  return ''
+})
 
-function submitLogin() {
-  if (loginEmail.value.trim()) {
-    // In a real app, this might trigger a magic link or password prompt
+// ── Helpers ──
+function clearErrors() { Object.keys(errors).forEach(k => delete errors[k]) }
+
+function isEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) }
+
+// ── Step 1 Actions ──
+async function handleLogin() {
+  clearErrors()
+  authError.value = ''
+  if (!loginForm.value.email.trim()) errors.loginEmail = t('checkout.required') || 'Required'
+  if (!loginForm.value.password) errors.loginPassword = t('checkout.required') || 'Required'
+  if (!isEmail(loginForm.value.email)) errors.loginEmail = t('checkout.invalidEmail') || 'Invalid email'
+  if (Object.keys(errors).length) return
+
+  authLoading.value = true
+  try {
+    await auth.login(loginForm.value.email, loginForm.value.password)
+    // Pre-fill address from user
+    if (auth.user) {
+      const parts = auth.user.name?.split(' ') || []
+      addressForm.value.firstName = parts[0] || ''
+      addressForm.value.lastName = parts.slice(1).join(' ') || ''
+      addressForm.value.phone = auth.user.phone || ''
+    }
     currentStep.value = 2
+  } catch (e: any) {
+    authError.value = e.response?.data?.message || t('common.error')
+  } finally {
+    authLoading.value = false
   }
 }
 
-function submitGuest() {
-  if (guestForm.value.firstName && guestForm.value.email) {
+async function handleRegister() {
+  clearErrors()
+  authError.value = ''
+  if (!registerForm.value.name.trim()) errors.regName = t('checkout.required') || 'Required'
+  if (!registerForm.value.email.trim()) errors.regEmail = t('checkout.required') || 'Required'
+  else if (!isEmail(registerForm.value.email)) errors.regEmail = t('checkout.invalidEmail') || 'Invalid email'
+  if (!registerForm.value.password) errors.regPassword = t('checkout.required') || 'Required'
+  else if (registerForm.value.password.length < 8) errors.regPassword = t('checkout.minPassword') || 'Min 8 characters'
+  if (registerForm.value.password !== registerForm.value.password_confirmation) errors.regConfirm = t('checkout.passwordMismatch') || 'Passwords do not match'
+  if (Object.keys(errors).length) return
+
+  authLoading.value = true
+  try {
+    await auth.register(registerForm.value)
+    if (auth.user) {
+      const parts = auth.user.name?.split(' ') || []
+      addressForm.value.firstName = parts[0] || ''
+      addressForm.value.lastName = parts.slice(1).join(' ') || ''
+    }
     currentStep.value = 2
+  } catch (e: any) {
+    authError.value = e.response?.data?.message || t('common.error')
+  } finally {
+    authLoading.value = false
   }
 }
 
+function handleGuest() {
+  clearErrors()
+  if (!guestForm.value.firstName.trim()) errors.gFirstName = t('checkout.required') || 'Required'
+  if (!guestForm.value.lastName.trim()) errors.gLastName = t('checkout.required') || 'Required'
+  if (!guestForm.value.email.trim()) errors.gEmail = t('checkout.required') || 'Required'
+  else if (!isEmail(guestForm.value.email)) errors.gEmail = t('checkout.invalidEmail') || 'Invalid email'
+  if (!guestForm.value.phone.trim()) errors.gPhone = t('checkout.required') || 'Required'
+  if (Object.keys(errors).length) return
+
+  // Pre-fill address name/phone from guest
+  addressForm.value.firstName = guestForm.value.firstName
+  addressForm.value.lastName = guestForm.value.lastName
+  addressForm.value.phone = guestForm.value.phone
+  currentStep.value = 2
+}
+
+// ── Step 2: Address ──
 async function submitAddress() {
-  if (addressForm.value.street || addressForm.value.city) {
-    try {
-      const rates = await fetchShippingRates({
-        country: addressForm.value.country,
-        state: addressForm.value.region,
-      })
-      if (rates && rates.length) {
-        shippingOptions.splice(0, shippingOptions.length, ...rates)
-        selectedShippingId.value = rates[0].id
-      }
-      currentStep.value = 3
-    } catch (e) {
-      console.error('Failed to fetch shipping rates', e)
-      currentStep.value = 3 // fallback to default
+  clearErrors()
+  addressError.value = ''
+  if (!addressForm.value.firstName.trim()) errors.addrFirstName = t('checkout.required') || 'Required'
+  if (!addressForm.value.lastName.trim()) errors.addrLastName = t('checkout.required') || 'Required'
+  if (!addressForm.value.phone.trim()) errors.addrPhone = t('checkout.required') || 'Required'
+  if (!addressForm.value.country.trim()) errors.addrCountry = t('checkout.required') || 'Required'
+  if (!addressForm.value.city.trim()) errors.addrCity = t('checkout.required') || 'Required'
+  if (!addressForm.value.street.trim()) errors.addrStreet = t('checkout.required') || 'Required'
+  if (Object.keys(errors).length) return
+
+  shippingLoading.value = true
+  shippingRatesFetched.value = false
+  try {
+    const rates = await fetchShippingRates({ country: addressForm.value.country, state: addressForm.value.state })
+    shippingRatesFetched.value = true
+    if (rates && rates.length) {
+      shippingOptions.value = rates
+      selectedShippingId.value = rates[0].id
+    } else {
+      shippingOptions.value = []
     }
+    currentStep.value = 3
+  } catch (e) {
+    shippingRatesFetched.value = true
+    addressError.value = t('checkout.shippingRatesError') || 'Could not fetch shipping rates'
+  } finally {
+    shippingLoading.value = false
   }
 }
 
+// ── Step 3: Shipping ──
 function submitShipping() {
-  if (selectedShippingId.value) {
-    currentStep.value = 4
+  clearErrors()
+  if (!selectedShippingId.value) { errors.shipping = t('checkout.required') || 'Please select a shipping option'; return }
+  currentStep.value = 4
+}
+
+// ── Coupon ──
+async function applyCoupon() {
+  if (!couponCode.value.trim()) return
+  couponLoading.value = true
+  couponMsg.value = ''
+  couponError.value = false
+  const result = await cart.applyCoupon(couponCode.value.trim())
+  couponLoading.value = false
+  if (result.success) {
+    couponMsg.value = t('checkout.couponApplied')
+    showCoupon.value = false
+  } else {
+    couponError.value = true
+    couponMsg.value = result.message || t('common.error')
   }
 }
 
-function submitAdditional() {
-  currentStep.value = 5
-}
-
+// ── Step 4: Payment ──
 async function confirmPayment() {
-  if (agreeTerms.value) {
-    try {
-      const payload = {
-        shippingAddress: {
-          firstName: isGuest.value ? guestForm.value.firstName : (auth.user?.name?.split(' ')[0] || 'User'),
-          lastName: isGuest.value ? guestForm.value.lastName : (auth.user?.name?.split(' ')[1] || 'Name'),
-          phone: isGuest.value ? guestForm.value.phone : (auth.user?.phone || additionalPhone.value),
-          addressLine1: addressForm.value.street,
-          city: addressForm.value.city,
-          country: addressForm.value.country,
-          state: addressForm.value.region,
-          postalCode: addressForm.value.postalCode
-        },
-        paymentMethod: selectedPayment.value,
-        shippingRateId: selectedShippingId.value,
-        couponCode: couponCode.value || cart.couponCode || undefined,
-        notes: '',
-        currency: settings.currentCurrencyCode,
-        guestEmail: isGuest.value ? guestForm.value.email : undefined,
-        guestName: isGuest.value ? `${guestForm.value.firstName} ${guestForm.value.lastName}` : undefined,
-        guestPhone: isGuest.value ? guestForm.value.phone : undefined
-      }
-      const response = await placeOrder(payload)
-      cart.clearCart() // locally
-      router.push('/checkout/success/' + response.orderNumber)
-    } catch (e: any) {
-      console.error(e)
-      alert(t('common.error'))
+  clearErrors()
+  orderError.value = ''
+  if (!selectedPayment.value) { errors.payment = t('checkout.selectPayment') || 'Select a payment method'; return }
+  if (!agreeTerms.value) { errors.terms = t('checkout.agreeTermsRequired') || 'You must agree to the terms'; return }
+
+  if (selectedPayment.value === 'stripe') {
+    if (!cardNumber.value.trim() || !cardName.value.trim() || !cardExpiry.value.trim() || !cardCvv.value.trim()) {
+      orderError.value = t('checkout.fillCardDetails') || 'Please fill all card details'
+      return
     }
   }
+
+  orderLoading.value = true
+  try {
+    const isGuestMode = authMode.value === 'guest' && !auth.isAuthenticated
+    const payload: any = {
+      shippingAddress: {
+        firstName: addressForm.value.firstName,
+        lastName: addressForm.value.lastName,
+        phone: addressForm.value.phone,
+        addressLine1: addressForm.value.street,
+        city: addressForm.value.city,
+        country: addressForm.value.country,
+        state: addressForm.value.state,
+        postalCode: addressForm.value.postalCode,
+      },
+      paymentMethod: selectedPayment.value,
+      shippingRateId: selectedShippingId.value,
+      couponCode: couponCode.value || cart.couponCode || undefined,
+      notes: '',
+      currency: settings.currentCurrencyCode,
+    }
+    if (isGuestMode) {
+      payload.guestEmail = guestForm.value.email
+      payload.guestName = `${guestForm.value.firstName} ${guestForm.value.lastName}`
+      payload.guestPhone = guestForm.value.phone
+    }
+
+    const response = await placeOrder(payload)
+    cart.clearCart()
+    router.push('/checkout/success/' + response.orderNumber)
+  } catch (e: any) {
+    orderError.value = e.response?.data?.message || t('common.error')
+  } finally {
+    orderLoading.value = false
+  }
 }
 
+// ── Init ──
 onMounted(() => {
   if (auth.isAuthenticated) {
-    isGuest.value = false
-    currentStep.value = 2 // skip login if auth
+    authMode.value = 'login'
+    currentStep.value = 2
+    if (auth.user) {
+      const parts = auth.user.name?.split(' ') || []
+      addressForm.value.firstName = parts[0] || ''
+      addressForm.value.lastName = parts.slice(1).join(' ') || ''
+      addressForm.value.phone = auth.user.phone || ''
+    }
   }
-  if (settings.storeSettings.paymentMethods?.length) {
-    selectedPayment.value = settings.storeSettings.paymentMethods[0].id
+  if (paymentMethods.value.length) {
+    selectedPayment.value = paymentMethods.value[0].id
   }
 })
 </script>
 
 <style scoped>
-/* ─── Page ─── */
-.checkout-page {
-  background: #f9fafb;
-  min-height: 100vh;
-  padding-bottom: 3rem;
-}
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
+.checkout-page { background: var(--bg-secondary, #f5f5f5); min-height: 100vh; padding-bottom: var(--space-2xl); }
+.container { max-width: 900px; margin: 0 auto; padding: 0 var(--container-padding, 1rem); }
 
-/* ─── Header ─── */
-.checkout-header {
-  background: #fff;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 1.25rem 0 0;
-  margin-bottom: 0;
-}
-.checkout-header__inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-.checkout-header__left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.checkout-header__logo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-}
-.checkout-header__logo-img {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #e5e7eb;
-}
-.checkout-header__logo-label {
-  font-size: 0.625rem;
-  color: #6b7280;
-}
-.checkout-header__thumbs {
-  display: flex;
-  gap: 0.25rem;
-}
-.checkout-header__thumb {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  border-radius: 4px;
-}
-.checkout-header__right {
-  text-align: right;
-}
-.checkout-header__title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--store-text-primary, #111827);
-}
-.checkout-header__total {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--store-text-primary, #111827);
-}
-.checkout-header__currency {
-  font-size: 1rem;
-}
-.checkout-header__coupon-btn {
-  background: none;
-  border: none;
-  color: #ef4444;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  text-decoration: underline;
-  margin-top: 0.25rem;
-}
+/* Header */
+.checkout-header { background: var(--bg-primary, #fff); border-bottom: 1px solid var(--product-border-color, #eee); padding: var(--space-lg) 0 0; }
+.checkout-header__inner { display: flex; justify-content: space-between; align-items: flex-start; }
+.checkout-header__left { display: flex; align-items: center; gap: var(--space-lg); }
+.checkout-header__logo { display: flex; flex-direction: column; align-items: center; gap: var(--space-xs); }
+.checkout-header__logo-img { width: 56px; height: 56px; border-radius: var(--radius-full); object-fit: cover; border: 2px solid var(--product-border-color, #eee); }
+.checkout-header__logo-label { font-size: 0.625rem; color: var(--footer-text-color, #374151); }
+.checkout-header__thumbs { display: flex; gap: var(--space-xs); }
+.checkout-header__thumb { width: 32px; height: 32px; object-fit: contain; border-radius: var(--radius-sm); }
+.checkout-header__right { text-align: right; }
+.checkout-header__title { font-size: 1.125rem; font-weight: 700; color: var(--store-text-primary); }
+.checkout-header__total { font-size: 1.5rem; font-weight: 700; color: var(--store-text-primary); }
+.checkout-header__coupon-btn { background: none; border: none; color: var(--color-primary); font-size: 0.8125rem; font-weight: 500; cursor: pointer; text-decoration: underline; margin-top: var(--space-xs); }
+.checkout-coupon { padding: var(--space-lg) 0; }
+.checkout-coupon__row { display: flex; gap: var(--space-sm); }
+.checkout-coupon__input { flex: 1; padding: 0.625rem 0.875rem; border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-md); font-size: 0.875rem; outline: none; }
+.checkout-coupon__input:focus { border-color: var(--color-primary); }
+.checkout-coupon__apply { padding: 0.625rem var(--space-lg); background: var(--color-primary-reverse, #060606); color: var(--bg-primary, #fff); border: none; border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+.checkout-coupon__apply:disabled { opacity: 0.6; cursor: not-allowed; }
+.checkout-coupon__msg { font-size: 0.8125rem; margin: var(--space-sm) 0 0; color: var(--color-primary); }
+.checkout-coupon__msg.error { color: var(--promotion-bg, #ff0000); }
+.checkout-header__details-toggle { display: flex; justify-content: center; padding: var(--space-lg) 0; }
+.checkout-details-btn { padding: 0.375rem var(--space-lg); border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-full); background: var(--bg-primary, #fff); font-size: 0.8125rem; color: var(--store-text-primary); cursor: pointer; transition: all var(--transition-normal); }
+.checkout-details-btn:hover { border-color: var(--color-primary); }
 
-/* Coupon */
-.checkout-coupon {
-  padding: 0.75rem 0;
-}
-.checkout-coupon__row {
-  display: flex;
-  gap: 0.5rem;
-}
-.checkout-coupon__input {
-  flex: 1;
-  padding: 0.625rem 0.875rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  outline: none;
-}
-.checkout-coupon__input:focus {
-  border-color: var(--color-primary, #858585);
-}
-.checkout-coupon__apply {
-  padding: 0.625rem 1.5rem;
-  background: #374151;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-}
+/* Steps */
+.checkout-body { padding-top: 0; }
+.checkout-step { background: var(--bg-primary, #fff); border-radius: var(--radius-xl); padding: var(--space-lg); transition: opacity var(--transition-normal); }
+.checkout-step.locked { opacity: 0.45; pointer-events: none; }
+.checkout-step.completed { opacity: 1; }
+.checkout-step__header { display: flex; align-items: flex-start; gap: var(--space-lg); }
+.checkout-step__num { width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--bg-secondary, #f5f5f5); color: var(--footer-text-color, #374151); display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 700; flex-shrink: 0; }
+.checkout-step__num.done { background: var(--color-primary); color: var(--bg-primary, #fff); }
+.checkout-step__title-wrap { flex: 1; }
+.checkout-step__title { font-size: 1.125rem; font-weight: 700; color: var(--store-text-primary); margin: 0; line-height: 1.3; }
+.checkout-step__subtitle { font-size: 0.8125rem; color: var(--footer-text-color, #374151); margin: 0.125rem 0 0; }
+.checkout-step__side-btn { background: none; border: none; font-size: 0.875rem; font-weight: 500; color: var(--color-primary); cursor: pointer; text-decoration: underline; white-space: nowrap; }
+.checkout-edit-btn { display: flex; align-items: center; gap: var(--space-xs); padding: 0.375rem var(--space-md); border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-md); background: var(--bg-primary, #fff); font-size: 0.8125rem; color: var(--store-text-primary); cursor: pointer; white-space: nowrap; }
+.checkout-edit-btn:hover { border-color: var(--color-primary); }
+.checkout-step__content { margin-top: var(--space-lg); }
+.checkout-divider { height: 1px; background: var(--product-border-color, #eee); }
 
-/* Order Details toggle */
-.checkout-header__details-toggle {
-  display: flex;
-  justify-content: center;
-  padding: 0.75rem 0;
-}
-.checkout-details-btn {
-  padding: 0.375rem 1.25rem;
-  border: 1px solid #d1d5db;
-  border-radius: 20px;
-  background: #fff;
-  font-size: 0.8125rem;
-  color: var(--store-text-primary, #111827);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.checkout-details-btn:hover {
-  border-color: var(--color-primary, #858585);
-}
+/* Auth Tabs */
+.auth-tabs { display: flex; gap: 0; margin-bottom: var(--space-lg); border-bottom: 2px solid var(--product-border-color, #eee); }
+.auth-tab { flex: 1; padding: var(--space-lg) var(--space-md); background: none; border: none; font-size: 0.9375rem; font-weight: 600; color: var(--color-primary-light, #ababab); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all var(--transition-normal); }
+.auth-tab.active { color: var(--store-text-primary); border-bottom-color: var(--color-primary); }
+.checkout-auth-form { display: flex; flex-direction: column; gap: var(--space-md); }
 
-/* ─── Steps ─── */
-.checkout-body {
-  padding-top: 0;
-}
-.checkout-step {
-  background: #fff;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 0;
-  transition: opacity 0.3s;
-}
-.checkout-step.locked {
-  opacity: 0.45;
-  pointer-events: none;
-}
-.checkout-step.completed {
-  opacity: 1;
-}
-.checkout-step__header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-.checkout-step__icon {
-  color: var(--store-text-primary, #111827);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.checkout-step__title-wrap {
-  flex: 1;
-}
-.checkout-step__title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--store-text-primary, #111827);
-  margin: 0;
-  line-height: 1.3;
-}
-.checkout-step__subtitle {
-  font-size: 0.8125rem;
-  color: #6b7280;
-  margin: 0.125rem 0 0;
-}
-.checkout-step__side-btn {
-  background: none;
-  border: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--store-text-primary, #111827);
-  cursor: pointer;
-  text-decoration: underline;
-  white-space: nowrap;
-}
-.checkout-edit-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 1rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #fff;
-  font-size: 0.8125rem;
-  color: var(--store-text-primary, #111827);
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-.checkout-edit-btn:hover {
-  border-color: var(--color-primary, #858585);
-}
-
-/* Content */
-.checkout-step__content {
-  margin-top: 1.25rem;
-}
-.checkout-divider {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 0;
-}
-
-/* ─── Forms ─── */
-.checkout-form-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-@media (min-width: 600px) {
-  .checkout-form-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-.checkout-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-.checkout-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--store-text-primary, #111827);
-}
-.req {
-  color: #ef4444;
-}
-.checkout-input {
-  padding: 0.625rem 0.875rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  outline: none;
-  color: var(--store-text-primary, #111827);
-  background: #fff;
-  width: 100%;
-  box-sizing: border-box;
-}
-.checkout-input:focus {
-  border-color: var(--color-primary, #858585);
-}
-.checkout-select {
-  padding: 0.625rem 0.875rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  outline: none;
-  color: var(--store-text-primary, #111827);
-  background: #fff;
-  width: 100%;
-  box-sizing: border-box;
-  cursor: pointer;
-}
-
-/* Phone input */
-.checkout-phone-input {
-  display: flex;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  overflow: hidden;
-}
-.checkout-phone-prefix {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0 0.625rem;
-  background: #f9fafb;
-  border-right: 1px solid #d1d5db;
-  flex-shrink: 0;
-}
-.checkout-phone-arrow {
-  font-size: 0.75rem;
-  color: #9ca3af;
-}
-.checkout-phone-flag {
-  font-size: 1.125rem;
-}
-.checkout-input--phone {
-  border: none;
-  border-radius: 0;
-}
+/* Forms */
+.checkout-form-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-md); }
+@media (min-width: 600px) { .checkout-form-grid { grid-template-columns: 1fr 1fr; } }
+.checkout-field { display: flex; flex-direction: column; gap: var(--space-xs); }
+.checkout-label { font-size: 0.875rem; font-weight: 600; color: var(--store-text-primary); }
+.req { color: var(--promotion-bg, #ff0000); }
+.checkout-input { padding: 0.625rem 0.875rem; border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-md); font-size: 0.875rem; outline: none; color: var(--store-text-primary); background: var(--bg-primary, #fff); width: 100%; box-sizing: border-box; transition: border-color var(--transition-normal); }
+.checkout-input:focus { border-color: var(--color-primary); }
+.checkout-input.input-error { border-color: var(--promotion-bg, #ff0000); }
+.field-error { font-size: 0.75rem; color: var(--promotion-bg, #ff0000); }
+.auth-error-msg { color: var(--promotion-bg, #ff0000); font-size: 0.875rem; margin: var(--space-xs) 0; padding: var(--space-sm) var(--space-lg); background: var(--bg-secondary, #f5f5f5); border-radius: var(--radius-md); }
+.checkout-alt-text { display: flex; align-items: center; justify-content: center; gap: var(--space-xs); font-size: 0.8125rem; color: var(--footer-text-color, #374151); margin-top: var(--space-sm); }
+.checkout-alt-text a { color: var(--color-primary); text-decoration: underline; }
 
 /* Buttons */
-.checkout-btn {
-  display: block;
-  width: 100%;
-  padding: 0.875rem 1rem;
-  background: #9ca3af;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 1rem;
-}
-.checkout-btn:hover:not(:disabled) {
-  background: #6b7280;
-}
-.checkout-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.checkout-btn { display: block; width: 100%; padding: 0.875rem var(--space-md); background: var(--color-primary); color: var(--bg-primary, #fff); border: none; border-radius: var(--radius-md); font-size: 0.9375rem; font-weight: 700; cursor: pointer; transition: all var(--transition-normal); margin-top: var(--space-md); }
+.checkout-btn:hover:not(:disabled) { background: var(--color-primary-dark); }
+.checkout-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.checkout-btn--pay { background: var(--color-primary-reverse, #060606); }
+.checkout-btn--pay:hover:not(:disabled) { background: var(--color-primary-dark); }
 
 /* Checkboxes */
-.checkout-checkbox {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin: 1rem 0;
-  cursor: pointer;
-  font-size: 0.8125rem;
-  color: var(--store-text-primary, #111827);
-}
-.checkout-checkbox input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-primary, #858585);
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-.checkout-checkbox--terms {
-  font-size: 0.75rem;
-  color: #6b7280;
-  line-height: 1.5;
-}
+.checkout-checkbox { display: flex; align-items: flex-start; gap: var(--space-sm); margin: var(--space-md) 0; cursor: pointer; font-size: 0.8125rem; color: var(--store-text-primary); }
+.checkout-checkbox input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--color-primary); flex-shrink: 0; margin-top: 1px; }
+.checkout-checkbox--terms { font-size: 0.75rem; color: var(--footer-text-color, #374151); line-height: 1.5; }
 
-.checkout-alt-text {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  font-size: 0.8125rem;
-  color: #6b7280;
-  margin-top: 1rem;
-}
-.checkout-recipient {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 0.75rem 0;
-}
+/* Shipping Cards */
+.checkout-shipping-options { display: flex; flex-direction: column; gap: var(--space-lg); margin-bottom: var(--space-sm); }
+.checkout-shipping-card { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md) var(--space-lg); border: 1.5px solid var(--product-border-color, #eee); border-radius: var(--radius-xl); cursor: pointer; transition: border-color var(--transition-normal); }
+.checkout-shipping-card.selected { border-color: var(--color-primary); background: var(--bg-secondary, #f5f5f5); }
+.checkout-radio { width: 18px; height: 18px; accent-color: var(--color-primary); flex-shrink: 0; }
+.checkout-shipping-info { flex: 1; }
+.checkout-shipping-name { display: block; font-size: 0.9375rem; font-weight: 700; color: var(--store-text-primary); }
+.checkout-shipping-time { font-size: 0.75rem; color: var(--footer-text-color, #374151); }
+.checkout-shipping-price { font-size: 1rem; font-weight: 700; color: var(--store-text-primary); white-space: nowrap; }
+.empty-shipping { text-align: center; padding: var(--space-xl); color: var(--footer-text-color, #374151); }
 
-/* ─── Shipping Cards ─── */
-.checkout-shipping-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-.checkout-shipping-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-.checkout-shipping-card.selected {
-  border-color: var(--color-primary, #858585);
-  background: #fafafa;
-}
-.checkout-radio {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-primary, #858585);
-  flex-shrink: 0;
-}
-.checkout-shipping-logo {
-  width: 48px;
-  height: 36px;
-  object-fit: contain;
-}
-.checkout-shipping-info {
-  flex: 1;
-}
-.checkout-shipping-name {
-  display: block;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: var(--store-text-primary, #111827);
-}
-.checkout-shipping-time {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-.checkout-shipping-price {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--store-text-primary, #111827);
-  white-space: nowrap;
-}
+/* Payment */
+.checkout-payment-methods { display: flex; flex-wrap: wrap; gap: var(--space-lg); margin-bottom: var(--space-lg); }
+.checkout-payment-card { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-lg) var(--space-lg); border: 1.5px solid var(--product-border-color, #eee); border-radius: var(--radius-xl); cursor: pointer; transition: border-color var(--transition-normal); min-width: 100px; }
+.checkout-payment-card.selected { border-color: var(--color-primary); background: var(--bg-secondary, #f5f5f5); }
+.checkout-payment-name { font-size: 0.875rem; font-weight: 600; color: var(--store-text-primary); }
+.checkout-payment-fee { font-size: 0.75rem; color: var(--footer-text-color, #374151); }
+.checkout-card-form { border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-xl); padding: var(--space-lg); margin-bottom: var(--space-md); }
+.card-form-note { margin: 0 0 var(--space-md); font-size: 0.875rem; color: var(--footer-text-color, #374151); }
 
-/* ─── Payment ─── */
-.checkout-payment-methods {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-.checkout-payment-card {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: border-color 0.2s;
-  min-width: 100px;
-}
-.checkout-payment-card.selected {
-  border-color: var(--color-primary, #858585);
-  background: #fafafa;
-}
-.checkout-payment-logo {
-  height: 28px;
-  width: auto;
-  object-fit: contain;
-}
-.checkout-card-form {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1rem;
-}
-.checkout-card-input-wrap {
-  position: relative;
-}
-.checkout-card-expiry {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  gap: 0.75rem;
-}
-.checkout-card-hint {
-  font-size: 0.75rem;
-  color: #9ca3af;
-}
+/* Order Summary */
+.checkout-order-summary { border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-xl); padding: var(--space-md) var(--space-lg); margin: var(--space-lg) 0 0; }
+.summary-row { display: flex; justify-content: space-between; padding: var(--space-sm) 0; font-size: 0.875rem; color: var(--store-text-primary); }
+.summary-row.discount { color: var(--color-primary); }
+.summary-row.total { font-size: 1.125rem; font-weight: 700; border-top: 1px solid var(--product-border-color, #eee); padding-top: var(--space-lg); margin-top: var(--space-xs); }
 </style>
