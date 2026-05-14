@@ -56,6 +56,7 @@ export interface ProductsParams {
   brand?: string
   search?: string
   tags?: string
+  ids?: string
   minPrice?: number
   maxPrice?: number
   rating?: number
@@ -222,7 +223,7 @@ export async function fetchWishlist(): Promise<Product[]> {
 }
 
 export async function addWishlistItem(productId: number) {
-  return unwrap(await apiClient.post('/wishlist', { product_id: productId }))
+  return unwrap(await apiClient.post('/wishlist', { productId }))
 }
 
 export async function removeWishlistItem(productId: number) {
@@ -242,6 +243,13 @@ export async function placeOrder(data: any) {
 
 export async function fetchOrderSuccess(orderNumber: string) {
   return unwrap<any>(await apiClient.get(`/checkout/order-success/${orderNumber}`))
+}
+
+// ═══════════════════════════════════════════
+// FLASH SALES
+// ═══════════════════════════════════════════
+export async function fetchActiveFlashSale() {
+  return unwrap<any>(await apiClient.get('/flash-sales/active'))
 }
 
 // ═══════════════════════════════════════════

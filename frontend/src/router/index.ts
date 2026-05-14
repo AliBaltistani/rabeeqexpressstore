@@ -121,6 +121,24 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Addresses - E-SEVEN STORE', requiresAuth: true },
       },
       {
+        path: 'reset-password',
+        name: 'reset-password',
+        component: () => import('@/pages/ResetPasswordPage.vue'),
+        meta: { title: 'Reset Password - E-SEVEN STORE', guest: true },
+      },
+      {
+        path: 'blog',
+        name: 'blog',
+        component: () => import('@/pages/BlogListPage.vue'),
+        meta: { title: 'Blog - E-SEVEN STORE' },
+      },
+      {
+        path: 'blog/:slug',
+        name: 'blog-post',
+        component: () => import('@/pages/BlogPostPage.vue'),
+        meta: { title: 'Blog - E-SEVEN STORE' },
+      },
+      {
         path: ':slug',
         name: 'cms-page',
         component: () => import('@/pages/CmsPage.vue'),

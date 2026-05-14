@@ -132,9 +132,12 @@ const { isOpen, product, close } = useQuickView()
 
 const quantity = ref(1)
 
-function formatPrice(price: number): string {
+function formatPrice(price: any): string {
+  if (price && typeof price === 'object' && price.formatted) {
+    return price.formatted
+  }
   const cur = product.value?.currency || 'SAR'
-  return `${price.toFixed(0)} ${cur}`
+  return `${Number(price).toFixed(0)} ${cur}`
 }
 
 function addToCart() {

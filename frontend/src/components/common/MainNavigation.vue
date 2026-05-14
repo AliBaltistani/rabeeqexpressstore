@@ -33,8 +33,8 @@
                 @mouseenter="activeDropdown = cat.slug"
                 @mouseleave="activeDropdown = null; activeSubmenu = null"
               >
-                <router-link :to="'/category/' + cat.slug" class="nav-link" :aria-label="cat.name">
-                  <span>{{ cat.name }}</span>
+                <router-link :to="'/category/' + cat.slug" class="nav-link" :aria-label="cat.label">
+                  <span>{{ cat.label }}</span>
                   <!-- Chevron down for categories with children -->
                   <svg v-if="cat.children && cat.children.length" class="chevron-down" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </router-link>
@@ -55,7 +55,7 @@
                         :class="{ 'is-active': activeSubmenu === child.slug && child.children && child.children.length }"
                       >
                         <router-link :to="'/category/' + child.slug" class="mega-link">
-                          <span>{{ child.name }}</span>
+                          <span>{{ child.label }}</span>
                           <!-- Arrow icon for items with sub-children -->
                           <svg v-if="child.children && child.children.length" class="chevron-right" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                         </router-link>
@@ -73,7 +73,7 @@
                     <ul v-if="child.children && child.children.length">
                       <li v-for="sub in child.children" :key="sub.slug">
                         <router-link :to="'/category/' + sub.slug" class="mega-link">
-                          <span>{{ sub.name }}</span>
+                          <span>{{ sub.label }}</span>
                         </router-link>
                       </li>
                     </ul>
@@ -90,6 +90,10 @@
             </button>
             <router-link to="/account" class="action-btn" aria-label="My Account">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </router-link>
+            <router-link to="/account/wishlist" class="action-btn" aria-label="Wishlist">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              <span v-if="wishlistCount > 0" class="cart-badge">{{ wishlistCount }}</span>
             </router-link>
             <router-link to="/cart" class="action-btn" aria-label="Cart">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
@@ -109,17 +113,20 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useCartStore } from '@/stores/cartStore'
+import { useWishlistStore } from '@/stores/wishlistStore'
 import { useMenuCategories } from '@/composables/useMenuCategories'
 import MobileMenu from '@/components/common/MobileMenu.vue'
 import logoImage from '@/assets/images/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png'
 
 const settings = useSettingsStore()
 const cart = useCartStore()
+const wishlist = useWishlistStore()
 const { menuItems } = useMenuCategories()
 const menuCategories = menuItems
 const mobileCategories = menuItems.value
 
 const cartCount = computed(() => cart.itemCount)
+const wishlistCount = computed(() => wishlist.count)
 const isSticky = ref(false)
 const showMobileMenu = ref(false)
 const logoSrc = settings.storeSettings.logo || logoImage

@@ -139,7 +139,8 @@
     "installmentText": "أو قسمها على {count} دفعات بقيمة {amount}",
     "installmentSub": "بدون رسوم تأخير، متوافق مع الشريعة!",
     "learnMore": "اعرف المزيد",
-    "shopNow": "تسوق الآن"
+    "shopNow": "تسوق الآن",
+    "wishlist": "المفضلة"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -152,7 +153,11 @@
     "name": "الاسم",
     "phone": "الهاتف",
     "confirmPassword": "تأكيد كلمة المرور",
-    "rememberMe": "تذكرني"
+    "rememberMe": "تذكرني",
+    "sendResetLink": "إرسال رابط إعادة التعيين",
+    "resetLinkSent": "لقد أرسلنا لك رابط إعادة تعيين كلمة المرور. يرجى التحقق من بريدك الإلكتروني.",
+    "forgotPasswordDesc": "أدخل عنوان بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين كلمة المرور.",
+    "passwordResetSuccess": "تم إعادة تعيين كلمة المرور بنجاح."
   },
   "account": {
     "myAccount": "حسابي",
@@ -166,9 +171,63 @@
     "orders": "الطلبات",
     "wishlist": "المفضلة",
     "addresses": "العناوين",
-    "orderHistory": "سجل الطلبات"
+    "orderHistory": "سجل الطلبات",
+    "notLoggedIn": "سجل الدخول لمزامنة المفضلة"
+  },
+  "wishlist": {
+    "empty": "قائمة رغباتك فارغة",
+    "emptyDesc": "استكشف متجرنا وأضف منتجاتك المفضلة!"
+  },
+  "address": {
+    "addNew": "إضافة عنوان جديد",
+    "edit": "تعديل العنوان",
+    "noAddresses": "لم يتم حفظ أي عناوين بعد",
+    "noAddressesDesc": "أضف عنوانًا لإتمام الشراء بشكل أسرع.",
+    "default": "الافتراضي",
+    "setAsDefault": "تعيين كعنوان افتراضي"
+  },
+  "profile": {
+    "personalInfo": "المعلومات الشخصية",
+    "emailCannotBeChanged": "لا يمكن تغيير عنوان البريد الإلكتروني.",
+    "updateSuccess": "تم تحديث الملف الشخصي بنجاح.",
+    "changePassword": "تغيير كلمة المرور",
+    "currentPassword": "كلمة المرور الحالية",
+    "newPassword": "كلمة المرور الجديدة",
+    "updatePassword": "تحديث كلمة المرور",
+    "passwordSuccess": "تم تحديث كلمة المرور بنجاح."
   },
   "breadcrumb": {
     "home": "الرئيسية"
+  },
+  "search": {
+    "title": "بحث",
+    "resultsFor": "نتائج البحث عن",
+    "resultsFound": "نتيجة",
+    "noResults": "لم يتم العثور على نتائج",
+    "noResultsDesc": "حاول البحث بكلمات مختلفة.",
+    "prev": "السابق",
+    "next": "التالي"
+  },
+  "blog": {
+    "title": "المدونة",
+    "noPosts": "لا توجد مقالات بعد",
+    "noPostsDesc": "تابعنا قريباً لمحتوى جديد!",
+    "readMore": "اقرأ المزيد",
+    "postNotFound": "المقال غير موجود",
+    "backToBlog": "العودة للمدونة"
+  },
+  "cms": {
+    "notFound": "الصفحة غير موجودة",
+    "notFoundDesc": "الصفحة التي تبحث عنها غير موجودة."
+  },
+  "flashSale": {
+    "title": "تخفيضات سريعة",
+    "noActiveSale": "لا توجد تخفيضات نشطة حالياً",
+    "noActiveSaleDesc": "تابعنا قريباً لعروض مذهلة!",
+    "ended": "انتهى هذا العرض.",
+    "days": "أيام",
+    "hours": "ساعات",
+    "minutes": "دقائق",
+    "seconds": "ثواني"
   }
 }

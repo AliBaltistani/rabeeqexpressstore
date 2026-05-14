@@ -139,7 +139,8 @@
     "installmentText": "Or split in {count} payments of {amount}",
     "installmentSub": "No late fees, Sharia compliant!",
     "learnMore": "Learn more",
-    "shopNow": "Shop Now"
+    "shopNow": "Shop Now",
+    "wishlist": "Wishlist"
   },
   "auth": {
     "login": "Login",
@@ -152,7 +153,11 @@
     "name": "Name",
     "phone": "Phone",
     "confirmPassword": "Confirm Password",
-    "rememberMe": "Remember me"
+    "rememberMe": "Remember me",
+    "sendResetLink": "Send Reset Link",
+    "resetLinkSent": "We have sent you a password reset link. Please check your email.",
+    "forgotPasswordDesc": "Enter your email address and we will send you a password reset link.",
+    "passwordResetSuccess": "Your password has been reset successfully."
   },
   "account": {
     "myAccount": "My Account",
@@ -166,9 +171,63 @@
     "orders": "Orders",
     "wishlist": "Wishlist",
     "addresses": "Addresses",
-    "orderHistory": "Order History"
+    "orderHistory": "Order History",
+    "notLoggedIn": "Sign in to sync wishlist"
+  },
+  "wishlist": {
+    "empty": "Your wishlist is empty",
+    "emptyDesc": "Explore our shop and add your favorite items!"
+  },
+  "address": {
+    "addNew": "Add New Address",
+    "edit": "Edit Address",
+    "noAddresses": "No addresses saved yet",
+    "noAddressesDesc": "Add an address for faster checkout.",
+    "default": "Default",
+    "setAsDefault": "Set as default address"
+  },
+  "profile": {
+    "personalInfo": "Personal Information",
+    "emailCannotBeChanged": "Email address cannot be changed.",
+    "updateSuccess": "Profile updated successfully.",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "updatePassword": "Update Password",
+    "passwordSuccess": "Password updated successfully."
   },
   "breadcrumb": {
     "home": "Home"
+  },
+  "search": {
+    "title": "Search",
+    "resultsFor": "Search results for",
+    "resultsFound": "results found",
+    "noResults": "No results found",
+    "noResultsDesc": "Try searching with different keywords.",
+    "prev": "Prev",
+    "next": "Next"
+  },
+  "blog": {
+    "title": "Blog",
+    "noPosts": "No blog posts yet",
+    "noPostsDesc": "Check back soon for new content!",
+    "readMore": "Read More",
+    "postNotFound": "Post not found",
+    "backToBlog": "Back to Blog"
+  },
+  "cms": {
+    "notFound": "Page not found",
+    "notFoundDesc": "The page you are looking for could not be found."
+  },
+  "flashSale": {
+    "title": "Flash Sale",
+    "noActiveSale": "No active flash sale right now",
+    "noActiveSaleDesc": "Check back soon for amazing deals!",
+    "ended": "This sale has ended.",
+    "days": "Days",
+    "hours": "Hours",
+    "minutes": "Min",
+    "seconds": "Sec"
   }
 }

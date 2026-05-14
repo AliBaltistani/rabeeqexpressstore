@@ -150,6 +150,11 @@ class ProductController extends Controller
             });
         }
 
+        if ($ids = $request->query('ids')) {
+            $idArray = is_array($ids) ? $ids : explode(',', $ids);
+            $query->whereIn('id', $idArray);
+        }
+
         if ($minPrice = $request->query('minPrice')) {
             $query->where('price', '>=', (float) $minPrice);
         }

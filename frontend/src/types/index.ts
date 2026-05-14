@@ -243,15 +243,16 @@ export interface User {
 // ─── Address ───
 export interface Address {
   id: number
-  name: string
+  firstName: string
+  lastName: string
   phone: string
-  address_line_1: string
-  address_line_2?: string
+  addressLine1: string
+  addressLine2?: string
   city: string
   state?: string
   country: string
-  postal_code?: string
-  is_default: boolean
+  postalCode?: string
+  isDefault: boolean
 }
 
 // ─── Order ───
@@ -259,20 +260,43 @@ export interface Order {
   id: number
   orderNumber: string
   status: string
+  statusLabel: string
   paymentStatus: string
   paymentMethod: string
+  subtotal: PriceValue
+  discountAmount: PriceValue
+  shippingAmount: PriceValue
+  taxAmount: PriceValue
   total: PriceValue
   currency: string
+  couponCode?: string
+  notes?: string
   createdAt: string
-  items: OrderItem[]
+  items?: OrderItem[]
+  shippingAddress?: Partial<Address>
+  billingAddress?: Partial<Address>
+  tracking?: {
+    carrier?: string
+    trackingNumber?: string
+    trackingUrl?: string
+    estimatedDelivery?: string
+  }
+  statusHistory?: {
+    status: string
+    note?: string
+    createdAt: string
+  }[]
 }
 
 export interface OrderItem {
   id: number
   productName: string
+  sku: string
   quantity: number
   unitPrice: PriceValue
-  lineTotal: PriceValue
+  total: PriceValue
+  variantName?: string
+  productImage?: string
 }
 
 // ─── Flash Sale ───

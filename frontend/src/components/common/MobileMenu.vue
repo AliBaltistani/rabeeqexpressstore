@@ -39,13 +39,13 @@
               <li v-for="cat in menuCategories" :key="cat.slug" class="mobile-menu__item">
                 <template v-if="cat.children && cat.children.length">
                   <button class="mobile-menu__link" @click="drillDown(cat)">
-                    <span>{{ cat.name }}</span>
+                    <span>{{ cat.label }}</span>
                     <svg class="mobile-menu__chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </button>
                 </template>
                 <template v-else>
                   <router-link :to="'/category/' + cat.slug" class="mobile-menu__link" @click="close">
-                    <span>{{ cat.name }}</span>
+                    <span>{{ cat.label }}</span>
                   </router-link>
                 </template>
               </li>
@@ -62,13 +62,13 @@
               <li v-for="child in currentParent?.children" :key="child.slug" class="mobile-menu__item">
                 <template v-if="child.children && child.children.length">
                   <button class="mobile-menu__link" @click="drillDownLevel2(child)">
-                    <span>{{ child.name }}</span>
+                    <span>{{ child.label }}</span>
                     <svg class="mobile-menu__chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </button>
                 </template>
                 <template v-else>
                   <router-link :to="'/category/' + child.slug" class="mobile-menu__link" @click="close">
-                    <span>{{ child.name }}</span>
+                    <span>{{ child.label }}</span>
                   </router-link>
                 </template>
               </li>
@@ -84,7 +84,7 @@
               </li>
               <li v-for="sub in currentChild?.children" :key="sub.slug" class="mobile-menu__item">
                 <router-link :to="'/category/' + sub.slug" class="mobile-menu__link" @click="close">
-                  <span>{{ sub.name }}</span>
+                  <span>{{ sub.label }}</span>
                 </router-link>
               </li>
             </ul>
@@ -99,21 +99,17 @@
 import { ref, computed, watch } from 'vue'
 import { useSettingsStore } from '@/stores/settingsStore'
 
-interface Category {
-  name: string
-  slug: string
-  children: Category[]
-}
+import type { MenuItem } from '@/composables/useMenuCategories'
 
-const props = defineProps<{ isOpen: boolean; menuCategories: Category[] }>()
+const props = defineProps<{ isOpen: boolean; menuCategories: MenuItem[] }>()
 const emit = defineEmits(['close'])
 
 const settings = useSettingsStore()
 
 
 const currentLevel = ref(0)
-const currentParent = ref<Category | null>(null)
-const currentChild = ref<Category | null>(null)
+const currentParent = ref<MenuItem | null>(null)
+const currentChild = ref<MenuItem | null>(null)
 const currentTitle = ref('')
 const slideDirection = ref('slide-left')
 
@@ -131,17 +127,17 @@ function close() {
   emit('close')
 }
 
-function drillDown(cat: Category) {
+function drillDown(cat: MenuItem) {
   slideDirection.value = 'slide-left'
   currentParent.value = cat
-  currentTitle.value = cat.name
+  currentTitle.value = cat.label
   currentLevel.value = 1
 }
 
-function drillDownLevel2(child: Category) {
+function drillDownLevel2(child: MenuItem) {
   slideDirection.value = 'slide-left'
   currentChild.value = child
-  currentTitle.value = child.name
+  currentTitle.value = child.label
   currentLevel.value = 2
 }
 
@@ -149,7 +145,7 @@ function goBack() {
   slideDirection.value = 'slide-right'
   if (currentLevel.value === 2) {
     currentLevel.value = 1
-    currentTitle.value = currentParent.value?.name || ''
+    currentTitle.value = currentParent.value?.label || ''
     currentChild.value = null
   } else if (currentLevel.value === 1) {
     currentLevel.value = 0

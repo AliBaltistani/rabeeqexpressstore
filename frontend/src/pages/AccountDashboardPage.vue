@@ -44,8 +44,8 @@
             <tr v-for="order in orders.slice(0, 5)" :key="order.id">
               <td>{{ order.orderNumber }}</td>
               <td>{{ new Date(order.createdAt).toLocaleDateString() }}</td>
-              <td><span :class="'status-badge ' + order.status.toLowerCase()">{{ order.status }}</span></td>
-              <td>{{ order.total }} {{ order.currency }}</td>
+              <td><span :class="'status-badge ' + order.status.toLowerCase()">{{ order.statusLabel || order.status }}</span></td>
+              <td>{{ order.total?.formatted }}</td>
             </tr>
           </tbody>
         </table>

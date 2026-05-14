@@ -28,6 +28,7 @@
 
     <!-- Modals -->
     <LocalizationModal :isOpen="showLocalization" @close="showLocalization = false" />
+    <SearchModal :isOpen="showSearch" @close="showSearch = false" />
 
     <!-- Mobile menu padding -->
     <div class="mobile-nav-spacer"></div>
@@ -46,6 +47,7 @@ import WhatsAppButton from '@/components/common/WhatsAppButton.vue'
 import ScrollToTop from '@/components/common/ScrollToTop.vue'
 import BottomNavigation from '@/components/common/BottomNavigation.vue'
 import LocalizationModal from '@/components/common/LocalizationModal.vue'
+import SearchModal from '@/components/common/SearchModal.vue'
 
 const settings = useSettingsStore()
 

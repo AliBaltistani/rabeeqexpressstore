@@ -1,49 +1,73 @@
-﻿<template>
-  <div class="forgot-password-page container">
+<template>
+  <div class="reset-password-page container">
     <div class="auth-box">
-      <h2>{{ $t('auth.forgotPassword') }}</h2>
-      <p class="auth-subtitle">{{ $t('auth.forgotPasswordDesc') || 'Enter your email address and we will send you a password reset link.' }}</p>
+      <h2>{{ $t('auth.resetPassword') }}</h2>
 
       <div v-if="successMsg" class="auth-success">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        <p>{{ successMsg }}</p>
+        <div>
+          <p>{{ successMsg }}</p>
+          <router-link to="/login" class="auth-link">{{ $t('auth.login') }}</router-link>
+        </div>
       </div>
 
-      <form v-else @submit.prevent="handleSubmit" class="auth-form">
+      <form v-else @submit.prevent="handleReset" class="auth-form">
         <div class="auth-field">
           <label>{{ $t('auth.email') }}</label>
-          <input type="email" v-model="email" required class="auth-input" :placeholder="$t('auth.email')" />
+          <input type="email" v-model="form.email" required class="auth-input" :placeholder="$t('auth.email')" />
+        </div>
+        <div class="auth-field">
+          <label>{{ $t('auth.password') }}</label>
+          <input type="password" v-model="form.password" required class="auth-input" minlength="8" :placeholder="$t('auth.password')" />
+        </div>
+        <div class="auth-field">
+          <label>{{ $t('auth.confirmPassword') }}</label>
+          <input type="password" v-model="form.password_confirmation" required class="auth-input" minlength="8" :placeholder="$t('auth.confirmPassword')" />
         </div>
         <p v-if="errorMsg" class="auth-error">{{ errorMsg }}</p>
         <button type="submit" class="auth-btn" :disabled="isLoading">
-          {{ isLoading ? $t('common.loading') : ($t('auth.sendResetLink') || 'Send Reset Link') }}
+          {{ isLoading ? $t('common.loading') : $t('auth.resetPassword') }}
         </button>
       </form>
-
-      <div class="auth-footer">
-        <router-link to="/login">{{ $t('auth.login') }}</router-link>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { forgotPasswordApi } from '@/api/services'
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { resetPasswordApi } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 
+const route = useRoute()
 const { t } = useI18n()
-const email = ref('')
+
+const form = ref({
+  email: '',
+  token: '',
+  password: '',
+  password_confirmation: '',
+})
 const isLoading = ref(false)
 const errorMsg = ref('')
 const successMsg = ref('')
 
-async function handleSubmit() {
+onMounted(() => {
+  form.value.token = (route.query.token as string) || ''
+  form.value.email = (route.query.email as string) || ''
+})
+
+async function handleReset() {
   isLoading.value = true
   errorMsg.value = ''
   try {
-    await forgotPasswordApi(email.value)
-    successMsg.value = t('auth.resetLinkSent') || 'We have sent you a password reset link. Please check your email.'
+    await resetPasswordApi({
+      email: form.value.email,
+      token: form.value.token,
+      password: form.value.password,
+      password_confirmation: form.value.password_confirmation,
+    })
+    successMsg.value = t('auth.passwordResetSuccess') || 'Your password has been reset successfully.'
   } catch (error: any) {
     errorMsg.value = error.response?.data?.message || t('common.error')
   } finally {
@@ -53,7 +77,7 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-.forgot-password-page {
+.reset-password-page {
   padding: 4rem 1rem;
   display: flex;
   justify-content: center;
@@ -69,16 +93,9 @@ async function handleSubmit() {
 .auth-box h2 {
   font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
   color: var(--store-text-primary, #111827);
   text-align: center;
-}
-.auth-subtitle {
-  font-size: 0.875rem;
-  color: #6b7280;
-  text-align: center;
-  margin: 0 0 1.5rem;
-  line-height: 1.5;
 }
 .auth-form {
   display: flex;
@@ -118,7 +135,6 @@ async function handleSubmit() {
   border: 1px solid #bbf7d0;
   border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 1rem;
 }
 .auth-success svg {
   flex-shrink: 0;
@@ -126,10 +142,15 @@ async function handleSubmit() {
   margin-top: 2px;
 }
 .auth-success p {
-  margin: 0;
+  margin: 0 0 0.5rem;
   font-size: 0.875rem;
   color: #166534;
   line-height: 1.5;
+}
+.auth-link {
+  color: var(--color-primary, #858585);
+  font-size: 0.875rem;
+  text-decoration: underline;
 }
 .auth-btn {
   padding: 0.875rem 1rem;
@@ -148,14 +169,5 @@ async function handleSubmit() {
 .auth-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-}
-.auth-footer {
-  margin-top: 1.5rem;
-  text-align: center;
-  font-size: 0.875rem;
-}
-.auth-footer a {
-  color: var(--color-primary, #858585);
-  text-decoration: underline;
 }
 </style>
