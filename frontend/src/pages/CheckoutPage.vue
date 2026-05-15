@@ -305,7 +305,7 @@
           <!-- Order Summary -->
           <div class="checkout-order-summary">
             <div class="summary-row"><span>{{ $t('cart.totalProductsCost') }}</span><span>{{ cart.subtotal?.formatted }}</span></div>
-            <div v-if="cart.discountAmount?.raw" class="summary-row discount"><span>{{ $t('checkout.discount') || 'Discount' }}</span><span>-{{ cart.discountAmount?.formatted }}</span></div>
+            <div v-if="cart.discount?.raw" class="summary-row discount"><span>{{ $t('checkout.discount') || 'Discount' }}</span><span>-{{ cart.discount?.formatted }}</span></div>
             <div class="summary-row"><span>{{ $t('checkout.shippingCompany') }}</span><span>{{ selectedShipping ? (typeof selectedShipping.price === 'object' ? (selectedShipping.price as any).formatted : selectedShipping.price) : '—' }}</span></div>
             <div class="summary-row total"><span>{{ $t('checkout.totalOrder') }}</span><span>{{ cart.total?.formatted }}</span></div>
           </div>
