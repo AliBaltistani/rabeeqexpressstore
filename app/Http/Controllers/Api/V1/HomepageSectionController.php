@@ -57,7 +57,39 @@ class HomepageSectionController extends Controller
                     break;
 
                 case 'reviews':
-                    $base['data'] = $config['reviews'] ?? [];
+                    $manual_reviews = collect($config['reviews'] ?? [])->map(function ($r) {
+                        $name = $r['name'] ?? 'User';
+                        $avatarUrl = !empty($r['avatar']) ? $this->resolveImageUrl($r['avatar']) : null;
+                        
+                        return [
+                            'name' => $name,
+                            'rating' => (int) ($r['rating'] ?? 5),
+                            'avatar' => $avatarUrl ?: 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&color=7F9CF5&background=EBF4FF',
+                            'text' => $r['text'] ?? '',
+                        ];
+                    })->toArray();
+
+                    $selected_review_ids = $config['selected_reviews'] ?? [];
+                    $db_reviews = [];
+                    if (!empty($selected_review_ids)) {
+                        $db_reviews = \App\Models\Review::query()
+                            ->with('user')
+                            ->whereIn('id', $selected_review_ids)
+                            ->get()
+                            ->map(function ($r) {
+                                $name = $r->user ? $r->user->name : 'Unknown User';
+                                $avatarUrl = ($r->user && $r->user->avatar) ? $this->resolveImageUrl($r->user->avatar) : null;
+                                    
+                                return [
+                                    'name' => $name,
+                                    'rating' => (int) $r->rating,
+                                    'avatar' => $avatarUrl ?: 'https://ui-avatars.com/api/?name=' . urlencode($name) . '&color=7F9CF5&background=EBF4FF',
+                                    'text' => $r->body,
+                                ];
+                            })->toArray();
+                    }
+
+                    $base['data'] = array_merge($db_reviews, $manual_reviews);
                     break;
 
                 case 'custom_html':

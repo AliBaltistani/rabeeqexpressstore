@@ -16,6 +16,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class HomepageSectionResource extends Resource
 {
@@ -397,8 +398,42 @@ class HomepageSectionResource extends Resource
                                                     ->default(true),
                                             ]),
 
+                                        Forms\Components\Select::make('config.selected_reviews')
+                                            ->label('Select Existing Reviews')
+                                            ->multiple()
+                                            ->searchable()
+                                            ->helperText('Search by customer name or review text')
+                                            ->getSearchResultsUsing(function (string $search): array {
+                                                return \App\Models\Review::query()
+                                                    ->with('user')
+                                                    ->whereHas('user', function ($q) use ($search) {
+                                                        $q->where('name', 'like', "%{$search}%");
+                                                    })
+                                                    ->orWhere('body', 'like', "%{$search}%")
+                                                    ->limit(50)
+                                                    ->get()
+                                                    ->mapWithKeys(function ($review) {
+                                                        $userName = $review->user ? $review->user->name : 'Unknown User';
+                                                        $rating = str_repeat('★', $review->rating) . str_repeat('☆', 5 - $review->rating);
+                                                        return [$review->id => "{$userName} - {$rating} (" . Str::limit($review->body, 30) . ")"];
+                                                    })
+                                                    ->toArray();
+                                            })
+                                            ->getOptionLabelsUsing(function (array $values): array {
+                                                return \App\Models\Review::query()
+                                                    ->with('user')
+                                                    ->whereIn('id', $values)
+                                                    ->get()
+                                                    ->mapWithKeys(function ($review) {
+                                                        $userName = $review->user ? $review->user->name : 'Unknown User';
+                                                        $rating = str_repeat('★', $review->rating) . str_repeat('☆', 5 - $review->rating);
+                                                        return [$review->id => "{$userName} - {$rating} (" . Str::limit($review->body, 30) . ")"];
+                                                    })
+                                                    ->toArray();
+                                            }),
+
                                         Forms\Components\Repeater::make('config.reviews')
-                                            ->label('Reviews')
+                                            ->label('Manual Reviews')
                                             ->schema([
                                                 Schemas\Components\Grid::make(3)
                                                     ->schema([
@@ -419,10 +454,10 @@ class HomepageSectionResource extends Resource
                                                             ->default(5)
                                                             ->columnSpan(1),
 
-                                                        Forms\Components\TextInput::make('avatar')
-                                                            ->label('Avatar URL')
-                                                            ->url()
-                                                            ->placeholder('https://...')
+                                                        Forms\Components\FileUpload::make('avatar')
+                                                            ->label('User Image')
+                                                            ->image()
+                                                            ->directory('manual_reviews_avatars')
                                                             ->columnSpan(1),
                                                     ]),
 
