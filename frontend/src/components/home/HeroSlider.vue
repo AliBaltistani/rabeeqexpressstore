@@ -106,7 +106,8 @@ onBeforeUnmount(() => pauseAutoplay())
 .hero-slider__link { display: block; }
 .hero-slider__image {
   width: 100%;
-  height: auto;
+  aspect-ratio: 21 / 9;
+  object-fit: cover;
   display: block;
   border-radius: 0.375rem;
 }

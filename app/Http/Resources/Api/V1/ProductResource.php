@@ -34,7 +34,8 @@ class ProductResource extends JsonResource
         if ($flashSalePrice && $currency !== $defaultCode) {
             try {
                 $flashSalePrice = Currency::convert($flashSalePrice, $defaultCode, $currency);
-            } catch (\Throwable) {}
+            } catch (\Throwable) {
+            }
         }
 
         // Discount percentage
@@ -122,10 +123,16 @@ class ProductResource extends JsonResource
      */
     protected function getPrimaryImage(): ?string
     {
+        $placeholder = asset('storage/dummy/placeholder.jpg');
+
         if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
             $primary = $this->images->where('is_primary', true)->first() ?? $this->images->first();
-            return $primary->image ? asset('storage/' . $primary->image) : null;
+
+            return $primary->image && \Illuminate\Support\Facades\Storage::disk('public')->exists($primary->image)
+                ? asset('storage/' . $primary->image)
+                : $placeholder;
         }
-        return null;
+
+        return $placeholder;
     }
 }

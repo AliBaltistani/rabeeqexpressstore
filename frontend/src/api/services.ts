@@ -273,3 +273,10 @@ export async function fetchBlogCategories() {
 export async function fetchCmsPage(slug: string): Promise<CmsPage> {
   return unwrap(await apiClient.get(`/pages/${slug}`))
 }
+
+// ═══════════════════════════════════════════
+// HOMEPAGE SECTIONS
+// ═══════════════════════════════════════════
+export async function fetchHomeSections() {
+  return unwrap<any[]>(await apiClient.get('/homepage-sections'))
+}

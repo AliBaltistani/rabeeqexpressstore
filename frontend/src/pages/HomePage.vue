@@ -1,37 +1,74 @@
 <template>
   <div class="home-page">
-    <!-- 1. Hero Banner Slider -->
-    <section class="s-block banners-slider">
-      <div class="container">
-        <HeroSlider :slides="heroSlides" />
+    <template v-for="section in sections" :key="section.id">
+      <div
+        :class="[
+          'home-section',
+          section.config?.css_class || '',
+          section.config?.background ? 'home-bg-' + section.config.background : '',
+          section.config?.padding ? 'home-pad-' + section.config.padding : 'home-pad-md',
+        ]"
+      >
+
+        <!-- Hero Slider -->
+        <section v-if="section.type === 'hero_slider'" class="s-block banners-slider">
+          <div class="container">
+            <HeroSlider :slides="mapHeroSlides(section.data)" />
+          </div>
+        </section>
+
+        <!-- Promo Banners (grid) -->
+        <template v-if="section.type === 'promo_banners' && section.data?.length">
+          <DoubleBanner v-if="section.data.length >= 2" :banners="mapPromoBanners(section.data.slice(0, 2))" />
+          <DoubleBanner v-if="section.data.length >= 4" :banners="mapPromoBanners(section.data.slice(2, 4))" />
+        </template>
+
+        <!-- Featured Products -->
+        <ProductSlider
+          v-if="section.type === 'featured_products' && section.data?.length"
+          :title="section.title"
+          :products="mapProducts(section.data)"
+          :view-all-link="section.config?.view_all_url || '/products?featured=true'"
+        />
+
+        <!-- Best Sellers -->
+        <ProductSlider
+          v-if="section.type === 'best_sellers' && section.data?.length"
+          :title="section.title"
+          :products="mapProducts(section.data)"
+          :view-all-link="section.config?.view_all_url || '/products?sortBy=best_seller'"
+        />
+
+        <!-- New Arrivals -->
+        <ProductSlider
+          v-if="section.type === 'new_arrivals' && section.data?.length"
+          :title="section.title"
+          :products="mapProducts(section.data)"
+          :view-all-link="section.config?.view_all_url || '/products?sortBy=newest'"
+        />
+
+        <!-- Category Products -->
+        <ProductSlider
+          v-if="section.type === 'category_products' && section.data?.length"
+          :title="section.title"
+          :products="mapProducts(section.data)"
+          :view-all-link="'/category/' + (section.category?.slug || '')"
+        />
+
+        <!-- Customer Reviews -->
+        <TestimonialsSlider
+          v-if="section.type === 'reviews' && section.data?.length"
+          :title="section.title"
+          :reviews="section.data"
+        />
+
       </div>
-    </section>
-
-    <!-- 2. Promo Banners (double) -->
-    <DoubleBanner v-if="promoBanners.length >= 2" :banners="promoBanners.slice(0, 2)" />
-    <DoubleBanner v-if="promoBanners.length >= 4" :banners="promoBanners.slice(2, 4)" />
-
-    <!-- 3. Featured Products -->
-    <ProductSlider v-if="featuredProducts.length" :title="$t('product.viewAll')" :products="mapProducts(featuredProducts)" view-all-link="/products?featured=true" />
-
-    <!-- 4. Best Sellers -->
-    <ProductSlider v-if="bestSellers.length" :title="$t('category.bestSeller')" :products="mapProducts(bestSellers)" view-all-link="/products?sortBy=best_seller" />
-
-    <!-- 5. New Arrivals -->
-    <ProductSlider v-if="newArrivals.length" :title="$t('common.viewAll')" :products="mapProducts(newArrivals)" view-all-link="/products?sortBy=newest" />
-
-    <!-- 6. Category-based Product Sliders (dynamic from API categories) -->
-    <template v-for="section in categorySections" :key="section.slug">
-      <ProductSlider
-        v-if="section.products.length"
-        :title="section.name"
-        :products="mapProducts(section.products)"
-        :view-all-link="'/category/' + section.slug"
-      />
     </template>
 
-    <!-- 7. Customer Reviews -->
-    <TestimonialsSlider :title="$t('common.customersReviews')" :reviews="customerReviews" />
+    <!-- Loading state -->
+    <div v-if="loading" class="home-loading">
+      <p>{{ $t('common.loading') }}...</p>
+    </div>
   </div>
 </template>
 
@@ -41,39 +78,38 @@ import HeroSlider from '@/components/home/HeroSlider.vue'
 import DoubleBanner from '@/components/home/DoubleBanner.vue'
 import ProductSlider from '@/components/home/ProductSlider.vue'
 import TestimonialsSlider from '@/components/home/TestimonialsSlider.vue'
-import {
-  fetchBanners, fetchFeaturedProducts, fetchBestSellers,
-  fetchNewArrivals, fetchProducts,
-} from '@/api/services'
-import { useSettingsStore } from '@/stores/settingsStore'
-import type { Product, Banner } from '@/types'
-
-const settings = useSettingsStore()
+import { fetchHomeSections } from '@/api/services'
 
 // ─── State ───
-const heroSlides = ref<{ image: string; link: string; alt?: string }[]>([])
-const promoBanners = ref<{ image: string; link: string }[]>([])
-const featuredProducts = ref<Product[]>([])
-const bestSellers = ref<Product[]>([])
-const newArrivals = ref<Product[]>([])
-const categorySections = ref<{ name: string; slug: string; products: Product[] }[]>([])
+const sections = ref<any[]>([])
+const loading = ref(true)
 
-const customerReviews = ref([
-  { name: 'سلوى الحوطي', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_female.png', rating: 5, text: 'الشوز مريح جدا' },
-  { name: 'Gharam .', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_female.png', rating: 5, text: 'Very comfortable shoes and fast delivery!' },
-  { name: 'محمد العتيبي', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_male.png', rating: 5, text: 'جودة ممتازة وسعر مناسب' },
-  { name: 'Sarah K.', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_female.png', rating: 5, text: 'Amazing quality, will order again!' },
-  { name: 'عبدالله الشمري', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_male.png', rating: 4, text: 'الحذاء جميل والتوصيل سريع' },
-  { name: 'Nora A.', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_female.png', rating: 5, text: 'Best store for shoes in Saudi!' },
-  { name: 'فهد القحطاني', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_male.png', rating: 5, text: 'تجربة رائعة' },
-  { name: 'Lina M.', avatar: 'https://cdn.assets.salla.network/prod/stores/themes/default/assets/images/avatar_female.png', rating: 5, text: 'عجبتني' },
-])
+/**
+ * Map hero banner API data to the shape HeroSlider expects.
+ */
+function mapHeroSlides(banners: any[]) {
+  return (banners || []).map((b: any) => ({
+    image: b.image || '',
+    link: b.linkUrl || '/',
+    alt: b.title || 'Banner',
+  }))
+}
+
+/**
+ * Map promo banner API data to the shape DoubleBanner expects.
+ */
+function mapPromoBanners(banners: any[]) {
+  return (banners || []).map((b: any) => ({
+    image: b.image || '',
+    link: b.linkUrl || '/',
+  }))
+}
 
 /**
  * Map API Product to the shape ProductCard expects.
  */
-function mapProducts(products: Product[]) {
-  return products.map(p => ({
+function mapProducts(products: any[]) {
+  return (products || []).map((p: any) => ({
     id: p.id,
     slug: p.slug,
     name: p.name,
@@ -87,60 +123,14 @@ function mapProducts(products: Product[]) {
 }
 
 onMounted(async () => {
-  // Fetch all homepage data in parallel
-  const [bannersRes, featuredRes, bestRes, newRes] = await Promise.allSettled([
-    fetchBanners(),
-    fetchFeaturedProducts(10),
-    fetchBestSellers(10),
-    fetchNewArrivals(10),
-  ])
-
-  // Process banners
-  if (bannersRes.status === 'fulfilled') {
-    const banners = bannersRes.value || []
-
-    heroSlides.value = banners
-      .filter((b: Banner) => b.position === 'hero')
-      .map((b: Banner) => ({
-        image: b.image || '',
-        link: b.linkUrl || '/',
-        alt: b.title || 'Banner',
-      }))
-
-    promoBanners.value = banners
-      .filter((b: Banner) => b.position === 'promo')
-      .map((b: Banner) => ({
-        image: b.image || '',
-        link: b.linkUrl || '/',
-      }))
+  try {
+    const data = await fetchHomeSections()
+    sections.value = data || []
+  } catch (e) {
+    console.error('Failed to fetch homepage sections:', e)
+  } finally {
+    loading.value = false
   }
-
-  // Process products
-  if (featuredRes.status === 'fulfilled') {
-    featuredProducts.value = featuredRes.value || []
-  }
-  if (bestRes.status === 'fulfilled') {
-    bestSellers.value = bestRes.value || []
-  }
-  if (newRes.status === 'fulfilled') {
-    newArrivals.value = newRes.value || []
-  }
-
-  // Load category-based sections from first few nav categories
-  const cats = settings.navCategories.slice(0, 6)
-  const catPromises = cats.map(async (cat) => {
-    try {
-      const result = await fetchProducts({ category: cat.slug, perPage: 10 })
-      return { name: cat.name, slug: cat.slug, products: result.data }
-    } catch {
-      return { name: cat.name, slug: cat.slug, products: [] }
-    }
-  })
-  const catResults = await Promise.allSettled(catPromises)
-  categorySections.value = catResults
-    .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
-    .map(r => r.value)
-    .filter(s => s.products.length > 0)
 })
 </script>
 
@@ -149,28 +139,35 @@ onMounted(async () => {
   background: var(--bg-primary, #fff);
 }
 
-/* Shared s-block spacing to match the Salla template */
+/* Shared s-block spacing */
 .s-block {
   margin-bottom: 0.25rem;
 }
 
-/* Fixed banner section */
-.fixed-banner-section {
-  padding: 0.5rem 0;
+/* ── Section wrapper ── */
+.home-section {
+  /* no extra styles by default */
 }
-.fixed-banner__link {
-  display: block;
-  overflow: hidden;
-  transition: transform 0.3s ease;
-}
-.fixed-banner__link:hover {
-  transform: translateY(-2px);
-}
-.fixed-banner__img {
-  width: 100%;
-  height: auto;
-  max-width: 100%;
-  object-fit: contain;
-  display: block;
+
+/* ── Background styles (controlled from admin) ── */
+.home-bg-default { background: var(--bg-primary, #fff); }
+.home-bg-light { background: var(--bg-secondary, #f7f7f8); }
+.home-bg-primary { background: var(--color-primary, #0d6efd); color: #fff; }
+.home-bg-dark { background: var(--footer-bg-color, #1a1a2e); color: #fff; }
+
+/* ── Padding styles (controlled from admin) ── */
+.home-pad-none { padding-top: 0; padding-bottom: 0; }
+.home-pad-sm { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.home-pad-md { padding-top: 1.25rem; padding-bottom: 1.25rem; }
+.home-pad-lg { padding-top: 2.5rem; padding-bottom: 2.5rem; }
+
+/* ── Loading ── */
+.home-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-3xl, 4rem);
+  color: var(--footer-text-color, #374151);
+  font-size: 1rem;
 }
 </style>

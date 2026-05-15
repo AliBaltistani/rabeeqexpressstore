@@ -15,7 +15,9 @@ class BannerResource extends JsonResource
             'id' => $this->id,
             'title' => $this->getTranslation('title', $locale),
             'subtitle' => $this->getTranslation('subtitle', $locale),
-            'image' => $this->image ? asset('storage/' . $this->image) : null,
+            'image' => $this->image && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->image)
+                ? asset('storage/' . $this->image)
+                : asset('storage/dummy/placeholder.jpg'),
             'linkUrl' => $this->link_url,
             'position' => $this->position,
             'sortOrder' => $this->sort_order,
