@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\FlashSaleController;
-use App\Http\Controllers\Api\V1\HomeSectionController;
+use App\Http\Controllers\Api\V1\HomepageSectionController;
 use App\Http\Controllers\Api\V1\InitController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PageController;
@@ -37,7 +37,7 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
     Route::get('init', InitController::class);
 
     // Homepage sections
-    Route::get('homepage-sections', [HomeSectionController::class, 'index']);
+    Route::get('homepage-sections', [HomepageSectionController::class, 'index']);
 
     // Auth
     Route::prefix('auth')->group(function () {
