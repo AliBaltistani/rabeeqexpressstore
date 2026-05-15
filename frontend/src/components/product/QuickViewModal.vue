@@ -17,14 +17,26 @@
 
         <div class="product-quickview">
           <div class="product-quickview__row">
-            <!-- Left: Image -->
+            <!-- Left: Image Gallery -->
             <div class="product-quickview__image-col">
               <div class="product-quickview__images">
                 <img
-                  :src="product.image"
+                  :src="selectedImage"
                   :alt="product.name"
                   class="product-quickview__img"
                 />
+              </div>
+              <!-- Thumbnails (only if multiple images) -->
+              <div v-if="productImages.length > 1" class="product-quickview__thumbs">
+                <button
+                  v-for="(img, i) in productImages"
+                  :key="img.id || i"
+                  class="product-quickview__thumb"
+                  :class="{ active: selectedImage === img.url }"
+                  @click="selectedImage = img.url"
+                >
+                  <img :src="img.url" :alt="img.alt || `${product.name} view ${i + 1}`" />
+                </button>
               </div>
             </div>
 
@@ -125,12 +137,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useQuickView } from '@/composables/useQuickView'
 
 const { isOpen, product, close } = useQuickView()
 
 const quantity = ref(1)
+const selectedImage = ref('')
+
+// Build images list from product data
+const productImages = computed(() => {
+  if (!product.value) return []
+  const imgs = product.value.images
+  if (imgs && imgs.length > 0) {
+    return imgs
+  }
+  // Fallback: single image from primaryImage or image
+  const fallback = product.value.primaryImage || product.value.image
+  return fallback ? [{ id: 0, url: fallback, alt: product.value.name, isPrimary: true }] : []
+})
+
+// Auto-select the primary image when product changes
+watch(() => product.value, (p) => {
+  if (!p) return
+  const imgs = productImages.value
+  const primary = imgs.find(img => img.isPrimary) || imgs[0]
+  selectedImage.value = primary?.url || p.primaryImage || p.image || ''
+  quantity.value = 1
+}, { immediate: true })
 
 function formatPrice(price: any): string {
   if (price && typeof price === 'object' && price.formatted) {
@@ -260,8 +294,7 @@ function decrementQty() {
   flex: 0 0 45%;
   background: #f9fafb;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   overflow: hidden;
   animation: qv-slide-left 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
   animation-delay: 0.1s;
@@ -279,18 +312,51 @@ function decrementQty() {
 }
 
 .product-quickview__images {
-  width: 100%;
-  height: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
+  min-height: 0;
 }
 
 .product-quickview__img {
   width: 100%;
   height: 100%;
-  max-height: 420px;
+  max-height: 380px;
+  object-fit: contain;
+}
+
+/* Thumbnails strip */
+.product-quickview__thumbs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+.product-quickview__thumb {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #fff;
+  padding: 3px;
+  transition: border-color 0.2s;
+}
+.product-quickview__thumb.active {
+  border-color: var(--color-primary, #858585);
+}
+.product-quickview__thumb:hover {
+  border-color: #9ca3af;
+}
+.product-quickview__thumb img {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
@@ -588,7 +654,7 @@ function decrementQty() {
   font-weight: 600;
   color: #111827;
   outline: none;
-  -moz-appearance: textfield;
+  --moz-appearance: textfield;
   height: 38px;
 }
 .quickview__qty-input::-webkit-outer-spin-button,

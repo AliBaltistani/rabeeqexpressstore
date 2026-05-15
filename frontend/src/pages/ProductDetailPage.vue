@@ -329,7 +329,8 @@ async function loadProduct(slug: string) {
       brand: data.brand,
     }
 
-    selectedImage.value = product.value.images[0] || ''
+    const primaryObj = (data.images || []).find((img: any) => img.isPrimary);
+    selectedImage.value = primaryObj ? primaryObj.url : (product.value.images[0] || product.value.primaryImage || '');
 
     // Fetch related products from the same category
     if (data.category?.slug) {
@@ -344,6 +345,8 @@ async function loadProduct(slug: string) {
             name: p.name,
             subtitle: p.category?.name || '',
             image: p.primaryImage || '',
+            primaryImage: p.primaryImage || '',
+            images: p.images || [],
             price: p.flashSalePrice?.raw ?? p.price?.raw ?? 0,
             currency: p.currency || 'SAR',
           }))

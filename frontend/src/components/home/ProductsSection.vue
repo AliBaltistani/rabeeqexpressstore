@@ -94,15 +94,20 @@ import ProductCard from './ProductCard.vue'
 
 interface ProductItem {
   id: number
-  slug: string
   name: string
-  primaryImage?: string
-  price?: { raw: number }
-  comparePrice?: { raw: number }
-  flashSalePrice?: { raw: number }
+  slug: string
+  price: any
+  comparePrice?: any
+  flashSalePrice?: any
   discountPercent?: number
   currency?: string
-  category?: { name?: string }
+  primaryImage?: string
+  images?: any[]
+  category?: {
+    id: number
+    name: string
+    slug: string
+  }
 }
 
 interface ProductsConfig {
@@ -172,6 +177,8 @@ function mapProduct(p: ProductItem) {
     name: p.name,
     subtitle: p.category?.name || undefined,
     image: p.primaryImage || '',
+    primaryImage: p.primaryImage || '',
+    images: p.images || [],
     price: p.flashSalePrice?.raw ?? p.price?.raw ?? 0,
     oldPrice: p.comparePrice?.raw || undefined,
     discount: p.discountPercent || undefined,

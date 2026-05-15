@@ -24,7 +24,7 @@ class ProductDetailResource extends ProductResource
             'allowBackorders' => (bool) $this->allow_backorders,
             'images' => $this->whenLoaded('images', fn() => $this->images->map(fn($img) => [
                 'id' => $img->id,
-                'url' => $img->image ? asset('storage/' . $img->image) : null,
+                'url' => $this->resolveImagePath($img->image_path),
                 'altText' => $img->alt_text ?? '',
                 'isPrimary' => (bool) ($img->is_primary ?? false),
                 'sortOrder' => $img->sort_order ?? 0,

@@ -6,6 +6,8 @@ export interface QuickViewProduct {
   name: string
   subtitle?: string
   image: string
+  primaryImage?: string
+  images?: Array<{ id: number; url: string; alt?: string; isPrimary?: boolean }>
   price: number
   oldPrice?: number
   discount?: number

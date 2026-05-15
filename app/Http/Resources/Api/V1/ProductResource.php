@@ -74,6 +74,8 @@ class ProductResource extends JsonResource
             'discountPercent' => $discountPercent,
             'currency' => $currency,
             'primaryImage' => $this->getPrimaryImage(),
+            'images' => $this->getAllImages(),
+            'image' => $this->getPrimaryImage(),
             'rating' => $avgRating,
             'reviewCount' => $reviewCount,
             'inStock' => !$this->track_stock || $this->stock_quantity > 0,
@@ -91,6 +93,52 @@ class ProductResource extends JsonResource
                 'slug' => $this->brand->slug,
             ] : null),
         ];
+    }
+
+    /**
+     * Get all product images with resolved URLs.
+     */
+    protected function getAllImages(): array
+    {
+        if (!$this->relationLoaded('images') || $this->images->isEmpty()) {
+            $primary = $this->getPrimaryImage();
+            return $primary ? [['id' => 0, 'url' => $primary, 'alt' => null, 'isPrimary' => true, 'sortOrder' => 0]] : [];
+        }
+
+        return $this->images
+            ->sortBy('sort_order')
+            ->values()
+            ->map(fn($img) => [
+                'id' => $img->id,
+                'url' => $this->resolveImagePath($img->image_path),
+                'alt' => $img->alt_text ?? null,
+                'isPrimary' => (bool) $img->is_primary,
+                'sortOrder' => $img->sort_order ?? 0,
+            ])
+            ->toArray();
+    }
+
+    /**
+     * Resolve a single image path to a full URL.
+     */
+    protected function resolveImagePath(?string $path): string
+    {
+        $placeholder = asset('storage/dummy/placeholder.jpg');
+        if (empty($path)) return $placeholder;
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return asset('storage/' . $path);
+        }
+
+        if (\Illuminate\Support\Facades\Storage::exists($path)) {
+            try {
+                return \Illuminate\Support\Facades\Storage::temporaryUrl($path, now()->addDay());
+            } catch (\Throwable) {
+                return asset('storage/' . $path);
+            }
+        }
+
+        return $placeholder;
     }
 
     /**
