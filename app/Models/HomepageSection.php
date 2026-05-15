@@ -28,10 +28,11 @@ class HomepageSection extends Model
      * Available section types.
      */
     public const TYPES = [
-        'hero_slider' => 'Hero Slider',
-        'banner' => 'Banner',
-        'products' => 'Products',
-        'custom_html' => 'Custom HTML',
+        'hero_slider'  => 'Hero Slider',
+        'banner'       => 'Banner',
+        'products'     => 'Products',
+        'reviews'      => 'Customer Reviews',
+        'custom_html'  => 'Custom HTML',
     ];
 
     /**
@@ -48,8 +49,7 @@ class HomepageSection extends Model
     public function getResolvedSliders()
     {
         $ids = $this->config['slider_ids'] ?? [];
-        if (empty($ids))
-            return collect();
+        if (empty($ids)) return collect();
 
         return Slider::whereIn('id', $ids)
             ->where('is_active', true)
@@ -63,8 +63,7 @@ class HomepageSection extends Model
     public function getResolvedBanners()
     {
         $ids = $this->config['banner_ids'] ?? [];
-        if (empty($ids))
-            return collect();
+        if (empty($ids)) return collect();
 
         return Banner::whereIn('id', $ids)
             ->where('is_active', true)
@@ -78,8 +77,7 @@ class HomepageSection extends Model
     public function getResolvedProducts()
     {
         $ids = $this->config['product_ids'] ?? [];
-        if (empty($ids))
-            return collect();
+        if (empty($ids)) return collect();
 
         return Product::withoutGlobalScope('active')
             ->whereIn('id', $ids)

@@ -1,21 +1,36 @@
 <template>
-  <div class="section-title">
+  <div class="section-title" :style="{ textAlign: alignment }">
     <h2 class="section-title__heading">{{ title }}</h2>
     <p v-if="subtitle" class="section-title__subtitle">{{ subtitle }}</p>
-    <div class="section-title__divider"></div>
+    <div
+      class="section-title__divider"
+      :style="dividerMargin"
+    ></div>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = withDefaults(defineProps<{
   title: string
   subtitle?: string
-}>()
+  alignment?: 'left' | 'center' | 'right'
+}>(), {
+  alignment: 'center',
+})
+
+const dividerMargin = computed(() => {
+  switch (props.alignment) {
+    case 'left':  return { margin: '0.5rem auto 0.5rem 0' }
+    case 'right': return { margin: '0.5rem 0 0.5rem auto' }
+    default:      return { margin: '0.5rem auto' }
+  }
+})
 </script>
 
 <style scoped>
 .section-title {
-  text-align: center;
   margin-bottom: 2rem;
 }
 .section-title__heading {
@@ -36,7 +51,6 @@ defineProps<{
   color: var(--store-text-secondary, #000);
 }
 .section-title__divider {
-  margin: 0.5rem auto;
   width: 7rem;
   height: 0;
   border-top: 2px solid var(--color-primary, #858585);

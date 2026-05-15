@@ -45,6 +45,54 @@ class HomepageSectionResource extends Resource
         return 'Homepage Sections';
     }
 
+    /**
+     * Shared slider config fields reused by products & reviews sections.
+     */
+    private static function sliderConfigFields(): array
+    {
+        return [
+            Schemas\Components\Grid::make(2)
+                ->schema([
+                    Forms\Components\Toggle::make('config.autoplay')
+                        ->label('Autoplay')
+                        ->default(true),
+
+                    Forms\Components\TextInput::make('config.autoplay_delay')
+                        ->label('Autoplay Delay (ms)')
+                        ->numeric()
+                        ->default(4000)
+                        ->minValue(1000)
+                        ->maxValue(30000),
+                ]),
+
+            Schemas\Components\Grid::make(2)
+                ->schema([
+                    Forms\Components\TextInput::make('config.slides_per_view')
+                        ->label('Items Per View')
+                        ->numeric()
+                        ->default(5)
+                        ->minValue(1)
+                        ->maxValue(10)
+                        ->helperText('Number of visible items at once'),
+
+                    Forms\Components\Toggle::make('config.loop')
+                        ->label('Loop')
+                        ->default(true)
+                        ->helperText('Restart from beginning when reaching end'),
+                ]),
+
+            Forms\Components\Select::make('config.direction')
+                ->label('Slide Direction')
+                ->options([
+                    'ltr' => 'Left to Right',
+                    'rtl' => 'Right to Left',
+                    'auto' => 'Auto (follows page language)',
+                ])
+                ->default('auto')
+                ->helperText('Auto will slide RTL for Arabic and LTR for English'),
+        ];
+    }
+
     public static function form(Schema $form): Schema
     {
         return $form
@@ -241,7 +289,7 @@ class HomepageSectionResource extends Resource
                                                     ->where('is_active', true)
                                                     ->where(function ($q) use ($search) {
                                                         $q->where('name', 'like', "%{$search}%")
-                                                            ->orWhere('sku', 'like', "%{$search}%");
+                                                          ->orWhere('sku', 'like', "%{$search}%");
                                                     })
                                                     ->limit(50)
                                                     ->get()
@@ -273,6 +321,16 @@ class HomepageSectionResource extends Resource
                                                     ->extraInputAttributes(['dir' => 'rtl']),
                                             ]),
 
+                                        Forms\Components\Select::make('config.display_mode')
+                                            ->label('Display Mode')
+                                            ->options([
+                                                'grid' => 'Grid (static)',
+                                                'slider' => 'Slider (animated)',
+                                            ])
+                                            ->default('slider')
+                                            ->live()
+                                            ->helperText('Grid shows all products in a static grid. Slider scrolls products one by one.'),
+
                                         Schemas\Components\Grid::make(2)
                                             ->schema([
                                                 Forms\Components\TextInput::make('config.cols')
@@ -300,6 +358,96 @@ class HomepageSectionResource extends Resource
                                     ])
                                     ->visible(fn(Schemas\Components\Utilities\Get $get) => $get('type') === 'products')
                                     ->collapsible(),
+
+                                // ── Product Slider Options (shown only when display_mode = slider) ──
+                                Schemas\Components\Section::make('Product Slider Options')
+                                    ->schema(static::sliderConfigFields())
+                                    ->visible(fn(Schemas\Components\Utilities\Get $get) =>
+                                        $get('type') === 'products' &&
+                                        ($get('config.display_mode') ?? 'slider') === 'slider'
+                                    )
+                                    ->collapsible()
+                                    ->collapsed(),
+
+                                // ═══════════════════════════════════════
+                                // REVIEWS CONFIG
+                                // ═══════════════════════════════════════
+                                Schemas\Components\Section::make('Customer Reviews Settings')
+                                    ->schema([
+                                        Schemas\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\TextInput::make('config.title_en')
+                                                    ->label('Section Title (English)')
+                                                    ->maxLength(255),
+
+                                                Forms\Components\TextInput::make('config.title_ar')
+                                                    ->label('Section Title (Arabic)')
+                                                    ->maxLength(255)
+                                                    ->extraInputAttributes(['dir' => 'rtl']),
+                                            ]),
+
+                                        Schemas\Components\Grid::make(2)
+                                            ->schema([
+                                                Forms\Components\Toggle::make('config.show_rating_stars')
+                                                    ->label('Show Rating Stars')
+                                                    ->default(true),
+
+                                                Forms\Components\Toggle::make('config.show_avatars')
+                                                    ->label('Show Customer Avatars')
+                                                    ->default(true),
+                                            ]),
+
+                                        Forms\Components\Repeater::make('config.reviews')
+                                            ->label('Reviews')
+                                            ->schema([
+                                                Schemas\Components\Grid::make(3)
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('name')
+                                                            ->label('Customer Name')
+                                                            ->required()
+                                                            ->columnSpan(1),
+
+                                                        Forms\Components\Select::make('rating')
+                                                            ->label('Rating')
+                                                            ->options([
+                                                                5 => '★★★★★ (5)',
+                                                                4 => '★★★★☆ (4)',
+                                                                3 => '★★★☆☆ (3)',
+                                                                2 => '★★☆☆☆ (2)',
+                                                                1 => '★☆☆☆☆ (1)',
+                                                            ])
+                                                            ->default(5)
+                                                            ->columnSpan(1),
+
+                                                        Forms\Components\TextInput::make('avatar')
+                                                            ->label('Avatar URL')
+                                                            ->url()
+                                                            ->placeholder('https://...')
+                                                            ->columnSpan(1),
+                                                    ]),
+
+                                                Forms\Components\Textarea::make('text')
+                                                    ->label('Review Text')
+                                                    ->required()
+                                                    ->rows(2),
+                                            ])
+                                            ->collapsible()
+                                            ->reorderable()
+                                            ->defaultItems(0)
+                                            ->addActionLabel('Add Review')
+                                            ->itemLabel(fn(array $state): ?string =>
+                                                ($state['name'] ?? '') . ' — ★' . ($state['rating'] ?? '5')
+                                            ),
+                                    ])
+                                    ->visible(fn(Schemas\Components\Utilities\Get $get) => $get('type') === 'reviews')
+                                    ->collapsible(),
+
+                                // ── Reviews Slider Options ──
+                                Schemas\Components\Section::make('Reviews Slider Options')
+                                    ->schema(static::sliderConfigFields())
+                                    ->visible(fn(Schemas\Components\Utilities\Get $get) => $get('type') === 'reviews')
+                                    ->collapsible()
+                                    ->collapsed(),
 
                                 // ═══════════════════════════════════════
                                 // CUSTOM HTML CONFIG
@@ -345,6 +493,95 @@ class HomepageSectionResource extends Resource
                                             ->minValue(0)
                                             ->helperText('Lower = appears first'),
                                     ]),
+
+                                // ═══════════════════════════════════════
+                                // COMMON APPEARANCE SETTINGS
+                                // ═══════════════════════════════════════
+                                Schemas\Components\Section::make('Section Layout')
+                                    ->schema([
+                                        Forms\Components\Select::make('config.section_width')
+                                            ->label('Width')
+                                            ->options([
+                                                'full-width' => 'Full Width',
+                                                'contained'  => 'Contained',
+                                            ])
+                                            ->default('contained')
+                                            ->helperText('Full width stretches edge-to-edge; Contained limits to max content width'),
+                                    ])
+                                    ->collapsible()
+                                    ->collapsed(),
+
+                                Schemas\Components\Section::make('Section Title')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('config.show_title')
+                                            ->label('Show Title')
+                                            ->default(true),
+
+                                        Forms\Components\Select::make('config.title_alignment')
+                                            ->label('Title Alignment')
+                                            ->options([
+                                                'left'   => 'Left',
+                                                'center' => 'Center',
+                                                'right'  => 'Right',
+                                            ])
+                                            ->default('center'),
+                                    ])
+                                    ->visible(fn(Schemas\Components\Utilities\Get $get) => in_array($get('type'), ['products', 'reviews', 'custom_html']))
+                                    ->collapsible()
+                                    ->collapsed(),
+
+                                Schemas\Components\Section::make('Slider Arrows')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('config.show_arrows')
+                                            ->label('Show Arrows')
+                                            ->default(true),
+
+                                        Forms\Components\Select::make('config.arrows_style')
+                                            ->label('Arrow Style')
+                                            ->options([
+                                                'rounded' => 'Rounded',
+                                                'square'  => 'Square',
+                                                'minimal' => 'Minimal',
+                                            ])
+                                            ->default('rounded'),
+
+                                        Forms\Components\Select::make('config.arrows_position')
+                                            ->label('Arrow Position')
+                                            ->options([
+                                                'inside'        => 'Both Sides — Center (inside)',
+                                                'outside'       => 'Both Sides — Center (outside)',
+                                                'center-left'   => 'Both Left — Center',
+                                                'center-right'  => 'Both Right — Center',
+                                                'top-left'      => 'Both Top Left',
+                                                'top-right'     => 'Both Top Right',
+                                                'top-center'    => 'Both Top Center',
+                                                'bottom-left'   => 'Both Bottom Left',
+                                                'bottom-right'  => 'Both Bottom Right',
+                                                'bottom-center' => 'Both Bottom Center',
+                                            ])
+                                            ->default('inside')
+                                            ->helperText('Both arrows are grouped together at the chosen position'),
+                                    ])
+                                    ->visible(fn(Schemas\Components\Utilities\Get $get) => in_array($get('type'), ['hero_slider', 'products', 'reviews']))
+                                    ->collapsible()
+                                    ->collapsed(),
+
+                                Schemas\Components\Section::make('Custom CSS / JS')
+                                    ->schema([
+                                        Forms\Components\Textarea::make('config.custom_css')
+                                            ->label('Custom CSS')
+                                            ->rows(4)
+                                            ->placeholder('.my-section { background: #f5f5f5; }')
+                                            ->helperText('CSS applied only to this section'),
+
+                                        Forms\Components\Textarea::make('config.custom_js')
+                                            ->label('Custom JS')
+                                            ->rows(4)
+                                            ->placeholder('console.log("section loaded");')
+                                            ->helperText('JavaScript executed when this section renders'),
+                                    ])
+                                    ->collapsible()
+                                    ->collapsed(),
                             ])
                             ->columnSpan(1),
                     ]),
@@ -372,7 +609,8 @@ class HomepageSectionResource extends Resource
                         'hero_slider' => 'primary',
                         'banner' => 'info',
                         'products' => 'success',
-                        'custom_html' => 'warning',
+                        'reviews' => 'warning',
+                        'custom_html' => 'gray',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => HomepageSection::TYPES[$state] ?? ucfirst($state)),
@@ -389,27 +627,27 @@ class HomepageSectionResource extends Resource
                         switch ($record->type) {
                             case 'hero_slider':
                                 $count = count($config['slider_ids'] ?? []);
-                                if ($count)
-                                    $parts[] = "{$count} sliders";
+                                if ($count) $parts[] = "{$count} sliders";
                                 break;
                             case 'banner':
                                 $count = count($config['banner_ids'] ?? []);
-                                if ($count)
-                                    $parts[] = "{$count} banners";
-                                if (!empty($config['cols']))
-                                    $parts[] = "{$config['cols']} cols";
+                                if ($count) $parts[] = "{$count} banners";
+                                if (!empty($config['cols'])) $parts[] = "{$config['cols']} cols";
                                 break;
                             case 'products':
                                 $count = count($config['product_ids'] ?? []);
-                                if ($count)
-                                    $parts[] = "{$count} products";
-                                if (!empty($config['cols']))
-                                    $parts[] = "{$config['cols']} cols";
+                                if ($count) $parts[] = "{$count} products";
+                                $mode = $config['display_mode'] ?? 'slider';
+                                $parts[] = ucfirst($mode);
+                                break;
+                            case 'reviews':
+                                $count = count($config['reviews'] ?? []);
+                                if ($count) $parts[] = "{$count} reviews";
+                                $parts[] = 'Slider';
                                 break;
                             case 'custom_html':
                                 $len = strlen($config['content'] ?? '');
-                                if ($len)
-                                    $parts[] = "{$len} chars";
+                                if ($len) $parts[] = "{$len} chars";
                                 break;
                         }
 

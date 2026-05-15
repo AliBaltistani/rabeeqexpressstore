@@ -6,7 +6,7 @@
         <!-- Tag/Label Badge -->
         <span v-if="product.subtitle" class="product-card__tag">{{ product.subtitle }}</span>
         <img
-          :src="product.image"
+          :src="product.primaryImage || product.image || '/storage/dummy/placeholder.jpg'"
           :alt="product.name"
           class="product-card__image"
           loading="lazy"

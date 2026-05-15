@@ -2,13 +2,19 @@
   <section class="s-block testimonials-section">
     <div class="container">
       <div class="testimonials-inner">
-        <div class="home-block-title">
+        <div
+          v-if="showTitle"
+          class="home-block-title"
+          :style="titleStyle"
+        >
           <h2 class="testimonials-heading">{{ title }}</h2>
-          <div class="testimonials-divider"></div>
+          <div class="testimonials-divider" :style="dividerMargin"></div>
         </div>
         <div class="testimonials-slider" ref="sliderRef">
           <button
+            v-if="showArrowBtns"
             class="testimonials-arrow testimonials-arrow--prev"
+            :class="arrowClasses"
             @click="scrollLeft"
             aria-label="Previous reviews"
           >
@@ -45,7 +51,9 @@
             </div>
           </div>
           <button
+            v-if="showArrowBtns"
             class="testimonials-arrow testimonials-arrow--next"
+            :class="arrowClasses"
             @click="scrollRight"
             aria-label="Next reviews"
           >
@@ -58,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 interface Review {
   name: string
@@ -67,12 +75,46 @@ interface Review {
   text: string
 }
 
-defineProps<{
+interface ReviewsConfig {
+  show_title?: boolean
+  title_alignment?: string
+  show_arrows?: boolean
+  arrows_style?: string
+  arrows_position?: string
+}
+
+const props = withDefaults(defineProps<{
   title: string
   reviews: Review[]
-}>()
+  config?: ReviewsConfig
+}>(), {
+  config: () => ({}),
+})
 
 const trackRef = ref<HTMLElement | null>(null)
+
+// ─── Title config ───
+const showTitle = computed(() => props.config.show_title !== false)
+const titleAlignment = computed(() => props.config.title_alignment || 'center')
+const titleStyle = computed(() => ({ textAlign: titleAlignment.value as 'left' | 'center' | 'right' }))
+const dividerMargin = computed(() => {
+  switch (titleAlignment.value) {
+    case 'left':  return { margin: '0.5rem auto 0.5rem 0' }
+    case 'right': return { margin: '0.5rem 0 0.5rem auto' }
+    default:      return { margin: '0.5rem auto' }
+  }
+})
+
+// ─── Arrow config ───
+const showArrowBtns = computed(() => props.config.show_arrows !== false)
+const arrowClasses = computed(() => {
+  const style = props.config.arrows_style || 'rounded'
+  const position = props.config.arrows_position || 'inside'
+  return [
+    `testimonials-arrow--${style}`,
+    `testimonials-arrow--pos-${position}`,
+  ]
+})
 
 function scrollLeft() {
   if (!trackRef.value) return
@@ -93,7 +135,6 @@ function scrollRight() {
   position: relative;
 }
 .testimonials-heading {
-  text-align: center;
   color: var(--store-text-primary, #111827);
   font-size: 1.5rem;
   font-weight: 700;
@@ -105,7 +146,6 @@ function scrollRight() {
   }
 }
 .testimonials-divider {
-  margin: 0.5rem auto;
   width: 7rem;
   height: 0;
   border-top: 2px solid var(--color-primary, #858585);
@@ -185,6 +225,8 @@ function scrollRight() {
   color: var(--store-text-primary, #111827);
   word-break: break-words;
 }
+
+/* ─── Arrow Buttons ─── */
 .testimonials-arrow {
   position: absolute;
   top: 50%;
@@ -193,7 +235,6 @@ function scrollRight() {
   border: 1px solid #e5e7eb;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,4 +250,62 @@ function scrollRight() {
 }
 .testimonials-arrow--prev { left: -6px; }
 .testimonials-arrow--next { right: -6px; }
+
+/* Arrow styles */
+.testimonials-arrow--rounded { border-radius: 50%; }
+.testimonials-arrow--square  { border-radius: 4px; }
+.testimonials-arrow--minimal {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--store-text-primary, #111827);
+}
+.testimonials-arrow--minimal:hover {
+  background: rgba(0,0,0,0.05);
+  box-shadow: none;
+}
+
+/* outside: push beyond edges */
+.testimonials-arrow--pos-outside.testimonials-arrow--prev { left: -44px; }
+.testimonials-arrow--pos-outside.testimonials-arrow--next { right: -44px; }
+
+/* center-left: both stacked on left */
+.testimonials-arrow--pos-center-left { left: -6px; right: auto; }
+.testimonials-arrow--pos-center-left.testimonials-arrow--prev { top: calc(50% - 22px); transform: none; }
+.testimonials-arrow--pos-center-left.testimonials-arrow--next { top: calc(50% + 4px); transform: none; }
+
+/* center-right: both stacked on right */
+.testimonials-arrow--pos-center-right { right: -6px; left: auto; }
+.testimonials-arrow--pos-center-right.testimonials-arrow--prev { top: calc(50% - 22px); transform: none; }
+.testimonials-arrow--pos-center-right.testimonials-arrow--next { top: calc(50% + 4px); transform: none; }
+
+/* top-left */
+.testimonials-arrow--pos-top-left { top: -2.5rem; transform: none; opacity: 1; right: auto; }
+.testimonials-arrow--pos-top-left.testimonials-arrow--prev { left: 0; }
+.testimonials-arrow--pos-top-left.testimonials-arrow--next { left: 44px; }
+
+/* top-right */
+.testimonials-arrow--pos-top-right { top: -2.5rem; transform: none; opacity: 1; left: auto; }
+.testimonials-arrow--pos-top-right.testimonials-arrow--prev { right: 44px; }
+.testimonials-arrow--pos-top-right.testimonials-arrow--next { right: 0; }
+
+/* top-center */
+.testimonials-arrow--pos-top-center { top: -2.5rem; transform: none; opacity: 1; }
+.testimonials-arrow--pos-top-center.testimonials-arrow--prev { left: calc(50% - 40px); right: auto; }
+.testimonials-arrow--pos-top-center.testimonials-arrow--next { left: calc(50% + 4px); right: auto; }
+
+/* bottom-left */
+.testimonials-arrow--pos-bottom-left { top: auto; bottom: -2.5rem; transform: none; opacity: 1; right: auto; }
+.testimonials-arrow--pos-bottom-left.testimonials-arrow--prev { left: 0; }
+.testimonials-arrow--pos-bottom-left.testimonials-arrow--next { left: 44px; }
+
+/* bottom-right */
+.testimonials-arrow--pos-bottom-right { top: auto; bottom: -2.5rem; transform: none; opacity: 1; left: auto; }
+.testimonials-arrow--pos-bottom-right.testimonials-arrow--prev { right: 44px; }
+.testimonials-arrow--pos-bottom-right.testimonials-arrow--next { right: 0; }
+
+/* bottom-center */
+.testimonials-arrow--pos-bottom-center { top: auto; bottom: -2.5rem; transform: none; opacity: 1; }
+.testimonials-arrow--pos-bottom-center.testimonials-arrow--prev { left: calc(50% - 40px); right: auto; }
+.testimonials-arrow--pos-bottom-center.testimonials-arrow--next { left: calc(50% + 4px); right: auto; }
 </style>

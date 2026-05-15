@@ -127,10 +127,25 @@ class ProductResource extends JsonResource
 
         if ($this->relationLoaded('images') && $this->images->isNotEmpty()) {
             $primary = $this->images->where('is_primary', true)->first() ?? $this->images->first();
+            $path = $primary->image_path ?? null;
 
-            return $primary->image && \Illuminate\Support\Facades\Storage::disk('public')->exists($primary->image)
-                ? asset('storage/' . $primary->image)
-                : $placeholder;
+            if (empty($path)) return $placeholder;
+
+            // Check public disk first
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+                return asset('storage/' . $path);
+            }
+
+            // Fall back to local disk with signed URL
+            if (\Illuminate\Support\Facades\Storage::exists($path)) {
+                try {
+                    return \Illuminate\Support\Facades\Storage::temporaryUrl($path, now()->addDay());
+                } catch (\Throwable) {
+                    return asset('storage/' . $path);
+                }
+            }
+
+            return $placeholder;
         }
 
         return $placeholder;

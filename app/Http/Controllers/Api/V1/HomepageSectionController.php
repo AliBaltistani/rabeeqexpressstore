@@ -8,6 +8,7 @@ use App\Http\Resources\Api\V1\ProductResource;
 use App\Http\Traits\ApiResponse;
 use App\Models\HomepageSection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
 
 class HomepageSectionController extends Controller
 {
@@ -27,20 +28,20 @@ class HomepageSectionController extends Controller
             $config = $section->config ?? [];
 
             $base = [
-                'id' => $section->id,
-                'name' => $section->name,
-                'type' => $section->type,
+                'id'         => $section->id,
+                'name'       => $section->name,
+                'type'       => $section->type,
                 'sort_order' => $section->sort_order,
-                'config' => $this->sanitizeConfig($config, $section->type),
+                'config'     => $this->sanitizeConfig($config, $section->type),
             ];
 
             switch ($section->type) {
                 case 'hero_slider':
                     $sliders = $section->getResolvedSliders();
                     $base['data'] = $sliders->map(fn($s) => [
-                        'id' => $s->id,
-                        'title' => $s->getTranslation('title', app()->getLocale()),
-                        'image' => $s->image ? asset('storage/' . $s->image) : null,
+                        'id'       => $s->id,
+                        'title'    => $s->getTranslation('title', app()->getLocale()),
+                        'image'    => $this->resolveImageUrl($s->image),
                         'link_url' => $s->link_url,
                     ])->values();
                     break;
@@ -53,6 +54,10 @@ class HomepageSectionController extends Controller
                 case 'products':
                     $products = $section->getResolvedProducts();
                     $base['data'] = ProductResource::collection($products);
+                    break;
+
+                case 'reviews':
+                    $base['data'] = $config['reviews'] ?? [];
                     break;
 
                 case 'custom_html':
@@ -72,56 +77,90 @@ class HomepageSectionController extends Controller
     }
 
     /**
+     * Resolve an image path to a full URL.
+     * Uses temporaryUrl for local disk (signed URLs), asset() for public disk.
+     */
+    private function resolveImageUrl(?string $path): ?string
+    {
+        if (empty($path)) return null;
+
+        // Try public disk first
+        if (Storage::disk('public')->exists($path)) {
+            return asset('storage/' . $path);
+        }
+
+        // Fall back to default (local) disk with signed temporary URL
+        if (Storage::exists($path)) {
+            return Storage::temporaryUrl($path, now()->addDay());
+        }
+
+        return null;
+    }
+
+    /**
      * Sanitize config to only send frontend-relevant keys (strip internal IDs).
      */
     private function sanitizeConfig(array $config, string $type): array
     {
+        // Common keys available to all section types
+        $commonKeys = [
+            'section_width',
+            'title_alignment', 'show_title',
+            'arrows_style', 'arrows_position', 'show_arrows',
+            'custom_css', 'custom_js',
+        ];
+
         $safe = [];
 
         switch ($type) {
             case 'hero_slider':
                 foreach ([
-                    'show_indicators',
-                    'indicator_position',
-                    'navigation_style',
-                    'navigation_position',
-                    'height',
-                    'width',
-                    'autoplay',
-                    'autoplay_delay',
+                    'show_indicators', 'indicator_position',
+                    'navigation_style', 'navigation_position',
+                    'height', 'width', 'autoplay', 'autoplay_delay',
                 ] as $key) {
-                    if (isset($config[$key]))
-                        $safe[$key] = $config[$key];
+                    if (isset($config[$key])) $safe[$key] = $config[$key];
                 }
                 break;
 
             case 'banner':
                 foreach (['cols', 'rows', 'gap', 'position'] as $key) {
-                    if (isset($config[$key]))
-                        $safe[$key] = $config[$key];
+                    if (isset($config[$key])) $safe[$key] = $config[$key];
                 }
                 break;
 
             case 'products':
                 foreach ([
-                    'title_en',
-                    'title_ar',
-                    'cols',
-                    'show_price',
-                    'show_badge',
-                    'show_add_to_cart',
+                    'title_en', 'title_ar', 'cols',
+                    'show_price', 'show_badge', 'show_add_to_cart',
+                    'display_mode', 'autoplay', 'autoplay_delay',
+                    'slides_per_view', 'loop', 'direction',
                 ] as $key) {
-                    if (isset($config[$key]))
-                        $safe[$key] = $config[$key];
+                    if (isset($config[$key])) $safe[$key] = $config[$key];
+                }
+                break;
+
+            case 'reviews':
+                foreach ([
+                    'title_en', 'title_ar',
+                    'display_mode', 'autoplay', 'autoplay_delay',
+                    'slides_per_view', 'loop', 'direction',
+                    'show_rating_stars', 'show_avatars',
+                ] as $key) {
+                    if (isset($config[$key])) $safe[$key] = $config[$key];
                 }
                 break;
 
             case 'custom_html':
                 foreach (['title_en', 'title_ar', 'content'] as $key) {
-                    if (isset($config[$key]))
-                        $safe[$key] = $config[$key];
+                    if (isset($config[$key])) $safe[$key] = $config[$key];
                 }
                 break;
+        }
+
+        // Merge common keys
+        foreach ($commonKeys as $key) {
+            if (isset($config[$key])) $safe[$key] = $config[$key];
         }
 
         return $safe;

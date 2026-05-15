@@ -21,7 +21,7 @@
       <template v-if="showArrows && slides.length > 1">
         <button
           class="hero-slider__arrow hero-slider__arrow--prev"
-          :class="{ 'hero-slider__arrow--outside': sliderConfig.navigation_position === 'outside' }"
+          :class="arrowClasses"
           @click="prevSlide"
           aria-label="Previous slide"
         >
@@ -29,7 +29,7 @@
         </button>
         <button
           class="hero-slider__arrow hero-slider__arrow--next"
-          :class="{ 'hero-slider__arrow--outside': sliderConfig.navigation_position === 'outside' }"
+          :class="arrowClasses"
           @click="nextSlide"
           aria-label="Next slide"
         >
@@ -74,6 +74,10 @@ interface SliderConfig {
   width?: string
   autoplay?: boolean
   autoplay_delay?: number
+  // Common config
+  show_arrows?: boolean
+  arrows_style?: string
+  arrows_position?: string
 }
 
 const props = withDefaults(defineProps<{
@@ -89,8 +93,18 @@ const currentSlide = ref(0)
 let autoplayTimer: ReturnType<typeof setInterval> | null = null
 
 const showArrows = computed(() => {
+  if (sliderConfig.value.show_arrows === false) return false
   const style = sliderConfig.value.navigation_style || 'arrows'
   return style === 'arrows' || style === 'both'
+})
+
+const arrowClasses = computed(() => {
+  const style = sliderConfig.value.arrows_style || 'rounded'
+  const navPos = sliderConfig.value.arrows_position || sliderConfig.value.navigation_position || 'inside'
+  return {
+    [`hero-slider__arrow--${navPos}`]: navPos !== 'inside',
+    [`hero-slider__arrow--${style}`]: true,
+  }
 })
 
 const showDots = computed(() => {
@@ -151,22 +165,28 @@ onBeforeUnmount(() => pauseAutoplay())
   position: relative;
   overflow: hidden;
   border-radius: 0.375rem;
+  width: 100%;
 }
 .hero-slider__track {
   display: flex;
+  width: 100%;
   transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .hero-slider__slide {
+  width: 100%;
   min-width: 100%;
   flex-shrink: 0;
 }
-.hero-slider__link { display: block; }
+.hero-slider__link {
+  display: block;
+  width: 100%;
+}
 .hero-slider__image {
   width: 100%;
-  aspect-ratio: 21 / 9;
+  height: auto;
+  max-height: 600px;
   object-fit: cover;
   display: block;
-  border-radius: 0.375rem;
 }
 .hero-slider__arrow {
   position: absolute;
@@ -192,10 +212,67 @@ onBeforeUnmount(() => pauseAutoplay())
   background: #fff;
   box-shadow: 0 4px 12px rgba(0,0,0,0.18);
 }
+/* Default inside: prev left, next right */
 .hero-slider__arrow--prev { left: 12px; }
 .hero-slider__arrow--next { right: 12px; }
+
+/* Arrow styles */
+.hero-slider__arrow--rounded { border-radius: 50%; }
+.hero-slider__arrow--square  { border-radius: 4px; }
+.hero-slider__arrow--minimal {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #fff;
+}
+.hero-slider__arrow--minimal:hover {
+  background: rgba(0,0,0,0.2);
+  box-shadow: none;
+}
+
+/* outside: push arrows outside slider edges */
 .hero-slider__arrow--outside.hero-slider__arrow--prev { left: -44px; }
 .hero-slider__arrow--outside.hero-slider__arrow--next { right: -44px; }
+
+/* center-left: both stacked on left */
+.hero-slider__arrow--center-left { left: 12px; right: auto; }
+.hero-slider__arrow--center-left.hero-slider__arrow--prev { top: calc(50% - 22px); transform: none; }
+.hero-slider__arrow--center-left.hero-slider__arrow--next { top: calc(50% + 4px); transform: none; }
+
+/* center-right: both stacked on right */
+.hero-slider__arrow--center-right { right: 12px; left: auto; }
+.hero-slider__arrow--center-right.hero-slider__arrow--prev { top: calc(50% - 22px); transform: none; }
+.hero-slider__arrow--center-right.hero-slider__arrow--next { top: calc(50% + 4px); transform: none; }
+
+/* top-left: both at top-left */
+.hero-slider__arrow--top-left { top: 12px; transform: none; opacity: 1; right: auto; }
+.hero-slider__arrow--top-left.hero-slider__arrow--prev { left: 12px; }
+.hero-slider__arrow--top-left.hero-slider__arrow--next { left: 56px; }
+
+/* top-right: both at top-right */
+.hero-slider__arrow--top-right { top: 12px; transform: none; opacity: 1; left: auto; }
+.hero-slider__arrow--top-right.hero-slider__arrow--prev { right: 56px; }
+.hero-slider__arrow--top-right.hero-slider__arrow--next { right: 12px; }
+
+/* top-center: both at top-center */
+.hero-slider__arrow--top-center { top: 12px; transform: none; opacity: 1; }
+.hero-slider__arrow--top-center.hero-slider__arrow--prev { left: calc(50% - 40px); right: auto; }
+.hero-slider__arrow--top-center.hero-slider__arrow--next { left: calc(50% + 4px); right: auto; }
+
+/* bottom-left: both at bottom-left */
+.hero-slider__arrow--bottom-left { top: auto; bottom: 12px; transform: none; opacity: 1; right: auto; }
+.hero-slider__arrow--bottom-left.hero-slider__arrow--prev { left: 12px; }
+.hero-slider__arrow--bottom-left.hero-slider__arrow--next { left: 56px; }
+
+/* bottom-right: both at bottom-right */
+.hero-slider__arrow--bottom-right { top: auto; bottom: 12px; transform: none; opacity: 1; left: auto; }
+.hero-slider__arrow--bottom-right.hero-slider__arrow--prev { right: 56px; }
+.hero-slider__arrow--bottom-right.hero-slider__arrow--next { right: 12px; }
+
+/* bottom-center: both at bottom-center */
+.hero-slider__arrow--bottom-center { top: auto; bottom: 12px; transform: none; opacity: 1; }
+.hero-slider__arrow--bottom-center.hero-slider__arrow--prev { left: calc(50% - 40px); right: auto; }
+.hero-slider__arrow--bottom-center.hero-slider__arrow--next { left: calc(50% + 4px); right: auto; }
 
 .hero-slider__dots {
   position: absolute;
