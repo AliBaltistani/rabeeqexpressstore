@@ -123,7 +123,7 @@ const cart = useCartStore()
 const wishlist = useWishlistStore()
 const { menuItems } = useMenuCategories()
 const menuCategories = menuItems
-const mobileCategories = menuItems.value
+const mobileCategories = menuItems
 
 const cartCount = computed(() => cart.itemCount)
 const wishlistCount = computed(() => wishlist.count)
