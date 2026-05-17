@@ -37,6 +37,14 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->navigationGroups([
+                __('admin.nav.catalog'),
+                __('admin.nav.sales'),
+                __('admin.nav.content'),
+                __('admin.nav.promotions'),
+                __('admin.nav.settings'),
+                __('admin.nav.system'),
+            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
