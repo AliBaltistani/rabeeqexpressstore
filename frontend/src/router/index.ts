@@ -55,18 +55,6 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'Cart - E-SEVEN STORE' },
       },
       {
-        path: 'checkout',
-        name: 'checkout',
-        component: () => import('@/pages/CheckoutPage.vue'),
-        meta: { title: 'Checkout - E-SEVEN STORE' },
-      },
-      {
-        path: 'checkout/success/:orderNumber',
-        name: 'order-success',
-        component: () => import('@/pages/OrderSuccessPage.vue'),
-        meta: { title: 'Order Success - E-SEVEN STORE' },
-      },
-      {
         path: 'login',
         name: 'login',
         component: () => import('@/pages/LoginPage.vue'),
@@ -145,6 +133,19 @@ const routes: RouteRecordRaw[] = [
         meta: { title: 'E-SEVEN STORE' },
       },
     ],
+  },
+  // Checkout routes — outside DefaultLayout (no header/footer)
+  {
+    path: '/checkout',
+    name: 'checkout',
+    component: () => import('@/pages/CheckoutPage.vue'),
+    meta: { title: 'Checkout - E-SEVEN STORE' },
+  },
+  {
+    path: '/checkout/success/:orderNumber',
+    name: 'order-success',
+    component: () => import('@/pages/OrderSuccessPage.vue'),
+    meta: { title: 'Order Success - E-SEVEN STORE' },
   },
 ]
 

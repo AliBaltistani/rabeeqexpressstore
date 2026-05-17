@@ -122,7 +122,12 @@
               </div>
               <div class="checkout-field">
                 <label class="checkout-label">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
-                <input type="tel" v-model="guestForm.phone" class="checkout-input" :class="{ 'input-error': errors.gPhone }" />
+                <div class="checkout-phone-row">
+                  <select v-model="guestCountryCode" class="checkout-country-code">
+                    <option v-for="cc in countryCodes" :key="cc.code" :value="cc.code">{{ cc.flag }} {{ cc.code }}</option>
+                  </select>
+                  <input type="tel" v-model="guestForm.phone" class="checkout-input checkout-input--phone" :class="{ 'input-error': errors.gPhone }" />
+                </div>
                 <span v-if="errors.gPhone" class="field-error">{{ errors.gPhone }}</span>
               </div>
             </div>
@@ -161,7 +166,12 @@
             </div>
             <div class="checkout-field">
               <label class="checkout-label">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
-              <input type="tel" v-model="addressForm.phone" class="checkout-input" :class="{ 'input-error': errors.addrPhone }" />
+              <div class="checkout-phone-row">
+                <select v-model="addrCountryCode" class="checkout-country-code">
+                  <option v-for="cc in countryCodes" :key="cc.code" :value="cc.code">{{ cc.flag }} {{ cc.code }}</option>
+                </select>
+                <input type="tel" v-model="addressForm.phone" class="checkout-input checkout-input--phone" :class="{ 'input-error': errors.addrPhone }" />
+              </div>
               <span v-if="errors.addrPhone" class="field-error">{{ errors.addrPhone }}</span>
             </div>
             <div class="checkout-form-grid">
@@ -201,6 +211,44 @@
               <label class="checkout-label">{{ $t('checkout.buildingNo') }}</label>
               <input type="text" v-model="addressForm.buildingNo" class="checkout-input" />
             </div>
+            <div class="checkout-field">
+              <label class="checkout-label">{{ $t('checkout.buildingDesc') || 'Building Description' }}</label>
+              <textarea v-model="addressForm.buildingDesc" class="checkout-input checkout-textarea" rows="2" :placeholder="$t('checkout.buildingDescPlaceholder') || 'e.g. Villa, Apartment 3B, near the mosque...'"></textarea>
+            </div>
+
+            <!-- Deliver to someone else -->
+            <label class="checkout-checkbox">
+              <input type="checkbox" v-model="deliverToOther" />
+              <span>{{ $t('checkout.deliverToOther') || 'Deliver order to someone else?' }}</span>
+            </label>
+            <div v-if="deliverToOther" class="checkout-other-recipient">
+              <div class="checkout-form-grid">
+                <div class="checkout-field">
+                  <label class="checkout-label">{{ $t('checkout.recipientName') || "Recipient's Name" }} <span class="req">*</span></label>
+                  <input type="text" v-model="recipientForm.name" class="checkout-input" />
+                </div>
+                <div class="checkout-field">
+                  <label class="checkout-label">{{ $t('checkout.recipientPhone') || "Recipient's Phone" }} <span class="req">*</span></label>
+                  <div class="checkout-phone-row">
+                    <select v-model="recipientCountryCode" class="checkout-country-code">
+                      <option v-for="cc in countryCodes" :key="cc.code" :value="cc.code">{{ cc.flag }} {{ cc.code }}</option>
+                    </select>
+                    <input type="tel" v-model="recipientForm.phone" class="checkout-input checkout-input--phone" />
+                  </div>
+                </div>
+              </div>
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('checkout.recipientEmail') || "Recipient's Email" }} ({{ $t('common.optional') || 'Optional' }})</label>
+                <input type="email" v-model="recipientForm.email" class="checkout-input" />
+              </div>
+            </div>
+
+            <!-- SMS opt-in -->
+            <label class="checkout-checkbox">
+              <input type="checkbox" v-model="smsUpdates" />
+              <span>{{ $t('checkout.smsUpdates') || 'Get order updates via SMS' }}</span>
+            </label>
+
             <p v-if="addressError" class="auth-error-msg">{{ addressError }}</p>
             <button type="submit" class="checkout-btn" :disabled="shippingLoading">{{ shippingLoading ? $t('common.loading') : $t('checkout.save') }}</button>
           </form>
@@ -360,10 +408,37 @@ const registerForm = ref({ name: '', email: '', password: '', password_confirmat
 const guestForm = ref({ firstName: '', lastName: '', email: '', phone: '' })
 
 // Address
-const addressForm = ref({ firstName: '', lastName: '', phone: '', country: '', state: '', city: '', district: '', street: '', postalCode: '', buildingNo: '' })
+const addressForm = ref({ firstName: '', lastName: '', phone: '', country: '', state: '', city: '', district: '', street: '', postalCode: '', buildingNo: '', buildingDesc: '' })
 const addressError = ref('')
 const shippingLoading = ref(false)
 const shippingRatesFetched = ref(false)
+
+// Country codes
+const countryCodes = [
+  { code: '+966', flag: '🇸🇦' },
+  { code: '+971', flag: '🇦🇪' },
+  { code: '+20', flag: '🇪🇬' },
+  { code: '+962', flag: '🇯🇴' },
+  { code: '+965', flag: '🇰🇼' },
+  { code: '+973', flag: '🇧🇭' },
+  { code: '+968', flag: '🇴🇲' },
+  { code: '+974', flag: '🇶🇦' },
+  { code: '+1', flag: '🇺🇸' },
+  { code: '+44', flag: '🇬🇧' },
+  { code: '+91', flag: '🇮🇳' },
+  { code: '+92', flag: '🇵🇰' },
+  { code: '+90', flag: '🇹🇷' },
+  { code: '+33', flag: '🇫🇷' },
+  { code: '+49', flag: '🇩🇪' },
+]
+const guestCountryCode = ref('+966')
+const addrCountryCode = ref('+966')
+const recipientCountryCode = ref('+966')
+
+// Deliver to someone else
+const deliverToOther = ref(false)
+const recipientForm = ref({ name: '', phone: '', email: '' })
+const smsUpdates = ref(false)
 
 // Shipping
 const shippingOptions = ref<any[]>([])
@@ -619,6 +694,15 @@ onMounted(() => {
 .checkout-header__details-toggle { display: flex; justify-content: center; padding: var(--space-lg) 0; }
 .checkout-details-btn { padding: 0.375rem var(--space-lg); border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-full); background: var(--bg-primary, #fff); font-size: 0.8125rem; color: var(--store-text-primary); cursor: pointer; transition: all var(--transition-normal); }
 .checkout-details-btn:hover { border-color: var(--color-primary); }
+
+/* Phone with country code */
+.checkout-phone-row { display: flex; gap: 0; }
+.checkout-country-code { width: auto; min-width: 100px; padding: 0.625rem 0.5rem; border: 1px solid var(--product-border-color, #eee); border-right: none; border-radius: var(--radius-md) 0 0 var(--radius-md); font-size: 0.8125rem; color: var(--store-text-primary); background: var(--bg-secondary, #f5f5f5); outline: none; cursor: pointer; }
+html[dir="rtl"] .checkout-country-code { border-right: 1px solid var(--product-border-color, #eee); border-left: none; border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.checkout-input--phone { border-radius: 0 var(--radius-md) var(--radius-md) 0; flex: 1; }
+html[dir="rtl"] .checkout-input--phone { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.checkout-textarea { resize: vertical; font-family: inherit; min-height: 56px; }
+.checkout-other-recipient { padding: var(--space-md) var(--space-lg); border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-xl); margin: var(--space-sm) 0 var(--space-md); background: var(--bg-secondary, #f5f5f5); }
 
 /* Steps */
 .checkout-body { padding-top: 0; }

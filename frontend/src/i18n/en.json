@@ -40,6 +40,9 @@
     "productDetails": "Product Details",
     "productRating": "Product Rating",
     "noReviews": "No reviews yet.",
+    "writeReview": "Write a Review",
+    "reviewPlaceholder": "Share your thoughts about this product...",
+    "submitReview": "Submit Review",
     "relatedProducts": "It is usually purchased with",
     "viewAll": "View all"
   },
@@ -92,8 +95,11 @@
     "postalCode": "Postal Code",
     "buildingNo": "Building Number (Optional)",
     "buildingDesc": "Building Description (Optional)",
+    "buildingDescPlaceholder": "e.g. Villa, Apartment 3B, near the mosque...",
     "deliverToOther": "Deliver order to someone else?",
     "recipientName": "Recipient's Name",
+    "recipientPhone": "Recipient's Phone",
+    "recipientEmail": "Recipient's Email",
     "smsUpdates": "Get order updates via SMS",
     "save": "Save",
     "shippingCompany": "Shipping Company",
@@ -152,7 +158,8 @@
     "installmentSub": "No late fees, Sharia compliant!",
     "learnMore": "Learn more",
     "shopNow": "Shop Now",
-    "wishlist": "Wishlist"
+    "wishlist": "Wishlist",
+    "optional": "Optional"
   },
   "auth": {
     "login": "Login",

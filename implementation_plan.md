@@ -10,7 +10,7 @@ This plan covers 10 major frontend modification requests for the Eseven Store Vu
 
 ---
 
-## Phase 1: Frontend-Only Changes
+## Phase 1: Frontend-Only Changes [Completed]
 
 ### 1. Search Bar — Live Results with Loader & No-Results
 
@@ -29,12 +29,11 @@ This plan covers 10 major frontend modification requests for the Eseven Store Vu
 
 ---
 
-### 2. Mobile Nav Categories Fix
+### 2. Mobile Nav Categories Fix [Completed]
 
 #### [MODIFY] [MobileMenu.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/components/common/MobileMenu.vue)
 
-**Current:** `MobileMenu` receives `menuCategories` as a prop. The issue is likely that the parent component isn't passing the categories.
-
+**Current:** `MobileMenu` receives `menuCategories` as a prop. The issue is likely that the parent component isn't passing the categories. [DONE]
 **Changes:**
 - Investigate parent (`MainNavigation.vue` or `BottomNavigation.vue`) to see how `MobileMenu` is invoked
 - If categories aren't passed, import [useMenuCategories](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/composables/useMenuCategories.ts#13-40) composable directly inside `MobileMenu` as a fallback
@@ -43,7 +42,7 @@ This plan covers 10 major frontend modification requests for the Eseven Store Vu
 
 ---
 
-### 3. Product Card — Spinners & Add-to-Cart Confirmation
+### 3. Product Card — Spinners & Add-to-Cart Confirmation [Pending]
 
 #### [MODIFY] [ProductCard.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/components/home/ProductCard.vue)
 

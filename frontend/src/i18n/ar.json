@@ -40,6 +40,9 @@
     "productDetails": "تفاصيل المنتج",
     "productRating": "تقييم المنتج",
     "noReviews": "لا توجد تقييمات بعد.",
+    "writeReview": "اكتب تقييماً",
+    "reviewPlaceholder": "شاركنا رأيك حول هذا المنتج...",
+    "submitReview": "إرسال التقييم",
     "relatedProducts": "عادة يتم شراؤها مع",
     "viewAll": "عرض الكل"
   },
@@ -92,8 +95,11 @@
     "postalCode": "الرمز البريدي",
     "buildingNo": "رقم المبنى (اختياري)",
     "buildingDesc": "وصف المبنى (اختياري)",
+    "buildingDescPlaceholder": "مثال: فيلا، شقة 3ب، بجوار المسجد...",
     "deliverToOther": "استلام الطلب عبر شخص آخر؟",
     "recipientName": "اسم المستلم",
+    "recipientPhone": "رقم هاتف المستلم",
+    "recipientEmail": "البريد الإلكتروني للمستلم",
     "smsUpdates": "الحصول على تحديثات الطلب عبر رسائل SMS",
     "save": "حفظ",
     "shippingCompany": "شركة الشحن",
@@ -152,7 +158,8 @@
     "installmentSub": "بدون رسوم تأخير، متوافق مع الشريعة!",
     "learnMore": "اعرف المزيد",
     "shopNow": "تسوق الآن",
-    "wishlist": "المفضلة"
+    "wishlist": "المفضلة",
+    "optional": "اختياري"
   },
   "auth": {
     "login": "تسجيل الدخول",

@@ -112,14 +112,31 @@
                   <router-link :to="'/product/' + product.slug" class="link--primary" @click="close">More details</router-link>
                 </div>
 
+                <!-- Variant Selectors -->
+                <div v-if="variantGroups.length > 0" class="quickview__variants">
+                  <div v-for="group in variantGroups" :key="group.name" class="quickview__variant-group">
+                    <div class="quickview__variant-header">
+                      <span class="quickview__variant-label">{{ group.name }} <span class="quickview__variant-req">*</span></span>
+                      <span class="quickview__variant-sublabel">Choose</span>
+                    </div>
+                    <select v-model="selectedAttributes[group.name]" class="quickview__variant-select" @change="onVariantChange">
+                      <option value="" disabled>Choose</option>
+                      <option v-for="opt in group.options" :key="opt" :value="opt">{{ opt }}</option>
+                    </select>
+                  </div>
+                </div>
+
                 <!-- Add to Cart + Quantity -->
                 <div class="quickview__cart-row">
-                  <button class="quickview__add-btn" @click="addToCart">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-                      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
-                    </svg>
-                    <span>Add to cart</span>
+                  <button class="quickview__add-btn" @click="addToCart" :disabled="addingToCart">
+                    <span v-if="addingToCart" class="qv-spinner"></span>
+                    <template v-else>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                      </svg>
+                      <span>Add to cart</span>
+                    </template>
                   </button>
                   <div class="quickview__quantity">
                     <button class="quickview__qty-btn" @click="decrementQty" :disabled="quantity <= 1">−</button>
@@ -137,13 +154,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useQuickView } from '@/composables/useQuickView'
+import { useCartStore } from '@/stores/cartStore'
+import { useWishlistStore } from '@/stores/wishlistStore'
 
 const { isOpen, product, close } = useQuickView()
+const cartStore = useCartStore()
+const wishlistStore = useWishlistStore()
 
 const quantity = ref(1)
 const selectedImage = ref('')
+const addingToCart = ref(false)
+const selectedAttributes = reactive<Record<string, string>>({})
+const selectedVariantId = ref<number | null>(null)
 
 // Build images list from product data
 const productImages = computed(() => {
@@ -152,10 +176,42 @@ const productImages = computed(() => {
   if (imgs && imgs.length > 0) {
     return imgs
   }
-  // Fallback: single image from primaryImage or image
   const fallback = product.value.primaryImage || product.value.image
   return fallback ? [{ id: 0, url: fallback, alt: product.value.name, isPrimary: true }] : []
 })
+
+// Build variant attribute groups from product.variants
+const variantGroups = computed(() => {
+  if (!product.value?.variants?.length) return []
+  const groups: Record<string, Set<string>> = {}
+  for (const v of product.value.variants) {
+    if (v.attributes && typeof v.attributes === 'object') {
+      for (const [key, val] of Object.entries(v.attributes)) {
+        if (!groups[key]) groups[key] = new Set()
+        groups[key].add(String(val))
+      }
+    } else {
+      // Fallback: use variant name as a single group
+      const label = 'Option'
+      if (!groups[label]) groups[label] = new Set()
+      groups[label].add(v.name || v.sku || `Variant ${v.id}`)
+    }
+  }
+  return Object.entries(groups).map(([name, opts]) => ({ name, options: Array.from(opts) }))
+})
+
+function onVariantChange() {
+  if (!product.value?.variants?.length) return
+  // Find the variant that matches all selected attributes
+  const match = product.value.variants.find((v: any) => {
+    if (v.attributes && typeof v.attributes === 'object') {
+      return Object.entries(selectedAttributes).every(([k, val]) => String(v.attributes[k]) === val)
+    }
+    // Fallback for simple variants
+    return (v.name || v.sku) === selectedAttributes['Option']
+  })
+  selectedVariantId.value = match?.id || null
+}
 
 // Auto-select the primary image when product changes
 watch(() => product.value, (p) => {
@@ -164,6 +220,12 @@ watch(() => product.value, (p) => {
   const primary = imgs.find(img => img.isPrimary) || imgs[0]
   selectedImage.value = primary?.url || p.primaryImage || p.image || ''
   quantity.value = 1
+  selectedVariantId.value = null
+  // Reset selected attributes
+  Object.keys(selectedAttributes).forEach(k => delete selectedAttributes[k])
+  for (const g of variantGroups.value) {
+    selectedAttributes[g.name] = ''
+  }
 }, { immediate: true })
 
 function formatPrice(price: any): string {
@@ -174,16 +236,28 @@ function formatPrice(price: any): string {
   return `${Number(price).toFixed(0)} ${cur}`
 }
 
-function addToCart() {
-  console.log('Quick view - Add to cart:', product.value?.id, 'qty:', quantity.value)
+async function addToCart() {
+  if (!product.value?.id || addingToCart.value) return
+  addingToCart.value = true
+  try {
+    await cartStore.addItem(product.value.id, quantity.value, selectedVariantId.value)
+  } catch (e) {
+    console.error('Quick view - Add to cart failed:', e)
+  } finally {
+    addingToCart.value = false
+  }
 }
 
 function toggleWishlist() {
-  console.log('Quick view - Toggle wishlist:', product.value?.id)
+  if (product.value?.id) {
+    wishlistStore.toggleItem(product.value.id)
+  }
 }
 
 function shareProduct() {
-  console.log('Quick view - Share:', product.value?.id)
+  if (navigator.share && product.value) {
+    navigator.share({ title: product.value.name, url: `/product/${product.value.slug}` }).catch(() => {})
+  }
 }
 
 function incrementQty() {
@@ -583,6 +657,62 @@ function decrementQty() {
 }
 .link--primary:hover {
   opacity: 0.8;
+}
+
+/* Variant Selectors */
+.quickview__variants {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+.quickview__variant-group { }
+.quickview__variant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.375rem;
+}
+.quickview__variant-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #111827;
+}
+.quickview__variant-req {
+  color: #ef4444;
+}
+.quickview__variant-sublabel {
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+.quickview__variant-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  appearance: auto;
+  transition: border-color 0.2s;
+}
+.quickview__variant-select:focus {
+  border-color: var(--color-primary, #858585);
+}
+
+/* Spinner */
+.qv-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #111827;
+  border-radius: 50%;
+  animation: qv-spin 0.6s linear infinite;
+}
+@keyframes qv-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Cart Row */

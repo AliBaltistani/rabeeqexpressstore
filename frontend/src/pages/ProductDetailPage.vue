@@ -85,15 +85,15 @@
             <img src="https://cdn.salla.sa/RvPxw/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png" alt="tamara" class="pdp-info__installment-logo" style="height:24px; width:auto;" />
           </div>
 
-          <!-- Size Option -->
-          <div class="pdp-info__option">
+          <!-- Variant Options -->
+          <div v-for="group in variantGroups" :key="group.name" class="pdp-info__option">
             <div class="pdp-info__option-header">
-              <span class="pdp-info__option-label">القياس <span class="pdp-info__required">*</span></span>
+              <span class="pdp-info__option-label">{{ group.name }} <span class="pdp-info__required">*</span></span>
               <span class="pdp-info__option-sublabel">Choose</span>
             </div>
-            <select v-model="selectedSize" class="pdp-info__select">
+            <select v-model="selectedAttributes[group.name]" class="pdp-info__select" @change="onVariantChange">
               <option value="" disabled>Choose</option>
-              <option v-for="s in product.sizes" :key="s" :value="s">{{ s }}</option>
+              <option v-for="opt in group.options" :key="opt" :value="opt">{{ opt }}</option>
             </select>
           </div>
 
@@ -148,44 +148,87 @@
 
       <!-- ======== PRODUCT DETAILS TAB ======== -->
       <div class="pdp-details-section">
-        <div class="pdp-tabs">
-          <button
-            v-for="tab in tabs"
-            :key="tab.key"
-            class="pdp-tab"
-            :class="{ active: activeTab === tab.key }"
-            @click="activeTab = tab.key"
-          >{{ tab.label }}</button>
-        </div>
-
-        <!-- Product Details -->
-        <div v-show="activeTab === 'details'" class="pdp-tab-content">
-          <h3 class="pdp-details__title">{{ product.name }}</h3>
-          <div class="pdp-details__description" v-html="product.description"></div>
-        </div>
-
-        <!-- Product Rating -->
-        <div v-show="activeTab === 'rating'" class="pdp-tab-content">
-          <div v-if="reviews.length > 0" class="pdp-reviews-list">
-            <div v-for="review in reviews" :key="review.id || review.createdAt" class="pdp-review-item">
-              <div class="pdp-review-header">
-                <span class="pdp-review-author">{{ review.customerName }}</span>
-                <span class="pdp-review-date">{{ new Date(review.createdAt).toLocaleDateString() }}</span>
-              </div>
-              <div class="pdp-review-stars">
-                <svg v-for="s in 5" :key="s" width="16" height="16" viewBox="0 0 24 24" :fill="s <= review.rating ? '#fbbf24' : 'none'" :stroke="s <= review.rating ? '#fbbf24' : '#d1d5db'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              </div>
-              <h4 v-if="review.title" class="pdp-review-title">{{ review.title }}</h4>
-              <p class="pdp-review-body">{{ review.body }}</p>
-              <div v-if="review.adminReply" class="pdp-review-reply">
-                <strong>Admin Reply:</strong> {{ review.adminReply }}
-              </div>
-            </div>
-            <button v-if="reviewsHasMore" class="pdp-btn pdp-btn--load-more" @click="loadMoreReviews">
-              {{ $t('category.loadMore') }}
-            </button>
+        <div class="pdp-tabs-layout">
+          <!-- Vertical Tabs -->
+          <div class="pdp-tabs">
+            <button
+              v-for="tab in tabs"
+              :key="tab.key"
+              class="pdp-tab"
+              :class="{ active: activeTab === tab.key }"
+              @click="activeTab = tab.key"
+            >{{ tab.label }}</button>
           </div>
-          <p v-else class="pdp-details__empty">{{ $t('product.noReviews') }}</p>
+
+          <!-- Tab Content -->
+          <div class="pdp-tab-content-area">
+            <!-- Product Details -->
+            <div v-show="activeTab === 'details'" class="pdp-tab-content">
+              <h3 class="pdp-details__title">{{ product.name }}</h3>
+              <div class="pdp-details__description" v-html="product.description"></div>
+            </div>
+
+            <!-- Product Rating -->
+            <div v-show="activeTab === 'rating'" class="pdp-tab-content">
+              <!-- Rating Breakdown -->
+              <div class="pdp-rating-breakdown">
+                <div class="pdp-rating-summary">
+                  <span class="pdp-rating-avg">{{ averageRating }}</span>
+                  <div class="pdp-rating-avg-stars">
+                    <svg v-for="s in 5" :key="s" width="16" height="16" viewBox="0 0 24 24" :fill="s <= Math.round(averageRating) ? '#fbbf24' : 'none'" :stroke="s <= Math.round(averageRating) ? '#fbbf24' : '#d1d5db'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  </div>
+                  <span class="pdp-rating-count">{{ reviews.length }} {{ $t('product.productRating') }}</span>
+                </div>
+                <div class="pdp-rating-bars">
+                  <div v-for="star in [5,4,3,2,1]" :key="star" class="pdp-rating-bar-row">
+                    <span class="pdp-rating-bar-label">{{ star }}★</span>
+                    <div class="pdp-rating-bar-track">
+                      <div class="pdp-rating-bar-fill" :style="{ width: ratingBarWidth(star) }"></div>
+                    </div>
+                    <span class="pdp-rating-bar-count">{{ ratingCounts[star] || 0 }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Review Form -->
+              <div class="pdp-review-form">
+                <h4 class="pdp-review-form__title">{{ $t('product.writeReview') || 'Write a Review' }}</h4>
+                <div class="pdp-review-form__stars">
+                  <svg v-for="s in 5" :key="s" @click="reviewFormRating = s" width="24" height="24" viewBox="0 0 24 24" :fill="s <= reviewFormRating ? '#fbbf24' : 'none'" :stroke="s <= reviewFormRating ? '#fbbf24' : '#d1d5db'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </div>
+                <textarea v-model="reviewFormBody" class="pdp-review-form__textarea" :placeholder="$t('product.reviewPlaceholder') || 'Share your thoughts about this product...'" rows="4"></textarea>
+                <button class="pdp-btn pdp-btn--cart pdp-review-form__submit" @click="handleSubmitReview" :disabled="reviewSubmitting">
+                  {{ reviewSubmitting ? ($t('common.loading') || 'Loading...') : ($t('product.submitReview') || 'Submit Review') }}
+                </button>
+                <p v-if="reviewFormMsg" class="pdp-review-form__msg" :class="{ error: reviewFormError }">{{ reviewFormMsg }}</p>
+              </div>
+
+              <!-- Reviews List -->
+              <div v-if="reviews.length > 0" class="pdp-reviews-list">
+                <div v-for="review in reviews" :key="review.id || review.createdAt" class="pdp-review-item">
+                  <div class="pdp-review-header">
+                    <div class="pdp-review-avatar">{{ (review.customerName || 'U').charAt(0).toUpperCase() }}</div>
+                    <div class="pdp-review-header-info">
+                      <span class="pdp-review-author">{{ review.customerName }}</span>
+                      <span class="pdp-review-date">{{ new Date(review.createdAt).toLocaleDateString() }}</span>
+                    </div>
+                    <div class="pdp-review-stars">
+                      <svg v-for="s in 5" :key="s" width="14" height="14" viewBox="0 0 24 24" :fill="s <= review.rating ? '#fbbf24' : 'none'" :stroke="s <= review.rating ? '#fbbf24' : '#d1d5db'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    </div>
+                  </div>
+                  <h4 v-if="review.title" class="pdp-review-title">{{ review.title }}</h4>
+                  <p class="pdp-review-body">{{ review.body }}</p>
+                  <div v-if="review.adminReply" class="pdp-review-reply">
+                    <strong>Admin Reply:</strong> {{ review.adminReply }}
+                  </div>
+                </div>
+                <button v-if="reviewsHasMore" class="pdp-btn pdp-btn--load-more" @click="loadMoreReviews">
+                  {{ $t('category.loadMore') }}
+                </button>
+              </div>
+              <p v-else class="pdp-details__empty">{{ $t('product.noReviews') }}</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -209,11 +252,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
-import { fetchProductBySlug, fetchProducts, fetchProductReviews } from '@/api/services'
+import { fetchProductBySlug, fetchProducts, fetchProductReviews, submitReview } from '@/api/services'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import type { ProductDetail } from '@/types'
@@ -236,17 +279,54 @@ const product = ref<any>({
   weight: '',
   soldCount: 0,
   tags: [],
-  sizes: [],
+  variants: [],
   images: [],
   description: '',
 })
 const isLoading = ref(true)
 
 const selectedImage = ref('')
-const selectedSize = ref('')
+const selectedAttributes = reactive<Record<string, string>>({})
 const selectedVariantId = ref<number | null>(null)
 const quantity = ref(1)
 const activeTab = ref('details')
+
+// Compute variant attribute groups from product.variants
+const variantGroups = computed(() => {
+  const variants = product.value.variants || []
+  if (!variants.length) return []
+  const groups: Record<string, Set<string>> = {}
+  for (const v of variants) {
+    if (v.attributes && typeof v.attributes === 'object') {
+      for (const [key, val] of Object.entries(v.attributes)) {
+        if (!groups[key]) groups[key] = new Set()
+        groups[key].add(String(val))
+      }
+    } else {
+      const label = 'Option'
+      if (!groups[label]) groups[label] = new Set()
+      groups[label].add(v.name || v.sku || `Variant ${v.id}`)
+    }
+  }
+  return Object.entries(groups).map(([name, opts]) => ({ name, options: Array.from(opts) }))
+})
+
+function onVariantChange() {
+  const variants = product.value.variants || []
+  if (!variants.length) return
+  const match = variants.find((v: any) => {
+    if (v.attributes && typeof v.attributes === 'object') {
+      return Object.entries(selectedAttributes).every(([k, val]) => String(v.attributes[k]) === val)
+    }
+    return (v.name || v.sku) === selectedAttributes['Option']
+  })
+  selectedVariantId.value = match?.id || null
+  // Update price if variant has its own price
+  if (match?.price) {
+    product.value.salePrice = match.price.raw ?? match.price
+    product.value.priceFormatted = match.price.formatted ?? `${Number(match.price).toFixed(0)} ${product.value.currency}`
+  }
+}
 
 const tabs = computed(() => [
   { key: 'details', label: t('product.productDetails') },
@@ -297,6 +377,70 @@ async function loadMoreReviews() {
   }
 }
 
+// ─── Rating Breakdown ───
+const ratingCounts = computed(() => {
+  const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  for (const r of reviews.value) {
+    const s = Math.round(r.rating)
+    if (s >= 1 && s <= 5) counts[s]++
+  }
+  return counts
+})
+
+const averageRating = computed(() => {
+  if (!reviews.value.length) return '0.0'
+  const sum = reviews.value.reduce((acc: number, r: any) => acc + r.rating, 0)
+  return (sum / reviews.value.length).toFixed(1)
+})
+
+function ratingBarWidth(star: number): string {
+  const total = reviews.value.length
+  if (!total) return '0%'
+  return `${((ratingCounts.value[star] || 0) / total) * 100}%`
+}
+
+// ─── Review Form ───
+const reviewFormRating = ref(0)
+const reviewFormBody = ref('')
+const reviewSubmitting = ref(false)
+const reviewFormMsg = ref('')
+const reviewFormError = ref(false)
+
+async function handleSubmitReview() {
+  reviewFormMsg.value = ''
+  reviewFormError.value = false
+  if (reviewFormRating.value < 1) {
+    reviewFormMsg.value = 'Please select a rating'
+    reviewFormError.value = true
+    return
+  }
+  if (!reviewFormBody.value.trim()) {
+    reviewFormMsg.value = 'Please write a review'
+    reviewFormError.value = true
+    return
+  }
+  reviewSubmitting.value = true
+  try {
+    await submitReview(product.value.slug, {
+      rating: reviewFormRating.value,
+      body: reviewFormBody.value.trim(),
+    })
+    reviewFormMsg.value = 'Review submitted successfully!'
+    reviewFormRating.value = 0
+    reviewFormBody.value = ''
+    // Reload reviews
+    const res = await fetchProductReviews(product.value.slug, 1)
+    reviews.value = res.data || []
+    reviewsPage.value = 1
+    reviewsHasMore.value = res.meta ? res.meta.page < res.meta.lastPage : false
+  } catch (e: any) {
+    reviewFormError.value = true
+    reviewFormMsg.value = e.response?.data?.message || 'Failed to submit review. Please login first.'
+  } finally {
+    reviewSubmitting.value = false
+  }
+}
+
 // ─── Fetch Product from API ───
 async function loadProduct(slug: string) {
   isLoading.value = true
@@ -306,7 +450,6 @@ async function loadProduct(slug: string) {
     // Map API response to component shape
     const images = (data.images || []).map((img: any) => img.url).filter(Boolean)
     const variants = data.variants || []
-    const sizes = variants.map((v: any) => v.name || v.sku).filter(Boolean)
 
     product.value = {
       id: data.id,
@@ -319,7 +462,7 @@ async function loadProduct(slug: string) {
       weight: data.weight || '',
       soldCount: data.reviewCount || 0,
       tags: (data.tags || []).map((t: any) => typeof t === 'string' ? t : t.name),
-      sizes,
+      variants,
       images: images.length ? images : [data.primaryImage].filter(Boolean),
       description: data.description || data.shortDescription || '',
       priceFormatted: data.flashSalePrice?.formatted ?? data.price?.formatted ?? '',
@@ -381,8 +524,8 @@ watch(() => route.params.slug, (newSlug) => {
   if (newSlug && typeof newSlug === 'string') {
     loadProduct(newSlug)
     quantity.value = 1
-    selectedSize.value = ''
     selectedVariantId.value = null
+    Object.keys(selectedAttributes).forEach(k => delete selectedAttributes[k])
   }
 })
 </script>
@@ -814,34 +957,104 @@ watch(() => route.params.slug, (newSlug) => {
   color: var(--color-primary, #858585);
 }
 
-/* ─── Details Tabs ─── */
+/* ─── Details Tabs (Vertical Layout) ─── */
 .pdp-details-section {
   margin-bottom: 3rem;
 }
+.pdp-tabs-layout {
+  display: flex;
+  gap: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 300px;
+}
 .pdp-tabs {
   display: flex;
-  border-bottom: 2px solid #e5e7eb;
-  gap: 0;
-  margin-bottom: 1.5rem;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
+  min-width: 160px;
 }
 .pdp-tab {
-  padding: 0.75rem 1.5rem;
+  padding: 1rem 1.5rem;
   background: none;
   border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  border-right: 3px solid transparent;
   font-size: 0.9375rem;
   font-weight: 600;
   color: #6b7280;
   cursor: pointer;
   transition: all 0.2s;
+  text-align: left;
+}
+html[dir="rtl"] .pdp-tabs {
+  border-right: none;
+  border-left: 1px solid #e5e7eb;
+}
+html[dir="rtl"] .pdp-tab {
+  border-right: none;
+  border-left: 3px solid transparent;
+  text-align: right;
+}
+.pdp-tab:hover {
+  color: var(--store-text-primary, #111827);
+  background: #f3f4f6;
 }
 .pdp-tab.active {
   color: var(--store-text-primary, #111827);
-  border-bottom-color: var(--color-primary, #858585);
+  border-right-color: var(--color-primary, #858585);
+  background: #fff;
+}
+html[dir="rtl"] .pdp-tab.active {
+  border-right-color: transparent;
+  border-left-color: var(--color-primary, #858585);
+}
+.pdp-tab-content-area {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
 }
 .pdp-tab-content {
-  max-width: 800px;
+  max-width: 100%;
+}
+@media (max-width: 767px) {
+  .pdp-tabs-layout {
+    flex-direction: column;
+  }
+  .pdp-tabs {
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+    min-width: auto;
+    overflow-x: auto;
+  }
+  .pdp-tab {
+    border-right: none;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    padding: 0.75rem 1.25rem;
+  }
+  .pdp-tab.active {
+    border-right-color: transparent;
+    border-bottom-color: var(--color-primary, #858585);
+  }
+  html[dir="rtl"] .pdp-tabs {
+    border-left: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  html[dir="rtl"] .pdp-tab {
+    border-left: none;
+    border-bottom: 3px solid transparent;
+  }
+  html[dir="rtl"] .pdp-tab.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--color-primary, #858585);
+  }
+  .pdp-tab-content-area {
+    padding: 1.25rem 1rem;
+  }
 }
 .pdp-details__title {
   font-size: 1.125rem;
@@ -871,6 +1084,128 @@ watch(() => route.params.slug, (newSlug) => {
   font-size: 0.875rem;
 }
 
+/* Rating Breakdown */
+.pdp-rating-breakdown {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.pdp-rating-summary {
+  text-align: center;
+  flex-shrink: 0;
+  min-width: 80px;
+}
+.pdp-rating-avg {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--store-text-primary, #111827);
+  line-height: 1;
+}
+.pdp-rating-avg-stars {
+  display: flex;
+  justify-content: center;
+  gap: 0.125rem;
+  margin: 0.375rem 0;
+}
+.pdp-rating-count {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+.pdp-rating-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.pdp-rating-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.pdp-rating-bar-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 24px;
+  text-align: right;
+}
+.pdp-rating-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.pdp-rating-bar-fill {
+  height: 100%;
+  background: #fbbf24;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.pdp-rating-bar-count {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  min-width: 16px;
+  text-align: left;
+}
+
+/* Review Form */
+.pdp-review-form {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+.pdp-review-form__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--store-text-primary, #111827);
+  margin: 0 0 0.75rem;
+}
+.pdp-review-form__stars {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.875rem;
+}
+.pdp-review-form__stars svg:hover ~ svg {
+  fill: none !important;
+  stroke: #d1d5db !important;
+}
+.pdp-review-form__textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--store-text-primary, #111827);
+  background: #fff;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.pdp-review-form__textarea:focus {
+  border-color: var(--color-primary, #858585);
+}
+.pdp-review-form__submit {
+  margin-top: 0.75rem;
+  width: auto;
+  padding: 0.625rem 2rem;
+}
+.pdp-review-form__msg {
+  font-size: 0.8125rem;
+  margin: 0.5rem 0 0;
+  color: #22c55e;
+}
+.pdp-review-form__msg.error {
+  color: #ef4444;
+}
+
 /* Reviews List */
 .pdp-reviews-list {
   display: flex;
@@ -886,23 +1221,40 @@ watch(() => route.params.slug, (newSlug) => {
 }
 .pdp-review-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
   margin-bottom: 0.5rem;
+}
+.pdp-review-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-primary, #858585);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.pdp-review-header-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 .pdp-review-author {
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   color: var(--store-text-primary, #111827);
 }
 .pdp-review-date {
-  font-size: 0.75rem;
-  color: #6b7280;
+  font-size: 0.6875rem;
+  color: #9ca3af;
 }
 .pdp-review-stars {
   display: flex;
   gap: 0.125rem;
-  margin-bottom: 0.5rem;
 }
 .pdp-review-title {
   font-size: 0.9375rem;
