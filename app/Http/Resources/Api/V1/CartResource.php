@@ -97,6 +97,24 @@ class CartResource extends JsonResource
             return null;
         }
         $primary = $product->images->where('is_primary', true)->first() ?? $product->images->first();
-        return $primary?->image ? asset('storage/' . $primary->image) : null;
+        $path = $primary?->image_path;
+
+        if (empty($path)) return asset('storage/dummy/placeholder.jpg');
+
+        // Check public disk first
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return asset('storage/' . $path);
+        }
+
+        // Fall back to local disk with signed URL
+        if (\Illuminate\Support\Facades\Storage::exists($path)) {
+            try {
+                return \Illuminate\Support\Facades\Storage::temporaryUrl($path, now()->addDay());
+            } catch (\Throwable) {
+                return asset('storage/' . $path);
+            }
+        }
+
+        return asset('storage/dummy/placeholder.jpg');
     }
 }

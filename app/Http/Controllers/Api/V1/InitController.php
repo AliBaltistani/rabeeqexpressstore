@@ -50,8 +50,8 @@ class InitController extends Controller
         return $this->success([
             'storeName' => setting('general.store_name_' . $locale, setting('general.store_name_en', 'Eseven Store')),
             'storeTagline' => setting('general.store_tagline_' . $locale),
-            'logo' => setting('general.store_logo') ? asset('storage/' . setting('general.store_logo')) : null,
-            'favicon' => setting('general.store_favicon') ? asset('storage/' . setting('general.store_favicon')) : null,
+            'logo' => $this->resolveImageUrl(setting('general.store_logo')),
+            'favicon' => $this->resolveImageUrl(setting('general.store_favicon')),
             'storeEmail' => setting('general.store_email'),
             'storePhone' => setting('general.store_phone'),
             'whatsappNumber' => setting('general.store_whatsapp'),
@@ -120,5 +120,24 @@ class InitController extends Controller
         }
 
         return $methods;
+    }
+
+    protected function resolveImageUrl(?string $path): ?string
+    {
+        if (empty($path)) return null;
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return asset('storage/' . $path);
+        }
+
+        if (\Illuminate\Support\Facades\Storage::exists($path)) {
+            try {
+                return \Illuminate\Support\Facades\Storage::temporaryUrl($path, now()->addDay());
+            } catch (\Throwable) {
+                return asset('storage/' . $path);
+            }
+        }
+
+        return null;
     }
 }
