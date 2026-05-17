@@ -23,6 +23,8 @@ class Order extends Model
         'status',
         'payment_status',
         'payment_method',
+        'shipping_rate_id',
+        'shipping_method',
         'transaction_id',
         'subtotal',
         'discount_amount',
@@ -132,6 +134,6 @@ class Order extends Model
 
     public function getFormattedTotalAttribute(): string
     {
-        return number_format($this->total, 2) . ' ' . $this->currency_code;
+        return number_format((float) $this->total, 2) . ' ' . $this->currency_code;
     }
 }

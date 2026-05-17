@@ -144,10 +144,14 @@ class CheckoutController extends Controller
 
                 // Shipping
                 $shippingAmount = 0;
+                $shippingRateId = null;
+                $shippingMethod = null;
                 if (!empty($validated['shippingRateId'])) {
                     $rate = ShippingRate::find($validated['shippingRateId']);
                     if ($rate) {
                         $shippingAmount = (float) $rate->price;
+                        $shippingRateId = $rate->id;
+                        $shippingMethod = $rate->getTranslation('name', 'en') . ' (' . ucfirst($rate->method) . ')';
                         if ($rate->min_order_for_free && $subtotal >= $rate->min_order_for_free) {
                             $shippingAmount = 0;
                         }
@@ -172,6 +176,8 @@ class CheckoutController extends Controller
                     'status' => 'pending',
                     'payment_status' => 'unpaid',
                     'payment_method' => $validated['paymentMethod'],
+                    'shipping_rate_id' => $shippingRateId,
+                    'shipping_method' => $shippingMethod,
                     'subtotal' => $subtotal,
                     'discount_amount' => $discount,
                     'shipping_amount' => $shippingAmount,

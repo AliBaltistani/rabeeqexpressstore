@@ -61,13 +61,11 @@ class ShippingZoneResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->label('Zone Name'),
-                Tables\Columns\TextColumn::make('countries')
+                Tables\Columns\TextColumn::make('countries_count')
                     ->label('Countries Included')
-                    ->formatStateUsing(function ($state) {
-                        if (!is_array($state)) {
-                            return '0 Countries';
-                        }
-                        return count($state) . ' Countries';
+                    ->getStateUsing(function (\App\Models\ShippingZone $record) {
+                        $count = is_array($record->countries) ? count($record->countries) : 0;
+                        return $count . ' Countries';
                     })
                     ->badge()
                     ->color('primary'),
