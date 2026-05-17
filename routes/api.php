@@ -130,6 +130,7 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
         // Orders
         Route::get('orders', [OrderController::class, 'index']);
         Route::get('orders/{orderNumber}', [OrderController::class, 'show']);
+        Route::get('orders/{orderNumber}/invoice', [OrderController::class, 'invoice']);
 
         // Wishlist
         Route::get('wishlist', [WishlistController::class, 'index']);

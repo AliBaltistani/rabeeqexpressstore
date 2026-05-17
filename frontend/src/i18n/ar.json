@@ -132,7 +132,12 @@
     "status": "الحالة",
     "total": "المجموع",
     "action": "إجراء",
-    "viewDetails": "عرض التفاصيل"
+    "viewDetails": "عرض التفاصيل",
+    "subtotal": "المجموع الفرعي",
+    "shipping": "الشحن",
+    "orderSummary": "ملخص الطلب",
+    "qty": "الكمية",
+    "tax": "الضريبة"
   },
   "category": {
     "sortBy": "ترتيب حسب",

@@ -59,6 +59,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useI18n } from 'vue-i18n'
+import { fetchOrders } from '@/api/services'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -77,8 +78,12 @@ async function logout() {
 }
 
 onMounted(async () => {
-  // In a real scenario, fetch user orders
-  // orders.value = await fetchUserOrders()
+  try {
+    const res = await fetchOrders()
+    orders.value = res.data || []
+  } catch (error) {
+    console.error('Failed to load dashboard orders:', error)
+  }
 })
 </script>
 

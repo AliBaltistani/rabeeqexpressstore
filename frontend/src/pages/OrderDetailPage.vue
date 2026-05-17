@@ -18,7 +18,10 @@
 
     <main class="account-content">
       <div class="header-row">
-        <h2>{{ $t('checkout.orderId') || 'Order' }} #{{ route.params.orderNumber }}</h2>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <h2>{{ $t('checkout.orderId') || 'Order' }} #{{ route.params.orderNumber }}</h2>
+          <button v-if="order" @click="handleDownloadInvoice" class="btn-invoice">📝 Generate Invoice</button>
+        </div>
         <router-link to="/account/orders" class="back-link">← {{ $t('account.orders') }}</router-link>
       </div>
 
@@ -105,15 +108,15 @@
             <span>{{ order.subtotal?.formatted }}</span>
           </div>
           <div class="summary-row" v-if="order.discountAmount?.raw > 0">
-            <span>Discount <span v-if="order.couponCode">({{ order.couponCode }})</span></span>
+            <span>{{ $t('checkout.discount') || 'Discount' }} <span v-if="order.couponCode">({{ order.couponCode }})</span></span>
             <span class="text-green">-{{ order.discountAmount?.formatted }}</span>
           </div>
           <div class="summary-row">
-            <span>Shipping</span>
+            <span>{{ $t('checkout.shipping') || 'Shipping' }}</span>
             <span>{{ order.shippingAmount?.formatted }}</span>
           </div>
           <div class="summary-row" v-if="order.taxAmount?.raw > 0">
-            <span>Tax</span>
+            <span>{{ $t('checkout.tax') || 'Tax' }}</span>
             <span>{{ order.taxAmount?.formatted }}</span>
           </div>
           <div class="summary-row total">
@@ -130,7 +133,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
-import { fetchOrderByNumber } from '@/api/services'
+import { fetchOrderByNumber, downloadInvoice } from '@/api/services'
 import type { Order } from '@/types'
 
 const auth = useAuthStore()
@@ -161,6 +164,15 @@ async function loadOrder() {
     console.error('Failed to load order details:', error)
   } finally {
     isLoading.value = false
+  }
+}
+
+async function handleDownloadInvoice() {
+  if (!order.value) return;
+  try {
+    await downloadInvoice(order.value.orderNumber);
+  } catch (error) {
+    console.error('Failed to download invoice', error);
   }
 }
 
@@ -283,6 +295,24 @@ html[dir="rtl"] .account-nav a, html[dir="rtl"] .logout-btn {
 }
 .back-link:hover {
   color: var(--color-primary, #858585);
+}
+
+.btn-invoice {
+  padding: 0.5rem 1rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.btn-invoice:hover {
+  background-color: #2563eb;
 }
 
 .loading-state {

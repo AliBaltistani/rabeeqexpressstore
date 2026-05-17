@@ -132,7 +132,12 @@
     "status": "Status",
     "total": "Total",
     "action": "Action",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "orderSummary": "Order Summary",
+    "qty": "Qty",
+    "tax": "Tax"
   },
   "category": {
     "sortBy": "Sort By",
