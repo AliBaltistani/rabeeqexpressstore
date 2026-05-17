@@ -59,7 +59,9 @@
     "finalTotal": "Final total amount",
     "submitOrder": "Submit Order",
     "total": "Total:",
-    "addMore": "Would you like to add something else?"
+    "addMore": "Would you like to add something else?",
+    "addedToCart": "Added to Cart",
+    "viewCart": "View Cart"
   },
   "checkout": {
     "title": "Checkout",

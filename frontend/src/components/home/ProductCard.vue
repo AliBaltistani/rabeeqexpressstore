@@ -51,14 +51,17 @@
     <!-- Added to Cart Toast -->
     <Teleport to="body">
       <transition name="toast-slide">
-        <div v-if="showCartToast" class="cart-toast" @click="showCartToast = false">
+        <div v-if="showCartToast" class="cart-toast" :class="toastPositionClass" @click="showCartToast = false">
           <div class="cart-toast__inner" @click.stop>
             <button class="cart-toast__close" @click="showCartToast = false" aria-label="Close">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
             <div class="cart-toast__header">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span class="cart-toast__title">{{ $t('cart.addedToCart') || 'Added to Cart' }}</span>
+              <span class="cart-toast__title">{{ $t('cart.addedToCart') }}</span>
+            </div>
+            <div class="cart-toast__progress-track">
+              <div class="cart-toast__progress-bar" :class="{ 'cart-toast__progress-bar--active': toastProgressActive }"></div>
             </div>
             <div class="cart-toast__product">
               <img :src="product.primaryImage || product.image || '/storage/dummy/placeholder.jpg'" :alt="product.name" class="cart-toast__img" />
@@ -68,8 +71,8 @@
               </div>
             </div>
             <div class="cart-toast__actions">
-              <router-link to="/checkout" class="cart-toast__btn cart-toast__btn--primary" @click="showCartToast = false">{{ $t('cart.submitOrder') || 'Submit Order' }}</router-link>
-              <router-link to="/cart" class="cart-toast__btn cart-toast__btn--secondary" @click="showCartToast = false">{{ $t('cart.viewCart') || 'View Cart' }}</router-link>
+              <router-link to="/checkout" class="cart-toast__btn cart-toast__btn--primary" @click="showCartToast = false">{{ $t('cart.submitOrder') }}</router-link>
+              <router-link to="/cart" class="cart-toast__btn cart-toast__btn--secondary" @click="showCartToast = false">{{ $t('cart.viewCart') }}</router-link>
             </div>
           </div>
         </div>
@@ -79,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useQuickView } from '@/composables/useQuickView'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
@@ -98,7 +101,14 @@ const addingToCart = ref(false)
 const togglingWishlist = ref(false)
 const openingQuickView = ref(false)
 const showCartToast = ref(false)
+const toastProgressActive = ref(false)
 let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+// Position toast based on document direction
+const toastPositionClass = computed(() => {
+  const dir = document.documentElement.dir || 'ltr'
+  return dir === 'rtl' ? 'cart-toast--left' : 'cart-toast--right'
+})
 
 function openQuickView() {
   openingQuickView.value = true
@@ -121,10 +131,17 @@ async function addToCart() {
     // Fly-to-cart animation
     flyToCart()
     await cart.addItem(props.product.id, 1)
-    // Show toast
+    // Show toast with progress bar
     if (toastTimer) clearTimeout(toastTimer)
+    toastProgressActive.value = false
     showCartToast.value = true
-    toastTimer = setTimeout(() => { showCartToast.value = false }, 5000)
+    // Trigger progress bar animation after next frame
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        toastProgressActive.value = true
+      })
+    })
+    toastTimer = setTimeout(() => { showCartToast.value = false; toastProgressActive.value = false }, 5000)
   } catch (e) {
     console.error('Add to cart failed:', e)
   } finally {
@@ -135,8 +152,10 @@ async function addToCart() {
 function flyToCart() {
   const imgEl = productImgRef.value
   if (!imgEl) return
-  // Find the cart icon in the header
-  const cartIcon = document.querySelector('[aria-label="Cart"]') as HTMLElement
+  // Find the cart icon in the header — try multiple selectors
+  const cartIcon = (document.querySelector('.action-btn[aria-label="Cart"]') ||
+                    document.querySelector('[aria-label="Cart"]') ||
+                    document.querySelector('.cart-badge')?.parentElement) as HTMLElement
   if (!cartIcon) return
 
   const imgRect = imgEl.getBoundingClientRect()
@@ -170,8 +189,14 @@ function flyToCart() {
     clone.style.transform = 'scale(0.2)'
   })
 
+  // Bounce effect on cart icon when item arrives
   setTimeout(() => {
     clone.remove()
+    cartIcon.style.transition = 'transform 0.3s ease'
+    cartIcon.style.transform = 'scale(1.3)'
+    setTimeout(() => {
+      cartIcon.style.transform = 'scale(1)'
+    }, 300)
   }, 700)
 }
 
@@ -416,13 +441,17 @@ async function toggleWishlist() {
 .cart-toast {
   position: fixed;
   top: 0;
-  left: 0;
-  right: 0;
   z-index: 10001;
-  display: flex;
-  justify-content: center;
   padding: 1rem;
   pointer-events: none;
+}
+.cart-toast--right {
+  right: 0;
+  left: auto;
+}
+.cart-toast--left {
+  left: 0;
+  right: auto;
 }
 .cart-toast__inner {
   pointer-events: auto;
@@ -459,6 +488,29 @@ async function toggleWishlist() {
   font-size: 0.875rem;
   font-weight: 700;
   color: #22c55e;
+}
+.cart-toast__progress-track {
+  width: 100%;
+  height: 3px;
+  background: #f3f4f6;
+  border-radius: 2px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+.cart-toast__progress-bar {
+  width: 100%;
+  height: 100%;
+  background: var(--color-primary, #858585);
+  border-radius: 2px;
+  transform-origin: left;
+  transition: none;
+}
+.cart-toast__progress-bar--active {
+  transition: transform 5s linear;
+  transform: scaleX(0);
+}
+html[dir="rtl"] .cart-toast__progress-bar {
+  transform-origin: right;
 }
 .cart-toast__product {
   display: flex;
@@ -529,6 +581,6 @@ async function toggleWishlist() {
 /* Toast Animation */
 .toast-slide-enter-active { transition: all 0.35s cubic-bezier(0.22, 0.61, 0.36, 1); }
 .toast-slide-leave-active { transition: all 0.25s ease-in; }
-.toast-slide-enter-from { transform: translateY(-100%); opacity: 0; }
-.toast-slide-leave-to { transform: translateY(-100%); opacity: 0; }
+.toast-slide-enter-from { transform: translateY(-20px); opacity: 0; }
+.toast-slide-leave-to { transform: translateY(-20px); opacity: 0; }
 </style>
