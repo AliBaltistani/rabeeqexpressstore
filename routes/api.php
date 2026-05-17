@@ -35,6 +35,7 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
 
     // Storefront initialization
     Route::get('init', InitController::class);
+    Route::get('countries/active', [\App\Http\Controllers\Api\V1\CountryController::class, 'active']);
 
     // Homepage sections
     Route::get('homepage-sections', [HomepageSectionController::class, 'index']);
