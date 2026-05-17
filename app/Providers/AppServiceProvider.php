@@ -95,6 +95,9 @@ class AppServiceProvider extends ServiceProvider
             $smtpEncryption = Setting::get('email.smtp_encryption');
             if ($smtpEncryption) {
                 Config::set('mail.mailers.smtp.encryption', $smtpEncryption);
+                // For Laravel 9+ Symfony Mailer compatibility:
+                $scheme = $smtpEncryption === 'tls' ? null : $smtpEncryption; // tls uses null scheme and defaults to STARTTLS
+                Config::set('mail.mailers.smtp.scheme', $scheme);
             }
 
             $fromEmail = Setting::get('email.from_email');

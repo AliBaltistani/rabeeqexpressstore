@@ -34,6 +34,40 @@ class EmailSettingsPage extends Page
 
     public ?array $data = [];
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            \Filament\Actions\Action::make('sendTestEmail')
+                ->label('Send Test Email')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('primary')
+                ->form([
+                    \Filament\Forms\Components\TextInput::make('recipient_email')
+                        ->label('Recipient Email')
+                        ->email()
+                        ->required(),
+                ])
+                ->action(function (array $data) {
+                    try {
+                        \Illuminate\Support\Facades\Mail::raw('This is a test email to verify your SMTP configuration.', function ($message) use ($data) {
+                            $message->to($data['recipient_email'])
+                                ->subject('Test Email from ' . config('app.name'));
+                        });
+                        \Filament\Notifications\Notification::make()
+                            ->title('Test email sent successfully!')
+                            ->success()
+                            ->send();
+                    } catch (\Exception $e) {
+                        \Filament\Notifications\Notification::make()
+                            ->title('Failed to send email')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
+                }),
+        ];
+    }
+
     public function mount(): void
     {
         $fields = [
