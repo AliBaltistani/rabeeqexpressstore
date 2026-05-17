@@ -10,6 +10,8 @@ class CouponUsage extends Model
 {
     use HasFactory;
 
+    public $timestamps = false;
+
     protected $fillable = [
         'coupon_id',
         'user_id',

@@ -126,7 +126,13 @@
     "shippingRatesError": "Could not load shipping rates",
     "discount": "Discount",
     "bankTransferNote": "You will receive bank details after placing your order. Payment confirmation may take 1-2 business days.",
-    "noShippingRates": "No shipping options available for this address. You can still proceed."
+    "noShippingRates": "No shipping options available for this address. You can still proceed.",
+    "orderId": "Order ID",
+    "date": "Date",
+    "status": "Status",
+    "total": "Total",
+    "action": "Action",
+    "viewDetails": "View Details"
   },
   "category": {
     "sortBy": "Sort By",

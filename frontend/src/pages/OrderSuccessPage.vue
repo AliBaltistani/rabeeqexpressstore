@@ -18,7 +18,7 @@
         </div>
         <div class="detail-row">
           <span>Total Amount:</span>
-          <strong>{{ order.total }} {{ order.currency }}</strong>
+          <strong>{{ order.total?.formatted || order.total }}</strong>
         </div>
         <div class="detail-row">
           <span>Payment Method:</span>

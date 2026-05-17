@@ -57,7 +57,7 @@ class CheckoutController extends Controller
      */
     public function placeOrder(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $user = $request->user('sanctum');
 
         $validated = $request->validate([
             'shippingAddress' => ['required', 'array'],
@@ -109,12 +109,11 @@ class CheckoutController extends Controller
                     $orderItems[] = [
                         'product_id' => $product->id,
                         'variant_id' => $cartItem->variant_id,
-                        'product_name' => $product->getTranslation('name', 'en'),
-                        'sku' => $cartItem->variant?->sku ?? $product->sku,
+                        'product_name' => $cartItem->variant?->name ? $product->getTranslation('name', 'en') . ' - ' . $cartItem->variant->name : $product->getTranslation('name', 'en'),
+                        'product_sku' => $cartItem->variant?->sku ?? $product->sku,
                         'quantity' => $qty,
                         'unit_price' => $price,
                         'total' => $lineTotal,
-                        'variant_name' => $cartItem->variant?->name,
                     ];
 
                     // Reduce stock
@@ -134,14 +133,6 @@ class CheckoutController extends Controller
                         $couponId = $coupon->id;
                         $couponCode = $coupon->code;
                         $coupon->increment('usage_count');
-                        if ($user) {
-                            CouponUsage::create([
-                                'coupon_id' => $coupon->id,
-                                'user_id' => $user->id,
-                                'order_id' => 0, // Updated below
-                                'discount_amount' => $discount,
-                            ]);
-                        }
                     }
                 }
 
@@ -210,9 +201,9 @@ class CheckoutController extends Controller
                     'address_line_1' => $shippingAddr['addressLine1'],
                     'address_line_2' => $shippingAddr['addressLine2'] ?? null,
                     'city' => $shippingAddr['city'],
-                    'state' => $shippingAddr['state'] ?? null,
+                    'state' => $shippingAddr['state'] ?? '',
                     'country' => $shippingAddr['country'],
-                    'postal_code' => $shippingAddr['postalCode'] ?? null,
+                    'postal_code' => $shippingAddr['postalCode'] ?? '',
                 ]);
 
                 $billingAddr = $validated['billingAddress'] ?? $validated['shippingAddress'];
@@ -225,9 +216,9 @@ class CheckoutController extends Controller
                     'address_line_1' => $billingAddr['addressLine1'],
                     'address_line_2' => $billingAddr['addressLine2'] ?? null,
                     'city' => $billingAddr['city'],
-                    'state' => $billingAddr['state'] ?? null,
+                    'state' => $billingAddr['state'] ?? '',
                     'country' => $billingAddr['country'],
-                    'postal_code' => $billingAddr['postalCode'] ?? null,
+                    'postal_code' => $billingAddr['postalCode'] ?? '',
                 ]);
 
                 // Status history
@@ -236,6 +227,15 @@ class CheckoutController extends Controller
                     'status' => 'pending',
                     'note' => 'Order placed.',
                 ]);
+
+                // Record coupon usage
+                if ($couponId && $user) {
+                    CouponUsage::create([
+                        'coupon_id' => $couponId,
+                        'user_id' => $user->id,
+                        'order_id' => $order->id,
+                    ]);
+                }
 
                 // Clear cart
                 $userId = $user?->id;
@@ -323,7 +323,7 @@ class CheckoutController extends Controller
 
     protected function getCartItems(Request $request)
     {
-        $userId = $request->user()?->id;
+        $userId = $request->user('sanctum')?->id;
         $sessionId = $userId ? null : $request->session()->getId();
 
         return CartItem::with(['product' => fn($q) => $q->withoutGlobalScopes(), 'variant'])

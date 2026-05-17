@@ -36,7 +36,7 @@ class CartController extends Controller
             'quantity' => ['required', 'integer', 'min:1', 'max:99'],
         ]);
 
-        $userId = $request->user()?->id;
+        $userId = $request->user('sanctum')?->id;
         $sessionId = $userId ? null : $request->session()->getId();
 
         // Check if item already in cart
@@ -103,7 +103,7 @@ class CartController extends Controller
      */
     public function clear(Request $request): JsonResponse
     {
-        $userId = $request->user()?->id;
+        $userId = $request->user('sanctum')?->id;
         $sessionId = $userId ? null : $request->session()->getId();
 
         CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
@@ -132,7 +132,7 @@ class CartController extends Controller
             return $this->error('This coupon is no longer valid.', 422);
         }
 
-        $user = $request->user();
+        $user = $request->user('sanctum');
         if ($user && !$coupon->isValidForUser($user)) {
             return $this->error('You have already used this coupon the maximum number of times.', 422);
         }
@@ -171,7 +171,7 @@ class CartController extends Controller
 
     protected function getCartItems(Request $request)
     {
-        $userId = $request->user()?->id;
+        $userId = $request->user('sanctum')?->id;
         $sessionId = $userId ? null : $request->session()->getId();
 
         return CartItem::with(['product' => fn($q) => $q->withoutGlobalScopes(), 'product.images', 'variant'])
@@ -182,7 +182,7 @@ class CartController extends Controller
 
     protected function findCartItem(Request $request, int $id): ?CartItem
     {
-        $userId = $request->user()?->id;
+        $userId = $request->user('sanctum')?->id;
         $sessionId = $userId ? null : $request->session()->getId();
 
         return CartItem::where('id', $id)
