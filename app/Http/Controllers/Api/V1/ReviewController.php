@@ -74,6 +74,16 @@ class ReviewController extends Controller
             'status' => $requireApproval ? 'pending' : 'approved',
         ]);
 
+        // --- Admin Notification ---
+        $adminEmails = setting('email.admin_email');
+        if ($adminEmails && setting('email.admin_notify_new_review', true)) {
+            $admins = array_filter(array_map('trim', explode(',', $adminEmails)));
+            if (!empty($admins)) {
+                \Illuminate\Support\Facades\Mail::to($admins)->queue(new \App\Mail\Admin\NewReviewAdminMail($review));
+            }
+        }
+        // --------------------------
+
         $message = $requireApproval
             ? 'Thank you! Your review has been submitted for approval.'
             : 'Thank you for your review!';

@@ -239,7 +239,32 @@ class CheckoutController extends Controller
                 return $order;
             });
 
-            $order->load(['items', 'shippingAddress', 'billingAddress']);
+            $order->load(['items', 'shippingAddress', 'billingAddress', 'user']);
+
+            // --- Email Notifications ---
+            $recipient = $user?->email ?? $validated['guestEmail'];
+            if ($recipient && setting('email.notify_order_placed', true)) {
+                \Illuminate\Support\Facades\Mail::to($recipient)->queue(new \App\Mail\Customer\OrderPlacedMail($order));
+            }
+
+            $adminEmails = setting('email.admin_email');
+            if ($adminEmails) {
+                $admins = array_filter(array_map('trim', explode(',', $adminEmails)));
+                if (!empty($admins)) {
+                    if (setting('email.admin_notify_new_order', true)) {
+                        \Illuminate\Support\Facades\Mail::to($admins)->queue(new \App\Mail\Admin\NewOrderAdminMail($order));
+                    }
+                    if (setting('email.admin_notify_low_stock', true)) {
+                        foreach ($order->items as $item) {
+                            $product = $item->product;
+                            if ($product && $product->track_stock && $product->stock_quantity <= setting('general.low_stock_threshold', 5)) {
+                                \Illuminate\Support\Facades\Mail::to($admins)->queue(new \App\Mail\Admin\LowStockAdminMail($product));
+                            }
+                        }
+                    }
+                }
+            }
+            // ---------------------------
 
             // Payment method responses
             $response = [

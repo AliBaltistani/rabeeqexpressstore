@@ -40,6 +40,20 @@ class AuthController extends Controller
             'language_preference' => $request->query('lang', 'en'),
         ]);
 
+        // --- Email Notifications ---
+        if (setting('email.notify_welcome_email', true)) {
+            \Illuminate\Support\Facades\Mail::to($user->email)->queue(new \App\Mail\Customer\WelcomeMail($user));
+        }
+
+        $adminEmails = setting('email.admin_email');
+        if ($adminEmails && setting('email.admin_notify_new_customer', true)) {
+            $admins = array_filter(array_map('trim', explode(',', $adminEmails)));
+            if (!empty($admins)) {
+                \Illuminate\Support\Facades\Mail::to($admins)->queue(new \App\Mail\Admin\NewCustomerAdminMail($user));
+            }
+        }
+        // ---------------------------
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return $this->success([
@@ -200,6 +214,19 @@ class AuthController extends Controller
                 'language_preference' => $request->query('lang', 'en'),
             ]);
             $isNewUser = true;
+
+            // --- Email Notifications ---
+            if (setting('email.notify_welcome_email', true)) {
+                \Illuminate\Support\Facades\Mail::to($user->email)->queue(new \App\Mail\Customer\WelcomeMail($user));
+            }
+            $adminEmails = setting('email.admin_email');
+            if ($adminEmails && setting('email.admin_notify_new_customer', true)) {
+                $admins = array_filter(array_map('trim', explode(',', $adminEmails)));
+                if (!empty($admins)) {
+                    \Illuminate\Support\Facades\Mail::to($admins)->queue(new \App\Mail\Admin\NewCustomerAdminMail($user));
+                }
+            }
+            // ---------------------------
         } else {
             // Mark email as verified if not already
             if (!$user->email_verified_at) {

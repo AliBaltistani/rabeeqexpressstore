@@ -32,6 +32,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->bootstrapSettingsFromDatabase();
+
+        \App\Models\Order::observe(\App\Observers\OrderObserver::class);
+        \App\Models\Review::observe(\App\Observers\ReviewObserver::class);
     }
 
     /**

@@ -70,4 +70,11 @@ class User extends Authenticatable
     {
         return $this->hasMany(CartItem::class);
     }
+
+    public function sendPasswordResetNotification($token)
+    {
+        if (setting('email.notify_password_reset', true)) {
+            parent::sendPasswordResetNotification($token);
+        }
+    }
 }
