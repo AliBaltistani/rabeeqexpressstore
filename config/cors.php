@@ -20,6 +20,7 @@ return [
         env('FRONTEND_URL', 'http://localhost:3000'),
         env('APP_URL', 'http://127.0.0.1:8000'),
         'http://localhost:5173', // Vite dev server
+        'http://127.0.0.1:5173',
     ],
 
     'allowed_origins_patterns' => [],

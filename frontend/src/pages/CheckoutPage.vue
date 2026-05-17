@@ -399,7 +399,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -494,6 +494,28 @@ const cardNumber = ref('')
 const cardName = ref('')
 const cardExpiry = ref('')
 const cardCvv = ref('')
+
+watch(cardNumber, (val) => {
+  const cleaned = val.replace(/\D/g, '')
+  let formatted = cleaned.replace(/(.{4})/g, '$1 ').trim()
+  if (cleaned.length > 16) formatted = formatted.substring(0, 19)
+  if (cardNumber.value !== formatted) cardNumber.value = formatted
+})
+
+watch(cardExpiry, (val) => {
+  let cleaned = val.replace(/\D/g, '')
+  let formatted = cleaned
+  if (cleaned.length >= 2) {
+    if (parseInt(cleaned.substring(0, 2)) > 12) cleaned = '12' + cleaned.substring(2)
+    formatted = cleaned.substring(0, 2) + '/' + cleaned.substring(2, 4)
+  }
+  if (cardExpiry.value !== formatted) cardExpiry.value = formatted
+})
+
+watch(cardCvv, (val) => {
+  const cleaned = val.replace(/\D/g, '').substring(0, 4)
+  if (cardCvv.value !== cleaned) cardCvv.value = cleaned
+})
 const agreeTerms = ref(false)
 const orderLoading = ref(false)
 const orderError = ref('')
@@ -725,8 +747,33 @@ async function confirmPayment() {
   if (!agreeTerms.value) { errors.terms = t('checkout.agreeTermsRequired') || 'You must agree to the terms'; return }
 
   if (selectedPayment.value === 'stripe') {
-    if (!cardNumber.value.trim() || !cardName.value.trim() || !cardExpiry.value.trim() || !cardCvv.value.trim()) {
-      orderError.value = t('checkout.fillCardDetails') || 'Please fill all card details'
+    const rawCard = cardNumber.value.replace(/\s/g, '')
+    if (rawCard.length < 15 || rawCard.length > 16) {
+      orderError.value = t('checkout.invalidCardNumber') || 'Invalid card number format'
+      return
+    }
+    if (!cardName.value.trim()) {
+      orderError.value = t('checkout.invalidCardName') || 'Please provide cardholder name'
+      return
+    }
+    
+    if (cardExpiry.value.length < 5) {
+      orderError.value = t('checkout.invalidExpiry') || 'Invalid expiry date (MM/YY)'
+      return
+    }
+    const [month, year] = cardExpiry.value.split('/')
+    const currentYear = parseInt(new Date().getFullYear().toString().substring(2, 4))
+    const currentMonth = new Date().getMonth() + 1
+    if (!month || !year || parseInt(month) < 1 || parseInt(month) > 12) {
+      orderError.value = t('checkout.invalidExpiry') || 'Invalid expiry date (MM/YY)'
+      return
+    }
+    if (parseInt(year) < currentYear || (parseInt(year) === currentYear && parseInt(month) < currentMonth)) {
+      orderError.value = t('checkout.expiredCard') || 'This card appears to be expired'
+      return
+    }
+    if (cardCvv.value.length < 3 || cardCvv.value.length > 4) {
+      orderError.value = t('checkout.invalidCvv') || 'Invalid CVV (3 or 4 digits)'
       return
     }
   }
