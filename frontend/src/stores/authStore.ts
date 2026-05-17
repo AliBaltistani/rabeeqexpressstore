@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { loginApi, registerApi, logoutApi, fetchMe } from '@/api/services'
+import { loginApi, registerApi, logoutApi, fetchMe, sendOtpApi, verifyOtpApi, resendOtpApi } from '@/api/services'
 import type { User } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -68,6 +68,43 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = userData
   }
 
+  // ─── OTP (Passwordless Login) ───
+  async function sendOtp(email: string) {
+    isLoading.value = true
+    try {
+      const result = await sendOtpApi(email)
+      return { success: true, ...result }
+    } catch (e: any) {
+      return { success: false, message: e.response?.data?.message || 'Failed to send OTP' }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function verifyOtp(email: string, code: string) {
+    isLoading.value = true
+    try {
+      const result = await verifyOtpApi(email, code)
+      user.value = result.user
+      token.value = result.token
+      localStorage.setItem('auth_token', result.token)
+      return { success: true, isNewUser: result.isNewUser }
+    } catch (e: any) {
+      return { success: false, message: e.response?.data?.message || 'Invalid or expired code' }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function resendOtp(email: string) {
+    try {
+      const result = await resendOtpApi(email)
+      return { success: true, ...result }
+    } catch (e: any) {
+      return { success: false, message: e.response?.data?.message || 'Failed to resend OTP' }
+    }
+  }
+
   /**
    * Restore session on app init — if token exists, fetch user data.
    */
@@ -80,5 +117,6 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user, token, isAuthenticated, isLoading,
     login, register, logout, fetchUser, setUser, restoreSession,
+    sendOtp, verifyOtp, resendOtp,
   }
 })

@@ -150,7 +150,7 @@ export async function loginApi(email: string, password: string): Promise<{ user:
   return unwrap(await apiClient.post('/auth/login', { email, password }))
 }
 
-export async function registerApi(data: { name: string; email: string; password: string; password_confirmation: string }) {
+export async function registerApi(data: { name: string; email: string; password: string; password_confirmation: string }): Promise<{ user: User; token: string }> {
   return unwrap(await apiClient.post('/auth/register', data))
 }
 
@@ -168,6 +168,19 @@ export async function resetPasswordApi(data: { email: string; token: string; pas
 
 export async function fetchMe(): Promise<User> {
   return unwrap(await apiClient.get('/auth/me'))
+}
+
+// ─── OTP (Passwordless Login) ───
+export async function sendOtpApi(email: string) {
+  return unwrap<{ expiresIn: number; cooldown: number }>(await apiClient.post('/auth/send-otp', { email }))
+}
+
+export async function verifyOtpApi(email: string, code: string) {
+  return unwrap<{ user: User; token: string; tokenType: string; isNewUser: boolean }>(await apiClient.post('/auth/verify-otp', { email, code }))
+}
+
+export async function resendOtpApi(email: string) {
+  return unwrap<{ expiresIn: number; cooldown: number }>(await apiClient.post('/auth/resend-otp', { email }))
 }
 
 // ═══════════════════════════════════════════

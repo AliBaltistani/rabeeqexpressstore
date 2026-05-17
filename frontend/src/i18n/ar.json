@@ -250,5 +250,26 @@
     "hours": "ساعات",
     "minutes": "دقائق",
     "seconds": "ثواني"
+  },
+  "loginModal": {
+    "title": "تسجيل الدخول / إنشاء حساب",
+    "subtitle": "أدخل بريدك الإلكتروني لتلقي رمز تحقق.",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "you{'@'}example.com",
+    "continue": "متابعة",
+    "otpTitle": "أدخل رمز التحقق",
+    "otpSubtitle": "أرسلنا رمزًا مكونًا من 4 أرقام إلى {email}",
+    "verify": "تحقق",
+    "resendCode": "إعادة إرسال الرمز",
+    "resendIn": "إعادة الإرسال خلال {seconds} ثانية",
+    "back": "رجوع",
+    "orContinueWith": "أو المتابعة عبر",
+    "google": "جوجل",
+    "facebook": "فيسبوك",
+    "apple": "آبل",
+    "comingSoon": "قريباً!",
+    "invalidOtp": "رمز التحقق غير صحيح",
+    "otpSent": "تم إرسال الرمز إلى بريدك الإلكتروني",
+    "otpExpired": "انتهت صلاحية الرمز، يرجى طلب رمز جديد"
   }
 }

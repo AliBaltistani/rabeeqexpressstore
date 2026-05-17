@@ -15,22 +15,40 @@
       </div>
       <span>{{ $t('nav.cart') }}</span>
     </router-link>
-    <router-link to="/account" class="bottom-nav__item" :class="{ 'bottom-nav__item--active': $route.name === 'account' }">
+    <!-- Account: open LoginModal if not authenticated -->
+    <router-link v-if="auth.isAuthenticated" to="/account" class="bottom-nav__item" :class="{ 'bottom-nav__item--active': $route.name === 'account' }">
       <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
       <span>{{ $t('nav.myAccount') }}</span>
     </router-link>
+    <button v-else class="bottom-nav__item" @click="showLoginModal = true">
+      <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      <span>{{ $t('nav.myAccount') }}</span>
+    </button>
+
+    <!-- Login Modal -->
+    <LoginModal v-model:visible="showLoginModal" @authenticated="handleAuthenticated" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useCartStore } from '@/stores/cartStore'
+import { useAuthStore } from '@/stores/authStore'
+import LoginModal from '@/components/common/LoginModal.vue'
 
+const router = useRouter()
 const settings = useSettingsStore()
 const cart = useCartStore()
+const auth = useAuthStore()
 
 const cartCount = computed(() => cart.itemCount)
+const showLoginModal = ref(false)
+
+function handleAuthenticated() {
+  router.push('/account')
+}
 </script>
 
 <style scoped>
@@ -60,6 +78,9 @@ const cartCount = computed(() => cart.itemCount)
   color: inherit;
   text-decoration: none;
   transition: color 0.15s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 .bottom-nav__item--active,
 .bottom-nav__item:hover { color: var(--color-primary); }
@@ -82,3 +103,4 @@ const cartCount = computed(() => cart.itemCount)
   line-height: 1;
 }
 </style>
+

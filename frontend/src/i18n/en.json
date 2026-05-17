@@ -250,5 +250,26 @@
     "hours": "Hours",
     "minutes": "Min",
     "seconds": "Sec"
+  },
+  "loginModal": {
+    "title": "Login / Register",
+    "subtitle": "Enter your email to receive a one-time verification code.",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "you{'@'}example.com",
+    "continue": "Continue",
+    "otpTitle": "Enter Verification Code",
+    "otpSubtitle": "We sent a 4-digit code to {email}",
+    "verify": "Verify",
+    "resendCode": "Resend Code",
+    "resendIn": "Resend in {seconds}s",
+    "back": "Back",
+    "orContinueWith": "Or continue with",
+    "google": "Google",
+    "facebook": "Facebook",
+    "apple": "Apple",
+    "comingSoon": "Coming soon!",
+    "invalidOtp": "Invalid verification code",
+    "otpSent": "Code sent to your email",
+    "otpExpired": "Code has expired, please request a new one"
   }
 }

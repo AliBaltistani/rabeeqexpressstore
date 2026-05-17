@@ -53,6 +53,7 @@
           <div v-if="authMode !== 'guest'" class="auth-tabs">
             <button class="auth-tab" :class="{ active: authMode === 'login' }" @click="authMode = 'login'">{{ $t('auth.login') }}</button>
             <button class="auth-tab" :class="{ active: authMode === 'register' }" @click="authMode = 'register'">{{ $t('auth.register') }}</button>
+            <button class="auth-tab" :class="{ active: authMode === 'otp' }" @click="authMode = 'otp'">OTP</button>
           </div>
 
           <!-- Login Form -->
@@ -99,6 +100,35 @@
             <p v-if="authError" class="auth-error-msg">{{ authError }}</p>
             <button type="submit" class="checkout-btn" :disabled="authLoading">{{ authLoading ? $t('common.loading') : $t('auth.register') }}</button>
           </form>
+
+          <!-- OTP Login Form -->
+          <div v-if="authMode === 'otp'" class="checkout-auth-form">
+            <!-- Step A: Email -->
+            <template v-if="otpStep === 'email'">
+              <div class="checkout-field">
+                <label class="checkout-label">{{ $t('loginModal.emailLabel') }} <span class="req">*</span></label>
+                <input type="email" v-model="otpEmail" class="checkout-input" :class="{ 'input-error': errors.otpEmail }" :placeholder="$t('loginModal.emailPlaceholder')" @keydown.enter.prevent="handleSendCheckoutOtp" />
+                <span v-if="errors.otpEmail" class="field-error">{{ errors.otpEmail }}</span>
+              </div>
+              <p v-if="authError" class="auth-error-msg">{{ authError }}</p>
+              <button class="checkout-btn" :disabled="authLoading" @click="handleSendCheckoutOtp">{{ authLoading ? $t('common.loading') : $t('loginModal.continue') }}</button>
+            </template>
+            <!-- Step B: OTP Code -->
+            <template v-else>
+              <p class="checkout-step__subtitle" style="margin:0 0 1rem;text-align:center;">{{ $t('loginModal.otpSubtitle', { email: otpEmail }) }}</p>
+              <div class="checkout-otp-row">
+                <input v-for="(_, idx) in 4" :key="idx" :ref="(el) => { if (el) checkoutOtpRefs[idx] = el as HTMLInputElement }" type="text" inputmode="numeric" maxlength="1" class="checkout-otp-box" :class="{ 'input-error': errors.otpCode }" :value="otpCodeDigits[idx]" @input="handleCheckoutOtpInput(idx, $event)" @keydown.backspace="handleCheckoutOtpBackspace(idx, $event)" @paste="handleCheckoutOtpPaste($event)" />
+              </div>
+              <span v-if="errors.otpCode" class="field-error" style="text-align:center;display:block;">{{ errors.otpCode }}</span>
+              <p v-if="authError" class="auth-error-msg">{{ authError }}</p>
+              <button class="checkout-btn" :disabled="authLoading || otpCodeDigits.join('').length < 4" @click="handleVerifyCheckoutOtp">{{ authLoading ? $t('common.loading') : $t('loginModal.verify') }}</button>
+              <div style="text-align:center;margin-top:0.75rem;">
+                <span v-if="otpResendCooldown > 0" class="checkout-alt-text">{{ $t('loginModal.resendIn', { seconds: otpResendCooldown }) }}</span>
+                <button v-else class="checkout-step__side-btn" @click="handleSendCheckoutOtp" :disabled="authLoading">{{ $t('loginModal.resendCode') }}</button>
+              </div>
+              <button class="checkout-step__side-btn" style="margin-top:0.5rem;" @click="otpStep = 'email'">{{ $t('loginModal.back') }}</button>
+            </template>
+          </div>
 
           <!-- Guest Form -->
           <form v-if="authMode === 'guest'" @submit.prevent="handleGuest" class="checkout-auth-form">
@@ -369,7 +399,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -392,7 +422,7 @@ const couponLoading = ref(false)
 const couponMsg = ref('')
 const couponError = ref(false)
 
-const authMode = ref<'login' | 'register' | 'guest'>('login')
+const authMode = ref<'login' | 'register' | 'guest' | 'otp'>('login')
 const authLoading = ref(false)
 const authError = ref('')
 
@@ -406,6 +436,14 @@ const registerForm = ref({ name: '', email: '', password: '', password_confirmat
 
 // Guest
 const guestForm = ref({ firstName: '', lastName: '', email: '', phone: '' })
+
+// OTP checkout
+const otpEmail = ref('')
+const otpStep = ref<'email' | 'code'>('email')
+const otpCodeDigits = ref(['', '', '', ''])
+const checkoutOtpRefs = ref<HTMLInputElement[]>([])
+const otpResendCooldown = ref(0)
+let otpCooldownTimer: ReturnType<typeof setInterval> | null = null
 
 // Address
 const addressForm = ref({ firstName: '', lastName: '', phone: '', country: '', state: '', city: '', district: '', street: '', postalCode: '', buildingNo: '', buildingDesc: '' })
@@ -524,6 +562,87 @@ async function handleRegister() {
   } finally {
     authLoading.value = false
   }
+}
+
+// ── OTP at Checkout ──
+async function handleSendCheckoutOtp() {
+  clearErrors()
+  authError.value = ''
+  if (!otpEmail.value.trim()) { errors.otpEmail = t('checkout.required'); return }
+  if (!isEmail(otpEmail.value)) { errors.otpEmail = t('checkout.invalidEmail'); return }
+
+  authLoading.value = true
+  const result = await auth.sendOtp(otpEmail.value)
+  authLoading.value = false
+
+  if (result.success) {
+    otpStep.value = 'code'
+    otpCodeDigits.value = ['', '', '', '']
+    startOtpCooldown((result as any).cooldown || 60)
+    nextTick(() => checkoutOtpRefs.value[0]?.focus())
+  } else {
+    authError.value = (result as any).message || t('common.error')
+  }
+}
+
+async function handleVerifyCheckoutOtp() {
+  clearErrors()
+  authError.value = ''
+  const code = otpCodeDigits.value.join('')
+  if (code.length < 4) { errors.otpCode = t('loginModal.invalidOtp'); return }
+
+  authLoading.value = true
+  const result = await auth.verifyOtp(otpEmail.value, code)
+  authLoading.value = false
+
+  if (result.success) {
+    if (auth.user) {
+      const parts = auth.user.name?.split(' ') || []
+      addressForm.value.firstName = parts[0] || ''
+      addressForm.value.lastName = parts.slice(1).join(' ') || ''
+      addressForm.value.phone = auth.user.phone || ''
+    }
+    currentStep.value = 2
+  } else {
+    authError.value = (result as any).message || t('loginModal.invalidOtp')
+    otpCodeDigits.value = ['', '', '', '']
+    nextTick(() => checkoutOtpRefs.value[0]?.focus())
+  }
+}
+
+function handleCheckoutOtpInput(idx: number, event: Event) {
+  const target = event.target as HTMLInputElement
+  const val = target.value.replace(/\D/g, '')
+  otpCodeDigits.value[idx] = val.slice(-1)
+  if (val && idx < 3) nextTick(() => checkoutOtpRefs.value[idx + 1]?.focus())
+  if (otpCodeDigits.value.join('').length === 4) handleVerifyCheckoutOtp()
+}
+
+function handleCheckoutOtpBackspace(idx: number, event: KeyboardEvent) {
+  if (!otpCodeDigits.value[idx] && idx > 0) {
+    event.preventDefault()
+    otpCodeDigits.value[idx - 1] = ''
+    nextTick(() => checkoutOtpRefs.value[idx - 1]?.focus())
+  }
+}
+
+function handleCheckoutOtpPaste(event: ClipboardEvent) {
+  event.preventDefault()
+  const paste = event.clipboardData?.getData('text')?.replace(/\D/g, '') || ''
+  for (let i = 0; i < 4; i++) otpCodeDigits.value[i] = paste[i] || ''
+  if (paste.length >= 4) nextTick(() => handleVerifyCheckoutOtp())
+}
+
+function startOtpCooldown(seconds: number) {
+  otpResendCooldown.value = seconds
+  if (otpCooldownTimer) clearInterval(otpCooldownTimer)
+  otpCooldownTimer = setInterval(() => {
+    otpResendCooldown.value--
+    if (otpResendCooldown.value <= 0 && otpCooldownTimer) {
+      clearInterval(otpCooldownTimer)
+      otpCooldownTimer = null
+    }
+  }, 1000)
 }
 
 function handleGuest() {
@@ -648,6 +767,12 @@ async function confirmPayment() {
   }
 }
 
+onUnmounted(() => {
+  if (otpCooldownTimer) {
+    clearInterval(otpCooldownTimer)
+  }
+})
+
 // ── Init ──
 onMounted(() => {
   if (auth.isAuthenticated) {
@@ -736,6 +861,10 @@ html[dir="rtl"] .checkout-input--phone { border-radius: var(--radius-md) 0 0 var
 .checkout-input { padding: 0.625rem 0.875rem; border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-md); font-size: 0.875rem; outline: none; color: var(--store-text-primary); background: var(--bg-primary, #fff); width: 100%; box-sizing: border-box; transition: border-color var(--transition-normal); }
 .checkout-input:focus { border-color: var(--color-primary); }
 .checkout-input.input-error { border-color: var(--promotion-bg, #ff0000); }
+.checkout-otp-row { display: flex; gap: var(--space-sm); justify-content: center; margin: var(--space-md) 0; direction: ltr; }
+.checkout-otp-box { width: 48px; height: 56px; text-align: center; font-size: 1.25rem; font-weight: 700; font-family: monospace; border: 1.5px solid var(--product-border-color, #eee); border-radius: var(--radius-md); outline: none; background: var(--bg-primary, #fff); color: var(--store-text-primary); transition: all var(--transition-normal); caret-color: var(--color-primary); }
+.checkout-otp-box:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 79, 70, 229), 0.1); }
+.checkout-otp-box.input-error { border-color: var(--promotion-bg, #ff0000); }
 .field-error { font-size: 0.75rem; color: var(--promotion-bg, #ff0000); }
 .auth-error-msg { color: var(--promotion-bg, #ff0000); font-size: 0.875rem; margin: var(--space-xs) 0; padding: var(--space-sm) var(--space-lg); background: var(--bg-secondary, #f5f5f5); border-radius: var(--radius-md); }
 .checkout-alt-text { display: flex; align-items: center; justify-content: center; gap: var(--space-xs); font-size: 0.8125rem; color: var(--footer-text-color, #374151); margin-top: var(--space-sm); }

@@ -5,11 +5,15 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Http\Traits\ApiResponse;
+use App\Mail\OtpMail;
+use App\Models\OtpCode;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 
 class AuthController extends Controller
@@ -128,6 +132,106 @@ class AuthController extends Controller
         }
 
         return $this->error('Unable to reset password. Invalid or expired token.', 400);
+    }
+
+    /**
+     * POST /api/v1/auth/send-otp
+     * Send a 4-digit OTP to the given email address.
+     */
+    public function sendOtp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+        ]);
+
+        $email = strtolower(trim($request->email));
+
+        // Check rate-limit / cooldown
+        if (OtpCode::isOnCooldown($email)) {
+            return $this->error('Please wait before requesting another code.', 429);
+        }
+
+        // Generate OTP
+        $otp = OtpCode::generate($email);
+
+        // Send email
+        try {
+            Mail::to($email)->send(new OtpMail($otp->code, OtpCode::EXPIRY_MINUTES));
+        } catch (\Throwable $e) {
+            return $this->error('Failed to send verification email. Please try again.', 500);
+        }
+
+        return $this->success([
+            'expiresIn' => OtpCode::EXPIRY_MINUTES * 60, // seconds
+            'cooldown' => OtpCode::COOLDOWN_SECONDS,
+        ], 'Verification code sent to your email.');
+    }
+
+    /**
+     * POST /api/v1/auth/verify-otp
+     * Verify the OTP code and authenticate (or auto-register) the user.
+     */
+    public function verifyOtp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'code' => ['required', 'string', 'size:4'],
+        ]);
+
+        $email = strtolower(trim($request->email));
+
+        $otp = OtpCode::verify($email, $request->code);
+
+        if (!$otp) {
+            return $this->error('Invalid or expired verification code.', 422);
+        }
+
+        // Find or create user
+        $isNewUser = false;
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            // Auto-register: create a passwordless user
+            $user = User::create([
+                'name' => Str::before($email, '@'),
+                'email' => $email,
+                'password' => Hash::make(Str::random(32)), // random password (user uses OTP)
+                'email_verified_at' => now(),
+                'language_preference' => $request->query('lang', 'en'),
+            ]);
+            $isNewUser = true;
+        } else {
+            // Mark email as verified if not already
+            if (!$user->email_verified_at) {
+                $user->update(['email_verified_at' => now()]);
+            }
+
+            // Check bans/active status
+            if ($user->is_banned) {
+                return $this->error('Your account has been suspended. Reason: ' . ($user->ban_reason ?? 'N/A'), 403);
+            }
+            if (!$user->is_active) {
+                return $this->error('Your account is not active.', 403);
+            }
+        }
+
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return $this->success([
+            'user' => new UserResource($user),
+            'token' => $token,
+            'tokenType' => 'Bearer',
+            'isNewUser' => $isNewUser,
+        ], $isNewUser ? 'Account created and verified.' : 'Login successful.');
+    }
+
+    /**
+     * POST /api/v1/auth/resend-otp
+     * Resend a new OTP to the given email (same as sendOtp with resend context).
+     */
+    public function resendOtp(Request $request): JsonResponse
+    {
+        return $this->sendOtp($request);
     }
 
     /**

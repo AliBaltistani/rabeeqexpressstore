@@ -88,9 +88,12 @@
             <button class="action-btn" @click="$emit('open-search')" aria-label="Search">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </button>
-            <router-link to="/account" class="action-btn" aria-label="My Account">
+            <router-link v-if="auth.isAuthenticated" to="/account" class="action-btn" aria-label="My Account">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             </router-link>
+            <button v-else class="action-btn" @click="showLoginModal = true" aria-label="Login">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </button>
             <router-link to="/account/wishlist" class="action-btn" aria-label="Wishlist">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
               <span v-if="wishlistCount > 0" class="cart-badge">{{ wishlistCount }}</span>
@@ -106,20 +109,28 @@
 
     <!-- Mobile Menu Drawer -->
     <MobileMenu :isOpen="showMobileMenu" :menuCategories="mobileCategories" @close="showMobileMenu = false" />
+
+    <!-- Login Modal -->
+    <LoginModal v-model:visible="showLoginModal" @authenticated="handleAuthenticated" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useCartStore } from '@/stores/cartStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import { useMenuCategories } from '@/composables/useMenuCategories'
 import MobileMenu from '@/components/common/MobileMenu.vue'
+import LoginModal from '@/components/common/LoginModal.vue'
 import logoImage from '@/assets/images/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png'
 
+const router = useRouter()
 const settings = useSettingsStore()
 const cart = useCartStore()
+const auth = useAuthStore()
 const wishlist = useWishlistStore()
 const { menuItems } = useMenuCategories()
 const menuCategories = menuItems
@@ -129,11 +140,16 @@ const cartCount = computed(() => cart.itemCount)
 const wishlistCount = computed(() => wishlist.count)
 const isSticky = ref(false)
 const showMobileMenu = ref(false)
+const showLoginModal = ref(false)
 const logoSrc = settings.storeSettings.logo || logoImage
 const activeDropdown = ref<string | null>(null)
 const activeSubmenu = ref<string | null>(null)
 
 defineEmits(['open-search'])
+
+function handleAuthenticated() {
+  router.push('/account')
+}
 
 function handleScroll() {
   isSticky.value = window.scrollY > 120
