@@ -9,6 +9,7 @@ return [
         'promotions' => 'Promotions',
         'content' => 'Content',
         'settings' => 'Settings',
+        'system' => 'System',
     ],
 
     // ── Navigation Labels ──

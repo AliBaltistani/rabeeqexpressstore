@@ -18,10 +18,10 @@ class QueuedJobResource extends Resource
     protected static ?string $model = QueuedJob::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-queue-list';
-    
-    protected static UnitEnum|string|null $navigationGroup = 'System';
-    
-    protected static bool $shouldRegisterNavigation = false;
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin.nav.system');
+    }
 
     public static function form(Schema $form): Schema
     {
