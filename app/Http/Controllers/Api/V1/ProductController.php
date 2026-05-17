@@ -44,7 +44,9 @@ class ProductController extends Controller
     {
         $product = Product::where('slug', $slug)
             ->with([
-                'category', 'brand', 'images', 'variants',
+                'category.attributes.values',
+                'brand', 'images',
+                'variants.attributeValues.attribute',
                 'tags', 'reviews' => fn($q) => $q->where('status', 'approved'),
                 'flashSales',
             ])

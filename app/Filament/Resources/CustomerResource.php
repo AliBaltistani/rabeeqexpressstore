@@ -105,6 +105,19 @@ class CustomerResource extends Resource
                             ->orderBy('orders_sum_total', $direction);
                     }),
 
+                Tables\Columns\TextColumn::make('wallet_balance')
+                    ->label(__('admin.wallet.balance'))
+                    ->formatStateUsing(fn(User $record) => number_format((float) $record->wallet_balance, 2) . ' ' . currency_symbol())
+                    ->sortable()
+                    ->badge()
+                    ->color('success'),
+
+                Tables\Columns\TextColumn::make('loyalty_points')
+                    ->label(__('admin.loyalty.points'))
+                    ->sortable()
+                    ->badge()
+                    ->color('warning'),
+
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->getStateUsing(fn(User $record): string => $record->is_banned ? 'Banned' : ($record->is_active ? 'Active' : 'Inactive'))

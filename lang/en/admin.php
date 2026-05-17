@@ -28,6 +28,9 @@ return [
         'cms_pages' => 'CMS Pages',
         'banners' => 'Banners & Sliders',
         'admin_users' => 'Admin Users',
+        'attributes' => 'Attributes',
+        'wallet_transactions' => 'Wallet Transactions',
+        'loyalty_transactions' => 'Loyalty Points',
     ],
 
     // ── Settings Pages ──
@@ -39,6 +42,7 @@ return [
         'shipping' => 'Shipping',
         'email' => 'Email / Notifications',
         'seo' => 'SEO & Social',
+        'social_login' => 'Social Login',
     ],
 
     // ── Dashboard ──
@@ -143,14 +147,6 @@ return [
         'is_featured' => 'Featured',
     ],
 
-    // ── Category Resource ──
-    'category' => [
-        'name_en' => 'Category Name (English)',
-        'name_ar' => 'Category Name (Arabic)',
-        'parent' => 'Parent Category',
-        'products_count' => 'Products',
-    ],
-
     // ── Order Resource ──
     'order' => [
         'order_details' => 'Order Details',
@@ -226,5 +222,59 @@ return [
         'current' => 'Current Language',
         'english' => 'English',
         'arabic' => 'العربية',
+    ],
+
+    // ── Attribute Resource ──
+    'attribute' => [
+        'singular' => 'Attribute',
+        'info' => 'Attribute Information',
+        'name_en' => 'Attribute Name (English)',
+        'name_ar' => 'Attribute Name (Arabic)',
+        'values' => 'Attribute Values',
+        'value_en' => 'Value (English)',
+        'value_ar' => 'Value (Arabic)',
+        'add_value' => 'Add Value',
+        'values_count' => 'Values',
+    ],
+
+    // ── Category Attributes ──
+    'category' => [
+        'name_en' => 'Category Name (English)',
+        'name_ar' => 'Category Name (Arabic)',
+        'parent' => 'Parent Category',
+        'products_count' => 'Products',
+        'attributes' => 'Category Attributes',
+        'attributes_help' => 'Select which attributes apply to products in this category (e.g., Size, Color)',
+    ],
+
+    // ── Wallet ──
+    'wallet' => [
+        'balance' => 'Wallet Balance',
+        'amount' => 'Amount',
+        'balance_after' => 'Balance After',
+        'description' => 'Description',
+        'credit' => 'Credit Wallet',
+        'debit' => 'Debit Wallet',
+        'by_admin' => 'By Admin',
+    ],
+
+    // ── Loyalty Points ──
+    'loyalty' => [
+        'points' => 'Loyalty Points',
+        'balance_after' => 'Points After',
+        'description' => 'Description',
+        'adjust' => 'Adjust Points',
+    ],
+
+    // ── Social Login Settings ──
+    'social' => [
+        'google' => 'Google Login',
+        'facebook' => 'Facebook Login',
+        'apple' => 'Apple Sign In',
+        'enable' => 'Enable',
+        'client_id' => 'Client ID',
+        'client_secret' => 'Client Secret',
+        'apple_team_id' => 'Team ID',
+        'apple_key_id' => 'Key ID',
     ],
 ];

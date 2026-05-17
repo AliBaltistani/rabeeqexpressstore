@@ -324,11 +324,25 @@ class ProductResource extends Resource
                                                 Forms\Components\Toggle::make('is_active')
                                                     ->label('Active')
                                                     ->default(true),
+
+                                                Forms\Components\Select::make('attributeValues')
+                                                    ->label('Attribute Values')
+                                                    ->relationship('attributeValues', 'value')
+                                                    ->getOptionLabelFromRecordUsing(function (\App\Models\ProductAttributeValue $record) {
+                                                        $attrName = $record->attribute?->getTranslation('name', 'en') ?? '';
+                                                        $valName = $record->getTranslation('value', 'en');
+                                                        return "{$attrName}: {$valName}";
+                                                    })
+                                                    ->multiple()
+                                                    ->searchable()
+                                                    ->preload()
+                                                    ->helperText('Select attribute values for this variant (e.g., Size: 42, Color: Black)'),
                                             ])
-                                            ->columns(5)
+                                            ->columns(3)
                                             ->collapsible()
                                             ->defaultItems(0)
-                                            ->addActionLabel('Add Variant'),
+                                            ->addActionLabel('Add Variant')
+                                            ->itemLabel(fn (array $state): ?string => $state['sku'] ?? null),
                                     ])
                                     ->visible(fn(Schemas\Components\Utilities\Get $get): bool => $get('product_type') === 'variable'),
 
@@ -451,9 +465,9 @@ class ProductResource extends Resource
                     ->label('Price')
                     ->formatStateUsing(function (Product $record) {
                         $symbol = currency_symbol();
-                        $price = number_format($record->price, 2) . ' ' . $symbol;
+                        $price = number_format((float) ($record->price ?? 0), 2) . ' ' . $symbol;
                         if ($record->compare_price && $record->compare_price > $record->price) {
-                            $price .= ' <span style="text-decoration:line-through;color:#9ca3af;font-size:12px;">' . number_format($record->compare_price, 2) . '</span>';
+                            $price .= ' <span style="text-decoration:line-through;color:#9ca3af;font-size:12px;">' . number_format((float) $record->compare_price, 2) . '</span>';
                         }
                         return $price;
                     })

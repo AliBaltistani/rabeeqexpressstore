@@ -167,6 +167,17 @@ class CategoryResource extends Resource
                                             ->default(true)
                                             ->helperText('Visible on the storefront'),
                                     ]),
+
+                                Schemas\Components\Section::make(__('admin.category.attributes'))
+                                    ->schema([
+                                        Forms\Components\Select::make('attributes')
+                                            ->relationship('attributes', 'name')
+                                            ->getOptionLabelFromRecordUsing(fn(\App\Models\ProductAttribute $record) => $record->getTranslation('name', 'en'))
+                                            ->multiple()
+                                            ->searchable()
+                                            ->preload()
+                                            ->helperText(__('admin.category.attributes_help')),
+                                    ]),
                             ])
                             ->columnSpan(1),
                     ]),

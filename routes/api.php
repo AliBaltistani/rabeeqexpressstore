@@ -10,11 +10,15 @@ use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\FlashSaleController;
 use App\Http\Controllers\Api\V1\HomepageSectionController;
 use App\Http\Controllers\Api\V1\InitController;
+use App\Http\Controllers\Api\V1\LoyaltyController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PageController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\ReviewController;
+use App\Http\Controllers\Api\V1\SocialLoginController;
+use App\Http\Controllers\Api\V1\WalletController;
 use App\Http\Controllers\Api\V1\WishlistController;
 use App\Http\Middleware\SetApiLocale;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +54,8 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
         Route::post('send-otp', [AuthController::class, 'sendOtp']);
         Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
         Route::post('resend-otp', [AuthController::class, 'resendOtp']);
+        // Social Login
+        Route::post('social/{provider}', [SocialLoginController::class, 'handleProvider']);
     });
 
     // Categories
@@ -132,5 +138,26 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
 
         // Reviews (authenticated — write)
         Route::post('products/{slug}/reviews', [ReviewController::class, 'store']);
+
+        // Notifications
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', [NotificationController::class, 'index']);
+            Route::get('unread-count', [NotificationController::class, 'unreadCount']);
+            Route::post('{id}/read', [NotificationController::class, 'markAsRead']);
+            Route::post('read-all', [NotificationController::class, 'markAllAsRead']);
+        });
+
+        // Wallet
+        Route::prefix('wallet')->group(function () {
+            Route::get('/', [WalletController::class, 'index']);
+            Route::get('transactions', [WalletController::class, 'transactions']);
+        });
+
+        // Loyalty Points
+        Route::prefix('loyalty')->group(function () {
+            Route::get('/', [LoyaltyController::class, 'index']);
+            Route::get('transactions', [LoyaltyController::class, 'transactions']);
+        });
     });
 });
+
