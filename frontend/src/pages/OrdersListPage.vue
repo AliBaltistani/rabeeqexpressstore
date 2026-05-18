@@ -1,22 +1,5 @@
 <template>
-  <div class="account-page container">
-    <aside class="account-sidebar">
-      <div class="user-info">
-        <div class="avatar">{{ userInitials }}</div>
-        <h3>{{ auth.user?.name || 'Guest User' }}</h3>
-        <p v-if="auth.isAuthenticated">{{ auth.user?.email || '' }}</p>
-      </div>
-      <nav class="account-nav">
-        <router-link v-if="auth.isAuthenticated" to="/account">{{ $t('account.dashboard') }}</router-link>
-        <router-link v-if="auth.isAuthenticated" to="/account/orders" class="active">{{ $t('account.orders') }}</router-link>
-        <router-link v-if="auth.isAuthenticated" to="/account/profile">{{ $t('account.profile') }}</router-link>
-        <router-link to="/account/wishlist">{{ $t('common.wishlist') }}</router-link>
-        <router-link v-if="auth.isAuthenticated" to="/account/addresses">{{ $t('account.addresses') || 'Addresses' }}</router-link>
-        <button v-if="auth.isAuthenticated" @click="logout" class="logout-btn">{{ $t('auth.logout') }}</button>
-      </nav>
-    </aside>
-
-    <main class="account-content">
+  <div class="account-content-inner">
       <div class="header-row">
         <h2>{{ $t('account.orderHistory') || 'Order History' }}</h2>
       </div>
@@ -78,8 +61,7 @@
           </button>
         </div>
       </div>
-    </main>
-  </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -95,16 +77,6 @@ const router = useRouter()
 const orders = ref<Order[]>([])
 const pagination = ref<PaginationMeta | undefined>()
 const isLoading = ref(true)
-
-const userInitials = computed(() => {
-  const name = auth.user?.name || 'G'
-  return name.substring(0, 2).toUpperCase()
-})
-
-async function logout() {
-  await auth.logout()
-  router.push('/login')
-}
 
 async function loadOrders(page = 1) {
   if (!auth.isAuthenticated) return
@@ -137,93 +109,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.account-page {
-  padding: 4rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-@media (min-width: 768px) {
-  .account-page {
-    flex-direction: row;
-  }
-}
-.account-sidebar {
-  width: 100%;
-  background: #fff;
-  border-radius: 12px;
-  padding: 2rem 1.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-@media (min-width: 768px) {
-  .account-sidebar {
-    width: 280px;
-    flex-shrink: 0;
-  }
-}
-.user-info {
-  text-align: center;
-  margin-bottom: 2rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid #f3f4f6;
-}
-.avatar {
-  width: 64px;
-  height: 64px;
-  background: var(--color-primary, #858585);
-  color: #fff;
-  font-size: 1.5rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  margin: 0 auto 1rem;
-}
-.user-info h3 {
-  margin: 0 0 0.25rem;
-  font-size: 1.125rem;
-  color: var(--store-text-primary, #111827);
-}
-.user-info p {
-  margin: 0;
-  color: #6b7280;
-  font-size: 0.875rem;
-}
-.account-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.account-nav a, .logout-btn {
-  display: block;
-  padding: 0.875rem 1rem;
-  border-radius: 8px;
-  color: #4b5563;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.9375rem;
-  transition: all 0.2s;
-  text-align: left;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-}
-html[dir="rtl"] .account-nav a, html[dir="rtl"] .logout-btn {
-  text-align: right;
-}
-.account-nav a:hover, .account-nav a.active {
-  background: #f9fafb;
-  color: var(--color-primary, #858585);
-}
-.logout-btn {
-  color: #ef4444;
-}
-.logout-btn:hover {
-  background: #fef2f2;
-}
-
-.account-content {
+.account-content-inner {
   flex: 1;
 }
 

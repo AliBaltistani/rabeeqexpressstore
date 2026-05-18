@@ -47,6 +47,7 @@ class CartController extends Controller
             ->first();
 
         if ($existing) {
+            /** @var \App\Models\CartItem $existing */
             $existing->update(['quantity' => $existing->quantity + $validated['quantity']]);
         } else {
             CartItem::create([

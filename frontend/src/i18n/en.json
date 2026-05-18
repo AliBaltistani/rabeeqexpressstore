@@ -204,7 +204,10 @@
     "wishlist": "Wishlist",
     "addresses": "Addresses",
     "orderHistory": "Order History",
-    "notLoggedIn": "Sign in to sync wishlist"
+    "notLoggedIn": "Sign in to sync wishlist",
+    "wallet": "Wallet",
+    "loyaltyPoints": "Loyalty Points",
+    "notifications": "Notifications"
   },
   "wishlist": {
     "empty": "Your wishlist is empty",

@@ -204,7 +204,10 @@
     "wishlist": "المفضلة",
     "addresses": "العناوين",
     "orderHistory": "سجل الطلبات",
-    "notLoggedIn": "سجل الدخول لمزامنة المفضلة"
+    "notLoggedIn": "سجل الدخول لمزامنة المفضلة",
+    "wallet": "المحفظة",
+    "loyaltyPoints": "نقاط الولاء",
+    "notifications": "الإشعارات"
   },
   "wishlist": {
     "empty": "قائمة رغباتك فارغة",

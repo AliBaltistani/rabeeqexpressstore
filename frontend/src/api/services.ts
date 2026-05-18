@@ -301,6 +301,37 @@ export async function fetchCmsPage(slug: string): Promise<CmsPage> {
 }
 
 // ═══════════════════════════════════════════
+// USER ENGAGEMENT MODULES (Auth Required)
+// ═══════════════════════════════════════════
+
+// Notifications
+export async function fetchNotifications() {
+  return unwrap(await apiClient.get('/notifications'))
+}
+export async function markNotificationRead(id: number) {
+  return unwrap(await apiClient.post(`/notifications/${id}/read`))
+}
+export async function markAllNotificationsRead() {
+  return unwrap(await apiClient.post('/notifications/read-all'))
+}
+
+// Wallet
+export async function fetchWallet() {
+  return unwrap(await apiClient.get('/wallet'))
+}
+export async function fetchWalletTransactions() {
+  return unwrap(await apiClient.get('/wallet/transactions'))
+}
+
+// Loyalty Points
+export async function fetchLoyaltyPoints() {
+  return unwrap(await apiClient.get('/loyalty'))
+}
+export async function fetchLoyaltyTransactions() {
+  return unwrap(await apiClient.get('/loyalty/transactions'))
+}
+
+// ═══════════════════════════════════════════
 // HOMEPAGE SECTIONS
 // ═══════════════════════════════════════════
 export async function fetchHomeSections() {

@@ -74,39 +74,64 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'account',
-        name: 'account',
-        component: () => import('@/pages/AccountDashboardPage.vue'),
-        meta: { title: 'My Account - E-SEVEN STORE', requiresAuth: true },
-      },
-      {
-        path: 'account/profile',
-        name: 'profile',
-        component: () => import('@/pages/ProfilePage.vue'),
-        meta: { title: 'Profile - E-SEVEN STORE', requiresAuth: true },
-      },
-      {
-        path: 'account/orders',
-        name: 'orders',
-        component: () => import('@/pages/OrdersListPage.vue'),
-        meta: { title: 'Orders - E-SEVEN STORE', requiresAuth: true },
-      },
-      {
-        path: 'account/orders/:orderNumber',
-        name: 'order-detail',
-        component: () => import('@/pages/OrderDetailPage.vue'),
-        meta: { title: 'Order Detail - E-SEVEN STORE', requiresAuth: true },
-      },
-      {
-        path: 'account/wishlist',
-        name: 'wishlist',
-        component: () => import('@/pages/WishlistPage.vue'),
-        meta: { title: 'Wishlist - E-SEVEN STORE', requiresAuth: true },
-      },
-      {
-        path: 'account/addresses',
-        name: 'addresses',
-        component: () => import('@/pages/AddressesPage.vue'),
-        meta: { title: 'Addresses - E-SEVEN STORE', requiresAuth: true },
+        component: () => import('@/layouts/AccountLayout.vue'),
+        meta: { requiresAuth: true },
+        children: [
+          {
+            path: '',
+            name: 'account',
+            component: () => import('@/pages/AccountDashboardPage.vue'),
+            meta: { title: 'My Account - E-SEVEN STORE' },
+          },
+          {
+            path: 'profile',
+            name: 'profile',
+            component: () => import('@/pages/ProfilePage.vue'),
+            meta: { title: 'Profile - E-SEVEN STORE' },
+          },
+          {
+            path: 'orders',
+            name: 'orders',
+            component: () => import('@/pages/OrdersListPage.vue'),
+            meta: { title: 'Orders - E-SEVEN STORE' },
+          },
+          {
+            path: 'orders/:orderNumber',
+            name: 'order-detail',
+            component: () => import('@/pages/OrderDetailPage.vue'),
+            meta: { title: 'Order Detail - E-SEVEN STORE' },
+          },
+          {
+            path: 'wishlist',
+            name: 'wishlist',
+            component: () => import('@/pages/WishlistPage.vue'),
+            meta: { title: 'Wishlist - E-SEVEN STORE' },
+          },
+          {
+            path: 'addresses',
+            name: 'addresses',
+            component: () => import('@/pages/AddressesPage.vue'),
+            meta: { title: 'Addresses - E-SEVEN STORE' },
+          },
+          {
+            path: 'notifications',
+            name: 'notifications',
+            component: () => import('@/pages/NotificationsPage.vue'),
+            meta: { title: 'Notifications - E-SEVEN STORE' },
+          },
+          {
+            path: 'loyalty-points',
+            name: 'loyalty-points',
+            component: () => import('@/pages/LoyaltyPointsPage.vue'),
+            meta: { title: 'Loyalty Points - E-SEVEN STORE' },
+          },
+          {
+            path: 'wallet',
+            name: 'wallet',
+            component: () => import('@/pages/WalletPage.vue'),
+            meta: { title: 'Wallet - E-SEVEN STORE' },
+          },
+        ]
       },
       {
         path: 'reset-password',

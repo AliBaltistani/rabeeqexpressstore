@@ -61,6 +61,15 @@ class WalletController extends Controller
             'createdAt' => $t->created_at->toISOString(),
         ]);
 
-        return $this->paginated($data);
+        return response()->json([
+            'success' => true,
+            'data' => $data->items(),
+            'meta' => [
+                'total' => $data->total(),
+                'page' => $data->currentPage(),
+                'perPage' => $data->perPage(),
+                'lastPage' => $data->lastPage(),
+            ],
+        ]);
     }
 }
