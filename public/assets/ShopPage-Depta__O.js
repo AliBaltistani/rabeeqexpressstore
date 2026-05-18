@@ -1,1 +1,0 @@
-import{lt as e,rt as t,vt as n}from"./services-BUNCM5e-.js";import{t as r}from"./CategoryPage-CILYK9qq.js";var i=e({__name:`ShopPage`,setup(e){return(e,i)=>(n(),t(r,{"is-shop":!0}))}});export{i as default};
