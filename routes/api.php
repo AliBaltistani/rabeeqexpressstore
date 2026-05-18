@@ -54,6 +54,8 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
         Route::post('send-otp', [AuthController::class, 'sendOtp']);
         Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
         Route::post('resend-otp', [AuthController::class, 'resendOtp']);
+        // Email existence check (checkout Step 1 branching)
+        Route::post('check-email', [AuthController::class, 'checkEmail']);
         // Social Login
         Route::post('social/{provider}', [SocialLoginController::class, 'handleProvider']);
     });

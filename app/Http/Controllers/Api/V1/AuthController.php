@@ -262,6 +262,20 @@ class AuthController extends Controller
     }
 
     /**
+     * POST /api/v1/auth/check-email
+     * Check whether an email address belongs to a registered account.
+     * Returns { exists: bool } — used by checkout Step 1 to branch flows.
+     */
+    public function checkEmail(Request $request): JsonResponse
+    {
+        $request->validate(['email' => ['required', 'email', 'max:255']]);
+
+        $exists = User::where('email', strtolower(trim($request->email)))->exists();
+
+        return $this->success(['exists' => $exists]);
+    }
+
+    /**
      * GET /api/v1/auth/me
      */
     public function me(Request $request): JsonResponse

@@ -137,7 +137,21 @@
     "shipping": "Shipping",
     "orderSummary": "Order Summary",
     "qty": "Qty",
-    "tax": "Tax"
+    "tax": "Tax",
+    "welcomeBack": "Welcome back, {name}",
+    "continue": "Continue",
+    "mapMode": "Map Mode",
+    "manualMode": "Enter Manually",
+    "currentLocation": "Use Current Location",
+    "mailingList": "Subscribe to mailing list",
+    "notes": "Notes (Optional)",
+    "notesPlaceholder": "Add any special instructions...",
+    "cardNumber": "Card Number",
+    "cashback": "Cashback Earned",
+    "invalidCardNumber": "Invalid card number",
+    "invalidCardName": "Please provide cardholder name",
+    "invalidExpiry": "Invalid expiry date (MM/YY)",
+    "invalidCvv": "Invalid CVV"
   },
   "category": {
     "sortBy": "Sort By",

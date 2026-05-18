@@ -137,7 +137,21 @@
     "shipping": "الشحن",
     "orderSummary": "ملخص الطلب",
     "qty": "الكمية",
-    "tax": "الضريبة"
+    "tax": "الضريبة",
+    "welcomeBack": "مرحباً بعودتك، {name}",
+    "continue": "متابعة",
+    "mapMode": "وضع الخريطة",
+    "manualMode": "إدخال يدوي",
+    "currentLocation": "استخدام موقعي الحالي",
+    "mailingList": "الاشتراك في القائمة البريدية",
+    "notes": "ملاحظات (اختياري)",
+    "notesPlaceholder": "أضف أي تعليمات خاصة...",
+    "cardNumber": "رقم البطاقة",
+    "cashback": "مكافأة الاسترداد",
+    "invalidCardNumber": "رقم بطاقة غير صالح",
+    "invalidCardName": "يرجى إدخال اسم حامل البطاقة",
+    "invalidExpiry": "تاريخ انتهاء غير صالح (شش/سس)",
+    "invalidCvv": "رمز CVV غير صالح"
   },
   "category": {
     "sortBy": "ترتيب حسب",

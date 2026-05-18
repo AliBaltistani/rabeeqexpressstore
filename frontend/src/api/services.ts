@@ -183,6 +183,26 @@ export async function resendOtpApi(email: string) {
   return unwrap<{ expiresIn: number; cooldown: number }>(await apiClient.post('/auth/resend-otp', { email }))
 }
 
+// Check if email belongs to a registered account (returns { exists: bool })
+export async function checkEmailApi(email: string): Promise<{ exists: boolean }> {
+  return unwrap<{ exists: boolean }>(await apiClient.post('/auth/check-email', { email }))
+}
+
+// ═══════════════════════════════════════════
+// COUNTRIES
+// ═══════════════════════════════════════════
+export interface CountryOption {
+  id: number
+  name: string
+  code: string
+  phone_code: string
+  flag_url: string
+}
+
+export async function fetchActiveCountries(): Promise<CountryOption[]> {
+  return unwrap<CountryOption[]>(await apiClient.get('/countries/active'))
+}
+
 // ═══════════════════════════════════════════
 // PROFILE
 // ═══════════════════════════════════════════
