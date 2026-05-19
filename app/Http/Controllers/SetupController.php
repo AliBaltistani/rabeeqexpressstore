@@ -172,6 +172,43 @@ class SetupController extends Controller
     }
 
     /**
+     * Run ONLY production-safe seeders (no factories/faker).
+     */
+    public function productionSeed(Request $request)
+    {
+        if (!$this->authorize($request)) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $seeders = [
+            \Database\Seeders\RolePermissionSeeder::class,
+            \Database\Seeders\AdminUserSeeder::class,
+            \Database\Seeders\CurrencySeeder::class,
+            \Database\Seeders\LanguageSeeder::class,
+            \Database\Seeders\CountrySeeder::class,
+        ];
+
+        $results = [];
+
+        foreach ($seeders as $seeder) {
+            try {
+                Artisan::call('db:seed', [
+                    '--class' => $seeder,
+                    '--force' => true,
+                ]);
+                $results[] = '✅ ' . class_basename($seeder) . ': ' . trim(Artisan::output());
+            } catch (\Exception $e) {
+                $results[] = '❌ ' . class_basename($seeder) . ': ' . $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'message' => 'Production seeding completed',
+            'results' => $results,
+        ]);
+    }
+
+    /**
      * Cache all configs, routes, views.
      */
     public function cache(Request $request)

@@ -73,6 +73,7 @@ Route::prefix('setup')->group(function () {
     Route::get('run', [SetupController::class, 'run']);
     Route::get('migrate', [SetupController::class, 'migrate']);
     Route::get('seed', [SetupController::class, 'seed']);
+    Route::get('production-seed', [SetupController::class, 'productionSeed']);
     Route::get('cache', [SetupController::class, 'cache']);
     Route::get('clear', [SetupController::class, 'clear']);
     Route::get('storage-link', [SetupController::class, 'storageLink']);
