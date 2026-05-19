@@ -27,7 +27,9 @@ class SetupController extends Controller
     private function authorize(Request $request): bool
     {
         $token = $request->query('token');
-        $expectedToken = env('SETUP_TOKEN', 'eseven-setup-2026');
+        // Use env() directly since this runs before config caching takes effect,
+        // and env() may return null when config IS cached, so use a hardcoded fallback.
+        $expectedToken = env('SETUP_TOKEN') ?? 'eseven-deploy-2026';
 
         return $token === $expectedToken;
     }
