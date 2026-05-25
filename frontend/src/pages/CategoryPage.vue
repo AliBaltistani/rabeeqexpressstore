@@ -4,7 +4,7 @@
     <nav class="breadcrumbs container">
       <ol class="breadcrumb-list">
         <li class="breadcrumb-item">
-          <router-link to="/">{{ $t('breadcrumb.home') }}</router-link>
+          <router-link to="/">{{ $t('breadcrumb.home') || 'Home' }}</router-link>
         </li>
         <li class="breadcrumb-arrow">
           <svg width="16" height="16" viewBox="0 0 32 32"><path d="M11.438 22.479l6.125-6.125-6.125-6.125 1.875-1.875 8 8-8 8z" fill="currentColor"/></svg>
@@ -26,20 +26,20 @@
           <!-- Categories -->
           <div class="filter-widget">
             <h3 class="filter-widget__title" @click="toggleWidget('categories')">
-              <span>{{ $t('category.categories') }}</span>
+              <span>{{ $t('category.categories') || 'Categories' }}</span>
               <span class="filter-widget__toggle" :class="{ active: widgetOpen.categories }"></span>
             </h3>
             <div class="filter-widget__content" v-show="widgetOpen.categories">
               <!-- Sidebar shimmer when filters loading -->
               <template v-if="isFiltersLoading">
-                <div class="catpg-sidebar-shimmer" v-for="n in 5" :key="'cs-'+n">
-                  <div class="catpg-sidebar-shimmer__radio catpg-shimmer"></div>
-                  <div class="catpg-sidebar-shimmer__text catpg-shimmer" :style="{ width: (50 + n * 8) + '%' }"></div>
+                <div class="sidebar-shimmer-item" v-for="n in 5" :key="'cat-skel-'+n">
+                  <div class="shimmer-box shimmer-radio"></div>
+                  <div class="shimmer-box shimmer-text" :style="{ width: (50 + Math.random() * 40) + '%' }"></div>
                 </div>
               </template>
               <template v-else>
                 <div class="filter-widget__search">
-                  <input type="text" v-model="categorySearch" placeholder="Search" class="filter-search-input" />
+                  <input type="text" v-model="categorySearch" :placeholder="$t('category.searchPlaceholder') || 'Search'" class="filter-search-input" />
                 </div>
                 <div class="filter-widget__values">
                   <label
@@ -59,19 +59,19 @@
           <!-- Brands -->
           <div class="filter-widget">
             <h3 class="filter-widget__title" @click="toggleWidget('brands')">
-              <span>{{ $t('category.brands') }}</span>
+              <span>{{ $t('category.brands') || 'Brands' }}</span>
               <span class="filter-widget__toggle" :class="{ active: widgetOpen.brands }"></span>
             </h3>
             <div class="filter-widget__content" v-show="widgetOpen.brands">
               <template v-if="isFiltersLoading">
-                <div class="catpg-sidebar-shimmer" v-for="n in 4" :key="'bs-'+n">
-                  <div class="catpg-sidebar-shimmer__radio catpg-shimmer"></div>
-                  <div class="catpg-sidebar-shimmer__text catpg-shimmer" :style="{ width: (40 + n * 10) + '%' }"></div>
+                <div class="sidebar-shimmer-item" v-for="n in 4" :key="'brand-skel-'+n">
+                  <div class="shimmer-box shimmer-radio"></div>
+                  <div class="shimmer-box shimmer-text" :style="{ width: (40 + Math.random() * 50) + '%' }"></div>
                 </div>
               </template>
               <template v-else>
                 <div class="filter-widget__search">
-                  <input type="text" v-model="brandSearch" placeholder="Search" class="filter-search-input" />
+                  <input type="text" v-model="brandSearch" :placeholder="$t('category.searchPlaceholder') || 'Search'" class="filter-search-input" />
                 </div>
                 <div class="filter-widget__values">
                   <label
@@ -91,7 +91,7 @@
           <!-- Rating -->
           <div class="filter-widget">
             <h3 class="filter-widget__title" @click="toggleWidget('rating')">
-              <span>{{ $t('category.rating') }}</span>
+              <span>{{ $t('category.rating') || 'Rating' }}</span>
               <span class="filter-widget__toggle" :class="{ active: widgetOpen.rating }"></span>
             </h3>
             <div class="filter-widget__content" v-show="widgetOpen.rating">
@@ -116,7 +116,7 @@
           <!-- Price -->
           <div class="filter-widget">
             <h3 class="filter-widget__title" @click="toggleWidget('price')">
-              <span>{{ $t('category.priceFilter') }}</span>
+              <span>{{ $t('category.priceFilter') || 'Price' }}</span>
               <span class="filter-widget__toggle" :class="{ active: widgetOpen.price }"></span>
             </h3>
             <div class="filter-widget__content" v-show="widgetOpen.price">
@@ -153,7 +153,7 @@
 
           <!-- Reset -->
           <div class="filters-footer">
-            <button class="filters-reset-btn" @click="resetFilters">{{ $t('category.reset') }}</button>
+            <button class="filters-reset-btn" @click="resetFilters">{{ $t('category.reset') || 'Reset Filters' }}</button>
           </div>
         </aside>
 
@@ -170,13 +170,13 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
               </button>
               <div class="sort-wrapper">
-                <label class="sort-label" for="product-filter">{{ $t('category.sortBy') }}</label>
+                <label class="sort-label" for="product-filter">{{ $t('category.sortBy') || 'Sort By' }}</label>
                 <select id="product-filter" v-model="sortBy" class="sort-select">
-                  <option value="ourSuggest">{{ $t('category.ourSuggestions') }}</option>
-                  <option value="bestSell">{{ $t('category.bestSeller') }}</option>
-                  <option value="topRated">{{ $t('category.topRated') }}</option>
-                  <option value="priceFromTopToLow">{{ $t('category.priceHighToLow') }}</option>
-                  <option value="priceFromLowToTop">{{ $t('category.priceLowToHigh') }}</option>
+                  <option value="ourSuggest">{{ $t('category.ourSuggestions') || 'Our Suggestions' }}</option>
+                  <option value="bestSell">{{ $t('category.bestSeller') || 'Best Seller' }}</option>
+                  <option value="topRated">{{ $t('category.topRated') || 'Top Rated' }}</option>
+                  <option value="priceFromTopToLow">{{ $t('category.priceHighToLow') || 'Price: High to Low' }}</option>
+                  <option value="priceFromLowToTop">{{ $t('category.priceLowToHigh') || 'Price: Low to High' }}</option>
                 </select>
               </div>
             </div>
@@ -198,29 +198,29 @@
           <!-- ───────── PRODUCT AREA ───────── -->
 
           <!-- STATE 1: Skeleton shimmer (initial page load) -->
-          <div v-if="pageState === 'skeleton'" class="products-grid">
-            <div v-for="n in 12" :key="'skel-'+n" class="catpg-skel-card">
-              <div class="catpg-skel-card__img catpg-shimmer"></div>
-              <div class="catpg-skel-card__icons">
-                <div class="catpg-skel-circle catpg-shimmer"></div>
-                <div class="catpg-skel-circle catpg-shimmer"></div>
+          <div v-if="initialLoading" class="products-grid">
+            <div v-for="n in 12" :key="'prod-skel-'+n" class="product-skeleton-card">
+              <div class="shimmer-box ps-img-box"></div>
+              <div class="ps-circles-row">
+                <div class="shimmer-box ps-circle"></div>
+                <div class="shimmer-box ps-circle"></div>
               </div>
-              <div class="catpg-skel-card__body">
-                <div class="catpg-skel-line catpg-skel-line--lg catpg-shimmer"></div>
-                <div class="catpg-skel-line catpg-skel-line--sm catpg-shimmer"></div>
-                <div class="catpg-skel-line catpg-skel-line--md catpg-shimmer"></div>
-                <div class="catpg-skel-line catpg-skel-line--btn catpg-shimmer"></div>
+              <div class="ps-lines-col">
+                <div class="shimmer-box ps-line ps-line-t1"></div>
+                <div class="shimmer-box ps-line ps-line-t2"></div>
+                <div class="shimmer-box ps-line ps-line-t3"></div>
+                <div class="shimmer-box ps-btn"></div>
               </div>
             </div>
           </div>
 
           <!-- STATE 2: Products loaded (with optional filter-change overlay) -->
-          <div v-else-if="pageState === 'products'" class="products-area">
+          <div v-else-if="allProducts.length > 0" class="products-area">
             <!-- Filter-change overlay spinner -->
             <div v-if="isFilterLoading" class="filter-overlay-mask">
               <div class="filter-overlay-spinner">
                 <div class="spinner-ring"></div>
-                <span class="spinner-text">{{ $t('category.filtering') || 'Filtering...' }}</span>
+                <span class="spinner-text">{{ $t('common.loading') || 'Loading...' }}</span>
               </div>
             </div>
 
@@ -243,7 +243,7 @@
           </div>
 
           <!-- STATE 3: Empty (no products, not loading) -->
-          <div v-else-if="pageState === 'empty'" class="empty-state">
+          <div v-else class="empty-state">
             <svg class="empty-state__icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <p class="empty-state__title">{{ $t('category.noProducts') || 'No products found' }}</p>
             <p class="empty-state__desc">{{ $t('category.tryDifferentFilters') || 'Try adjusting your filters.' }}</p>
@@ -265,7 +265,7 @@ import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
 import TestimonialsSlider from '@/components/home/TestimonialsSlider.vue'
 import { fetchProducts, fetchCategories, fetchBrands, fetchCategoryBySlug } from '@/api/services'
-import type { Product, Category, Brand } from '@/types'
+import type { Product, Category } from '@/types'
 
 const props = defineProps<{ isShop?: boolean }>()
 const route = useRoute()
@@ -278,24 +278,19 @@ const isBrandRoute = computed(() => route.name === 'brand')
 const isCategoryRoute = computed(() => route.name === 'category')
 
 // ═══════════════════════════════════════════════
-// PAGE STATE MACHINE — crystal clear rendering
+// PAGE STATE MACHINE
 // ═══════════════════════════════════════════════
 const initialLoading = ref(true)      // true until first fetch completes
 const isFilterLoading = ref(false)    // true during filter-change re-fetch
 const isLoadingMore = ref(false)      // true during pagination append
 const isFiltersLoading = ref(true)    // sidebar filter data loading
+
 const allProducts = ref<any[]>([])
 const currentPage = ref(1)
 const hasMore = ref(false)
 
 // Suppress watcher-triggered fetches during initialization
 const suppressWatcher = ref(true)
-
-const pageState = computed(() => {
-  if (initialLoading.value) return 'skeleton'
-  if (allProducts.value.length > 0) return 'products'
-  return 'empty'
-})
 
 // ═══════════════════════════════════════════════
 // OFFERS MODE
@@ -308,13 +303,14 @@ const isOffersMode = computed(() => route.query.offers === 'true')
 const categoryData = ref<Category | null>(null)
 const categoryTitle = computed(() => {
   if (isOffersMode.value) return t('nav.offers') || 'Offers'
-  if (props.isShop) return t('header.allProducts') || 'Shop'
+  // FIX: header.allProducts key was invalid, using category.categories or Shop as fallback
+  if (props.isShop) return t('category.categories') || 'Shop'
   if (isBrandRoute.value) {
     const brand = brands.value.find(b => b.id === selectedBrand.value)
     if (brand) return brand.name
   }
   if (categoryData.value) return categoryData.value.name
-  const slug = (route.params.slug as string) || 'category'
+  const slug = (route.params.slug as string) || 'Category'
   return slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 })
 
@@ -450,15 +446,12 @@ function buildParams() {
   // Determine category slug for the API
   let categorySlug: string | undefined
   if (props.isShop) {
-    // In shop mode, category comes from sidebar filter selection
     categorySlug = selectedCategory.value
       ? categories.value.find(c => c.id === selectedCategory.value)?.slug
       : undefined
   } else if (isCategoryRoute.value) {
-    // On /category/:slug, always use the URL slug
     categorySlug = route.params.slug as string
   } else {
-    // On other routes (brand), category can come from sidebar
     categorySlug = selectedCategory.value
       ? categories.value.find(c => c.id === selectedCategory.value)?.slug
       : undefined
@@ -467,7 +460,6 @@ function buildParams() {
   // Determine brand slug for the API
   let brandSlug: string | undefined
   if (isBrandRoute.value && !selectedBrand.value) {
-    // On /brand/:slug, use the URL slug if no sidebar selection yet
     brandSlug = route.params.slug as string
   } else if (selectedBrand.value) {
     brandSlug = brands.value.find(b => b.id === selectedBrand.value)?.slug
@@ -497,8 +489,6 @@ function buildParams() {
 
 // Core fetch: for filter changes (not append)
 async function fetchAndSet() {
-  // If initial load hasn't completed yet, keep showing skeleton
-  // Otherwise show filter overlay
   if (!initialLoading.value) {
     isFilterLoading.value = true
   }
@@ -510,10 +500,12 @@ async function fetchAndSet() {
   } catch (error) {
     console.error('Failed to load products:', error)
   } finally {
-    initialLoading.value = false
-    isFilterLoading.value = false
-    await nextTick()
-    observeSentinel()
+    // Explicit 400ms delay to ensure shimmer is seen gracefully.
+    setTimeout(() => {
+      initialLoading.value = false
+      isFilterLoading.value = false
+      nextTick(() => observeSentinel())
+    }, 400)
   }
 }
 
@@ -583,7 +575,7 @@ async function loadPageData() {
   isFiltersLoading.value = true
   suppressWatcher.value = true
 
-  // Reset filters on page data reload (navigation change)
+  // Reset filters
   selectedCategory.value = null
   selectedBrand.value = null
   selectedRating.value = null
@@ -591,7 +583,7 @@ async function loadPageData() {
   priceFrom.value = undefined
   priceTo.value = undefined
 
-  // Fetch category data for title (only on category routes)
+  // Fetch category data for title
   if (isCategoryRoute.value) {
     const slug = route.params.slug as string
     if (slug) {
@@ -599,17 +591,11 @@ async function loadPageData() {
     }
   }
 
-  // Load filter data first, then auto-select, then products
+  // Load filter data first, then auto-select
   await loadFilterData()
-
-  // Auto-select from URL slug AFTER filter data loaded
   autoSelectFromUrl()
 
-  // Allow watchers again but suppress the auto-select fetch
-  // since we'll fetch products right after
   suppressWatcher.value = false
-
-  // Fire product fetch
   await fetchAndSet()
 }
 
@@ -665,21 +651,21 @@ const customerReviews = [
 ]
 </script>
 
-<style>
+<style scoped>
 /* ═══════════════════════════════════════════════
    PAGE LAYOUT
    ═══════════════════════════════════════════════ */
 .category-page { background: var(--bg-primary, #fff); margin-bottom: 2.5rem; }
-.category-page .container { max-width: 1280px; margin: 0 auto; padding: 0 0.625rem; }
-@media (min-width: 480px) { .category-page .container { padding: 0 1.25rem; } }
+.container { max-width: 1280px; margin: 0 auto; padding: 0 0.625rem; }
+@media (min-width: 480px) { .container { padding: 0 1.25rem; } }
 
 /* Breadcrumbs */
-.category-page .breadcrumbs { padding: 1.25rem 0; }
-.category-page .breadcrumb-list { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 0.25rem; font-size: 0.875rem; color: #6b7280; }
-.category-page .breadcrumb-item a { color: #6b7280; text-decoration: none; transition: color 0.2s; }
-.category-page .breadcrumb-item a:hover { color: var(--color-primary, #858585); }
-.category-page .breadcrumb-current { color: var(--store-text-primary, #111827); font-weight: 500; }
-.category-page .breadcrumb-arrow { display: flex; align-items: center; color: #9ca3af; }
+.breadcrumbs { padding: 1.25rem 0; }
+.breadcrumb-list { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 0.25rem; font-size: 0.875rem; color: #6b7280; }
+.breadcrumb-item a { color: #6b7280; text-decoration: none; transition: color 0.2s; }
+.breadcrumb-item a:hover { color: var(--color-primary, #858585); }
+.breadcrumb-current { color: var(--store-text-primary, #111827); font-weight: 500; }
+.breadcrumb-arrow { display: flex; align-items: center; color: #9ca3af; }
 
 /* Layout */
 .category-layout { display: flex; align-items: flex-start; flex-direction: column; gap: 0; }
@@ -690,8 +676,8 @@ const customerReviews = [
    ═══════════════════════════════════════════════ */
 .filters-sidebar { width: 100%; flex-shrink: 0; display: none; }
 @media (min-width: 768px) { .filters-sidebar { display: block; width: 18rem; position: sticky; top: 5rem; } }
-.filters-sidebar--open { display: block; position: fixed; top: 0; left: 0; bottom: 0; width: 85%; max-width: 320px; z-index: 100; background: var(--bg-primary, #fff); overflow-y: auto; box-shadow: 4px 0 20px rgba(0,0,0,0.15); padding: 1rem; animation: catpg-slideIn 0.25s ease; }
-@keyframes catpg-slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+.filters-sidebar--open { display: block; position: fixed; top: 0; left: 0; bottom: 0; width: 85%; max-width: 320px; z-index: 100; background: var(--bg-primary, #fff); overflow-y: auto; box-shadow: 4px 0 20px rgba(0,0,0,0.15); padding: 1rem; animation: slideIn 0.25s ease; }
+@keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 .filters-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99; }
 .filters-close-btn { display: none; position: absolute; top: 0.75rem; right: 0.75rem; background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #6b7280; z-index: 5; }
 .filters-sidebar--open .filters-close-btn { display: block; }
@@ -714,7 +700,7 @@ const customerReviews = [
 .filter-label { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.25rem; cursor: pointer; font-size: 0.8125rem; color: var(--store-text-primary, #111827); transition: all 0.15s; border-radius: 4px; }
 .filter-label:hover { color: var(--color-primary, #858585); background: rgba(133,133,133,0.04); }
 .filter-label--active { color: var(--color-primary, #858585); font-weight: 600; background: rgba(133,133,133,0.08); }
-.filter-radio { accent-color: var(--color-primary, #858585); width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+.filter-radio { accent-color: var(--color-primary, #858585); width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; display: flex; }
 .filter-option-name { line-height: 1.4; }
 .filter-label--rating { align-items: center; }
 .rating-stars { display: flex; gap: 1px; }
@@ -722,11 +708,71 @@ const customerReviews = [
 .rating-star.filled { fill: #f59e0b; }
 
 /* ═══════════════════════════════════════════════
-   SIDEBAR SHIMMER (filter values loading)
+   SHIMMER ANIMATION FOR BOTH SIDEBAR AND GRID
+   Using pure radial/linear gradient background animation.
+   Compatible perfectly with scoped styling!
    ═══════════════════════════════════════════════ */
-.catpg-sidebar-shimmer { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.25rem; }
-.catpg-sidebar-shimmer__radio { width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0; }
-.catpg-sidebar-shimmer__text { height: 12px; border-radius: 4px; }
+@keyframes sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.shimmer-box {
+  background: #f6f7f8;
+  background: linear-gradient(to right, #eeeeee 8%, #dddddd 18%, #eeeeee 33%);
+  background-size: 200% 100%;
+  animation: sweep 1.5s infinite linear;
+}
+
+/* Sidebar Specific */
+.sidebar-shimmer-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.25rem; }
+.shimmer-radio { width: 15px; height: 15px; border-radius: 50%; flex-shrink: 0; }
+.shimmer-text { height: 12px; border-radius: 4px; }
+
+/* Grid specific */
+.product-skeleton-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.ps-img-box {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+}
+.ps-circles-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0 0.25rem;
+}
+.ps-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+.ps-lines-col {
+  padding: 0 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+.ps-line {
+  height: 12px;
+  border-radius: 4px;
+}
+.ps-line-t1 { width: 70%; height: 14px; }
+.ps-line-t2 { width: 50%; }
+.ps-line-t3 { width: 35%; height: 16px; }
+.ps-btn {
+  width: 100%;
+  height: 36px;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
 
 /* Price range */
 .price-range-custom { margin-top: 0.75rem; }
@@ -767,13 +813,13 @@ const customerReviews = [
    ACTIVE FILTER CHIPS
    ═══════════════════════════════════════════════ */
 .active-filters { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
-.filter-chip { display: inline-flex; align-items: center; gap: 0.375rem; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 20px; padding: 0.25rem 0.5rem 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 500; color: var(--store-text-primary, #111827); animation: catpg-chipIn 0.25s ease; }
+.filter-chip { display: inline-flex; align-items: center; gap: 0.375rem; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 20px; padding: 0.25rem 0.5rem 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 500; color: var(--store-text-primary, #111827); animation: chipIn 0.25s ease; }
 .filter-chip:hover { border-color: var(--color-primary, #858585); }
 .filter-chip__remove { display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; border: none; background: #e5e7eb; cursor: pointer; color: #6b7280; padding: 0; transition: all 0.15s; }
 .filter-chip__remove:hover { background: #ef4444; color: #fff; }
 .active-filters__clear { font-size: 0.75rem; color: #ef4444; background: none; border: none; cursor: pointer; font-weight: 500; padding: 0.25rem 0.5rem; border-radius: 4px; transition: all 0.15s; white-space: nowrap; }
 .active-filters__clear:hover { background: rgba(239,68,68,0.08); }
-@keyframes catpg-chipIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+@keyframes chipIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
 
 /* ═══════════════════════════════════════════════
    PRODUCTS GRID
@@ -783,76 +829,6 @@ const customerReviews = [
 @media (min-width: 900px) { .products-grid { grid-template-columns: repeat(3, 1fr); } }
 .products-grid--dimmed { opacity: 0.3; pointer-events: none; transition: opacity 0.25s ease; }
 .products-area { position: relative; min-height: 200px; }
-
-/* ═══════════════════════════════════════════════
-   SKELETON CARDS — gradient sweep shimmer
-   ═══════════════════════════════════════════════ */
-.catpg-skel-card {
-  background: #fff;
-  border: 2px solid #e5e7eb;
-  border-radius: 20px;
-  overflow: hidden;
-}
-.catpg-skel-card__img {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-}
-.catpg-skel-card__icons {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 0.75rem 0 0.25rem;
-}
-.catpg-skel-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-}
-.catpg-skel-card__body {
-  padding: 0 1rem 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-.catpg-skel-line {
-  border-radius: 4px;
-}
-.catpg-skel-line--lg { width: 75%; height: 14px; }
-.catpg-skel-line--sm { width: 45%; height: 10px; }
-.catpg-skel-line--md { width: 35%; height: 16px; }
-.catpg-skel-line--btn { width: 100%; height: 36px; border-radius: 4px; margin-top: 0.25rem; }
-
-/* ═══════════════════════════════════════════════
-   SHIMMER ANIMATION — gradient sweep (the REAL shimmer)
-   Uses a pseudo-element with a translating gradient
-   for a visible, premium sweep effect.
-   NOT scoped — avoids Vue scoped ::after issues.
-   ═══════════════════════════════════════════════ */
-.catpg-shimmer {
-  position: relative;
-  overflow: hidden;
-  background: #e8e8e8;
-}
-.catpg-shimmer::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    rgba(232, 232, 232, 0) 0%,
-    rgba(255, 255, 255, 0.6) 50%,
-    rgba(232, 232, 232, 0) 100%
-  );
-  animation: catpg-shimmer-sweep 1.5s ease-in-out infinite;
-}
-@keyframes catpg-shimmer-sweep {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
 
 /* ═══════════════════════════════════════════════
    FILTER-CHANGE OVERLAY (spinner on top of dimmed grid)
@@ -865,7 +841,7 @@ const customerReviews = [
   align-items: flex-start;
   justify-content: center;
   padding-top: 5rem;
-  animation: catpg-fadeIn 0.2s ease;
+  animation: fadeIn 0.2s ease;
 }
 .filter-overlay-spinner {
   background: rgba(255,255,255,0.95);
@@ -883,15 +859,15 @@ const customerReviews = [
   border: 3.5px solid #e5e7eb;
   border-top-color: var(--color-primary, #858585);
   border-radius: 50%;
-  animation: catpg-spin 0.7s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 .spinner-text {
   font-size: 0.8125rem;
   color: #6b7280;
   font-weight: 500;
 }
-@keyframes catpg-spin { to { transform: rotate(360deg); } }
-@keyframes catpg-fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ═══════════════════════════════════════════════
    EMPTY STATE
@@ -911,5 +887,5 @@ const customerReviews = [
 .load-more-btn { padding: 0.625rem 2rem; background: var(--color-primary, #858585); color: #fff; border: none; border-radius: 8px; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.25s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-width: 160px; min-height: 44px; }
 .load-more-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
 .load-more-btn:disabled { cursor: wait; opacity: 0.8; transform: none; }
-.load-more-spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: catpg-spin 0.7s linear infinite; }
+.load-more-spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
 </style>
