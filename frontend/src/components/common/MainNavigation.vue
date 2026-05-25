@@ -24,14 +24,14 @@
                 </router-link>
               </li>
 
-              <!-- Category dropdowns with multi-level -->
+              <!-- Category dropdowns with unlimited multi-level -->
               <li
                 v-for="cat in menuCategories"
                 :key="cat.slug"
                 class="root-level"
                 :class="{ 'has-children': cat.children && cat.children.length > 0 }"
-                @mouseenter="activeDropdown = cat.slug"
-                @mouseleave="activeDropdown = null; activeSubmenu = null"
+                @mouseenter="openDropdown(cat.slug)"
+                @mouseleave="closeDropdown()"
               >
                 <router-link :to="'/category/' + cat.slug" class="nav-link" :aria-label="cat.label">
                   <span>{{ cat.label }}</span>
@@ -45,39 +45,14 @@
                   class="mega-dropdown"
                   :class="{ 'mega-dropdown--visible': activeDropdown === cat.slug }"
                 >
-                  <!-- Left: Parent categories list -->
-                  <div class="mega-dropdown__left">
-                    <ul>
-                      <li
-                        v-for="child in cat.children"
-                        :key="child.slug"
-                        @mouseenter="activeSubmenu = child.slug"
-                        :class="{ 'is-active': activeSubmenu === child.slug && child.children && child.children.length }"
-                      >
-                        <router-link :to="'/category/' + child.slug" class="mega-link">
-                          <span>{{ child.label }}</span>
-                          <!-- Arrow icon for items with sub-children -->
-                          <svg v-if="child.children && child.children.length" class="chevron-right" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                        </router-link>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <!-- Right: Sub-categories panel (shows on hover) -->
-                  <div
-                    v-for="child in cat.children"
-                    :key="'sub-' + child.slug"
-                    class="mega-dropdown__right"
-                    :class="{ 'mega-dropdown__right--visible': activeSubmenu === child.slug && child.children && child.children.length }"
-                  >
-                    <ul v-if="child.children && child.children.length">
-                      <li v-for="sub in child.children" :key="sub.slug">
-                        <router-link :to="'/category/' + sub.slug" class="mega-link">
-                          <span>{{ sub.label }}</span>
-                        </router-link>
-                      </li>
-                    </ul>
-                  </div>
+                  <!-- Recursive category panels -->
+                  <CategoryPanel
+                    :items="cat.children"
+                    :level="0"
+                    :activeTrail="activeTrail"
+                    @hover-item="handleHoverItem"
+                    @close="closeDropdown()"
+                  />
                 </div>
               </li>
             </ul>
@@ -116,13 +91,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, defineComponent, h, type VNode } from 'vue'
+import { useRouter, RouterLink } from 'vue-router'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import { useMenuCategories } from '@/composables/useMenuCategories'
+import type { MenuItem } from '@/composables/useMenuCategories'
 import MobileMenu from '@/components/common/MobileMenu.vue'
 import LoginModal from '@/components/common/LoginModal.vue'
 import logoImage from '@/assets/images/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png'
@@ -143,9 +119,26 @@ const showMobileMenu = ref(false)
 const showLoginModal = ref(false)
 const logoSrc = settings.storeSettings.logo || logoImage
 const activeDropdown = ref<string | null>(null)
-const activeSubmenu = ref<string | null>(null)
+// activeTrail tracks hovered items at each depth level: [level0_slug, level1_slug, ...]
+const activeTrail = ref<string[]>([])
 
 defineEmits(['open-search'])
+
+function openDropdown(slug: string) {
+  activeDropdown.value = slug
+  activeTrail.value = []
+}
+
+function closeDropdown() {
+  activeDropdown.value = null
+  activeTrail.value = []
+}
+
+function handleHoverItem(level: number, slug: string) {
+  // Set the active item at this level and clear deeper levels
+  activeTrail.value = activeTrail.value.slice(0, level)
+  activeTrail.value[level] = slug
+}
 
 function handleAuthenticated() {
   router.push('/account')
@@ -156,10 +149,93 @@ function handleScroll() {
 }
 onMounted(() => window.addEventListener('scroll', handleScroll, { passive: true }))
 onUnmounted(() => window.removeEventListener('scroll', handleScroll))
+
+/**
+ * Recursive CategoryPanel component for unlimited-depth flyout menus
+ */
+const CategoryPanel: ReturnType<typeof defineComponent> = defineComponent({
+  name: 'CategoryPanel',
+  props: {
+    items: { type: Array as () => MenuItem[], required: true },
+    level: { type: Number, required: true },
+    activeTrail: { type: Array as () => string[], required: true },
+  },
+  emits: ['hover-item', 'close'],
+  setup(props, { emit }) {
+    const activeSlugAtLevel = computed(() => props.activeTrail[props.level] || null)
+
+    const activeChild = computed(() => {
+      if (!activeSlugAtLevel.value) return null
+      const item = props.items.find(i => i.slug === activeSlugAtLevel.value)
+      return item && item.children && item.children.length > 0 ? item : null
+    })
+
+    function onHover(slug: string) {
+      emit('hover-item', props.level, slug)
+    }
+
+    function bubbleHover(level: number, slug: string) {
+      emit('hover-item', level, slug)
+    }
+
+    return (): VNode => {
+      const panelChildren: VNode[] = []
+
+      // Left panel: list of items at this level
+      panelChildren.push(
+        h('div', { class: 'mega-panel' }, [
+          h('ul', props.items.map(item =>
+            h('li', {
+              key: item.slug,
+              class: { 'is-active': activeSlugAtLevel.value === item.slug && item.children && item.children.length > 0 },
+              onMouseenter: () => onHover(item.slug),
+            }, [
+              h(RouterLink, {
+                to: '/category/' + item.slug,
+                class: 'mega-link',
+                onClick: () => emit('close'),
+              }, () => [
+                h('span', item.label),
+                item.children && item.children.length > 0
+                  ? h('svg', {
+                      class: 'chevron-right',
+                      xmlns: 'http://www.w3.org/2000/svg',
+                      width: '14',
+                      height: '14',
+                      viewBox: '0 0 24 24',
+                      fill: 'none',
+                      stroke: 'currentColor',
+                      'stroke-width': '2.5',
+                      innerHTML: '<polyline points="9 18 15 12 9 6"></polyline>',
+                    })
+                  : null,
+              ]),
+            ])
+          ))
+        ])
+      )
+
+      // Right: recursive child panel if an item with children is hovered
+      if (activeChild.value && activeChild.value.children) {
+        panelChildren.push(
+          h(CategoryPanel, {
+            items: activeChild.value.children,
+            level: props.level + 1,
+            activeTrail: props.activeTrail,
+            onHoverItem: bubbleHover,
+            onClose: () => emit('close'),
+          })
+        )
+      }
+
+      return h('div', { class: 'mega-panels-row' }, panelChildren)
+    }
+  },
+})
 </script>
 
 
-<style scoped>
+<style>
 /* ═══ Main Nav Container ═══ */
 .main-nav {
   background: var(--header-bg);
@@ -172,17 +248,17 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   z-index: 100;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
-.main-nav__inner {
+.main-nav .main-nav__inner {
   border-bottom: 1px solid var(--product-border-color);
 }
-.main-nav__row {
+.main-nav .main-nav__row {
   display: flex;
   align-items: stretch;
   justify-content: space-between;
 }
 
 /* ═══ Hamburger (mobile only) ═══ */
-.hamburger-btn {
+.main-nav .hamburger-btn {
   display: flex;
   align-items: center;
   padding: 0.5rem;
@@ -192,29 +268,29 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   border: none;
   color: var(--header-text-color);
 }
-@media (min-width: 1024px) { .hamburger-btn { display: none; } }
+@media (min-width: 1024px) { .main-nav .hamburger-btn { display: none; } }
 
 /* ═══ Logo ═══ */
-.navbar-brand {
+.main-nav .navbar-brand {
   display: flex;
   align-items: center;
   padding: 0.375rem 0;
   flex-shrink: 0;
   text-decoration: none;
 }
-.navbar-brand img { height: 48px; width: auto; }
+.main-nav .navbar-brand img { height: 48px; width: auto; }
 
 /* ═══ Desktop Menu Wrapper ═══ */
-.main-menu-wrap {
+.main-nav .main-menu-wrap {
   display: none;
   margin-inline-start: 0.75rem;
   flex: 1;
   min-width: 0;
   overflow: visible;
 }
-@media (min-width: 1024px) { .main-menu-wrap { display: flex; align-items: stretch; } }
+@media (min-width: 1024px) { .main-nav .main-menu-wrap { display: flex; align-items: stretch; } }
 
-.main-menu {
+.main-nav .main-menu {
   display: flex;
   align-items: stretch;
   flex-wrap: wrap;
@@ -224,9 +300,9 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 }
 
 /* ═══ Root Nav Links ═══ */
-.root-level { position: relative; }
+.main-nav .root-level { position: relative; }
 
-.nav-link {
+.main-nav .nav-link {
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -238,21 +314,21 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   text-decoration: none;
   transition: color 0.15s ease;
 }
-.nav-link span {
+.main-nav .nav-link span {
   text-decoration-color: currentColor;
 }
-.nav-link:hover { color: var(--color-primary); }
+.main-nav .nav-link:hover { color: var(--color-primary); }
 
-.offers-link { color: #ef4444 !important; font-weight: 600 !important; }
+.main-nav .offers-link { color: #ef4444 !important; font-weight: 600 !important; }
 
-.chevron-down {
+.main-nav .chevron-down {
   opacity: 0.5;
   transition: transform 0.2s ease;
 }
-.has-children:hover .chevron-down { transform: rotate(180deg); }
+.main-nav .has-children:hover .chevron-down { transform: rotate(180deg); }
 
 /* ═══ Multi-Level Mega Dropdown ═══ */
-.mega-dropdown {
+.main-nav .mega-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
@@ -268,97 +344,78 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   z-index: 50;
   min-width: 240px;
 }
-html[dir="rtl"] .mega-dropdown { left: auto; right: 0; }
-.mega-dropdown--visible {
+html[dir="rtl"] .main-nav .mega-dropdown { left: auto; right: 0; }
+.main-nav .mega-dropdown--visible {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
 }
 
-/* ── Left panel ── */
-.mega-dropdown__left {
-  min-width: 220px;
-  max-width: 260px;
-  border-inline-end: 1px solid #f3f4f6;
-  max-height: 420px;
-  overflow-y: auto;
-}
-.mega-dropdown__left ul {
-  list-style: none;
-  margin: 0;
-  padding: 0.5rem 0;
+/* ── Recursive panels row ── */
+.main-nav .mega-panels-row {
+  display: flex;
 }
 
-.mega-link {
+/* ── Each panel ── */
+.main-nav .mega-panel {
+  min-width: 220px;
+  max-width: 280px;
+  border-inline-end: 1px solid #e5e7eb;
+  max-height: 480px;
+  overflow-y: auto;
+  background: #fff;
+}
+.main-nav .mega-panel:last-child {
+  border-inline-end: none;
+}
+.main-nav .mega-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0.375rem 0;
+}
+
+.main-nav .mega-link {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.625rem 1rem;
+  padding: 0.6rem 1rem;
   font-size: 0.875rem;
   color: #374151;
   text-decoration: none;
   transition: all 0.12s ease;
   white-space: nowrap;
+  gap: 1rem;
 }
-.mega-link:hover,
-.mega-dropdown__left li.is-active .mega-link {
-  background: #f9fafb;
+.main-nav .mega-link:hover,
+.main-nav .mega-panel li.is-active > .mega-link {
+  background: #f5f5f5;
   color: var(--color-primary);
 }
 
-.chevron-right {
-  opacity: 0.4;
+.main-nav .chevron-right {
+  opacity: 0.35;
   flex-shrink: 0;
   margin-inline-start: 0.5rem;
   transition: opacity 0.12s ease;
 }
-html[dir="rtl"] .chevron-right { transform: rotate(180deg); }
-.mega-link:hover .chevron-right,
-.mega-dropdown__left li.is-active .chevron-right {
-  opacity: 0.8;
-}
-
-/* ── Right sub-panel ── */
-.mega-dropdown__right {
-  display: none;
-  min-width: 220px;
-  max-width: 260px;
-  max-height: 420px;
-  overflow-y: auto;
-  background: #fff;
-}
-.mega-dropdown__right--visible { display: block; }
-
-.mega-dropdown__right ul {
-  list-style: none;
-  margin: 0;
-  padding: 0.5rem 0;
-}
-.mega-dropdown__right .mega-link {
-  font-size: 0.8125rem;
-  color: #4b5563;
-  padding: 0.5rem 1rem;
-}
-.mega-dropdown__right .mega-link:hover {
-  background: #f3f4f6;
-  color: var(--color-primary);
+html[dir="rtl"] .main-nav .chevron-right { transform: rotate(180deg); }
+.main-nav .mega-link:hover .chevron-right,
+.main-nav .mega-panel li.is-active .chevron-right {
+  opacity: 0.7;
 }
 
 /* Scrollbar */
-.mega-dropdown__left::-webkit-scrollbar,
-.mega-dropdown__right::-webkit-scrollbar { width: 4px; }
-.mega-dropdown__left::-webkit-scrollbar-track,
-.mega-dropdown__right::-webkit-scrollbar-track { background: transparent; }
-.mega-dropdown__left::-webkit-scrollbar-thumb,
-.mega-dropdown__right::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+.main-nav .mega-panel::-webkit-scrollbar { width: 4px; }
+.main-nav .mega-panel::-webkit-scrollbar-track { background: transparent; }
+.main-nav .mega-panel::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
 
 /* ═══ Right Action Buttons ═══ */
-.main-nav__right {
+.main-nav .main-nav__right {
   display: flex;
   align-items: center;
   gap: 0.25rem;
 }
-.action-btn {
+.main-nav .action-btn {
   position: relative;
   display: flex;
   align-items: center;
@@ -371,8 +428,8 @@ html[dir="rtl"] .chevron-right { transform: rotate(180deg); }
   border: none;
   cursor: pointer;
 }
-.action-btn:hover { color: var(--color-primary); }
-.cart-badge {
+.main-nav .action-btn:hover { color: var(--color-primary); }
+.main-nav .cart-badge {
   position: absolute;
   top: 0.375rem;
   right: 0;
@@ -389,8 +446,9 @@ html[dir="rtl"] .chevron-right { transform: rotate(180deg); }
   line-height: 1;
 }
 
-.sr-only {
+.main-nav .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
 </style>
+

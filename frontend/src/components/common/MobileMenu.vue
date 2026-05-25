@@ -10,7 +10,7 @@
       <div v-if="isOpen" class="mobile-menu">
         <!-- Header -->
         <div class="mobile-menu__header">
-          <template v-if="currentLevel === 0">
+          <template v-if="navStack.length === 0">
             <span class="mobile-menu__title">Main Menu</span>
           </template>
           <template v-else>
@@ -27,8 +27,8 @@
         <!-- Menu Content -->
         <div class="mobile-menu__content">
           <transition :name="slideDirection" mode="out-in">
-            <!-- Level 0: Root categories -->
-            <ul v-if="currentLevel === 0" key="root" class="mobile-menu__list">
+            <!-- Root level -->
+            <ul v-if="navStack.length === 0" key="root" class="mobile-menu__list">
               <!-- Offers -->
               <li class="mobile-menu__item">
                 <router-link to="/products?offers=true" class="mobile-menu__link mobile-menu__link--offers" @click="close">
@@ -51,17 +51,18 @@
               </li>
             </ul>
 
-            <!-- Level 1: Sub-categories -->
-            <ul v-else-if="currentLevel === 1" :key="'l1-' + currentParent?.slug" class="mobile-menu__list">
-              <!-- View all -->
+            <!-- Drilled-down level (any depth) -->
+            <ul v-else :key="'level-' + navStack.length + '-' + currentItem?.slug" class="mobile-menu__list">
+              <!-- View all link for current category -->
               <li class="mobile-menu__item">
-                <router-link :to="'/category/' + currentParent?.slug" class="mobile-menu__link mobile-menu__link--viewall" @click="close">
+                <router-link :to="'/category/' + currentItem?.slug" class="mobile-menu__link mobile-menu__link--viewall" @click="close">
                   <span>{{ $t('common.viewAll') }}</span>
                 </router-link>
               </li>
-              <li v-for="child in currentParent?.children" :key="child.slug" class="mobile-menu__item">
+              <!-- Children -->
+              <li v-for="child in currentItem?.children" :key="child.slug" class="mobile-menu__item">
                 <template v-if="child.children && child.children.length">
-                  <button class="mobile-menu__link" @click="drillDownLevel2(child)">
+                  <button class="mobile-menu__link" @click="drillDown(child)">
                     <span>{{ child.label }}</span>
                     <svg class="mobile-menu__chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </button>
@@ -73,21 +74,6 @@
                 </template>
               </li>
             </ul>
-
-            <!-- Level 2: Sub-sub-categories -->
-            <ul v-else-if="currentLevel === 2" :key="'l2-' + currentChild?.slug" class="mobile-menu__list">
-              <!-- View all -->
-              <li class="mobile-menu__item">
-                <router-link :to="'/category/' + currentChild?.slug" class="mobile-menu__link mobile-menu__link--viewall" @click="close">
-                  <span>{{ $t('common.viewAll') }}</span>
-                </router-link>
-              </li>
-              <li v-for="sub in currentChild?.children" :key="sub.slug" class="mobile-menu__item">
-                <router-link :to="'/category/' + sub.slug" class="mobile-menu__link" @click="close">
-                  <span>{{ sub.label }}</span>
-                </router-link>
-              </li>
-            </ul>
           </transition>
         </div>
       </div>
@@ -97,29 +83,26 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useSettingsStore } from '@/stores/settingsStore'
-
 import type { MenuItem } from '@/composables/useMenuCategories'
 
 const props = defineProps<{ isOpen: boolean; menuCategories: MenuItem[] }>()
 const emit = defineEmits(['close'])
 
-const settings = useSettingsStore()
-
-
-const currentLevel = ref(0)
-const currentParent = ref<MenuItem | null>(null)
-const currentChild = ref<MenuItem | null>(null)
-const currentTitle = ref('')
+// Navigation stack — each entry is a MenuItem that was drilled into
+const navStack = ref<MenuItem[]>([])
 const slideDirection = ref('slide-left')
+
+// Current drilled-into item (top of stack)
+const currentItem = computed(() =>
+  navStack.value.length > 0 ? navStack.value[navStack.value.length - 1] : null
+)
+
+const currentTitle = computed(() => currentItem.value?.label || '')
 
 // Reset when menu opens
 watch(() => props.isOpen, (val) => {
   if (val) {
-    currentLevel.value = 0
-    currentParent.value = null
-    currentChild.value = null
-    currentTitle.value = ''
+    navStack.value = []
   }
 })
 
@@ -127,31 +110,14 @@ function close() {
   emit('close')
 }
 
-function drillDown(cat: MenuItem) {
+function drillDown(item: MenuItem) {
   slideDirection.value = 'slide-left'
-  currentParent.value = cat
-  currentTitle.value = cat.label
-  currentLevel.value = 1
-}
-
-function drillDownLevel2(child: MenuItem) {
-  slideDirection.value = 'slide-left'
-  currentChild.value = child
-  currentTitle.value = child.label
-  currentLevel.value = 2
+  navStack.value = [...navStack.value, item]
 }
 
 function goBack() {
   slideDirection.value = 'slide-right'
-  if (currentLevel.value === 2) {
-    currentLevel.value = 1
-    currentTitle.value = currentParent.value?.label || ''
-    currentChild.value = null
-  } else if (currentLevel.value === 1) {
-    currentLevel.value = 0
-    currentParent.value = null
-    currentTitle.value = ''
-  }
+  navStack.value = navStack.value.slice(0, -1)
 }
 </script>
 
