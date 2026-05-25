@@ -52,14 +52,12 @@ class CategoryResource extends Resource
                             ->schema([
                                 Forms\Components\Select::make('parent_id')
                                     ->label('Parent Category')
-                                    ->relationship(
-                                        'parent',
-                                        'name',
-                                        fn(Builder $query) => $query->withoutGlobalScope('active')
-                                    )
-                                    ->getOptionLabelFromRecordUsing(fn(Category $record) => $record->getTranslation('name', 'en'))
+                                    ->options(function (?Category $record) {
+                                        return Category::getHierarchicalOptions(
+                                            excludeId: $record?->id
+                                        );
+                                    })
                                     ->searchable()
-                                    ->preload()
                                     ->placeholder('None (Root Category)')
                                     ->rules([
                                         fn(Schemas\Components\Utilities\Get $get) => function (string $attribute, $value, $fail) use ($get) {
@@ -67,12 +65,12 @@ class CategoryResource extends Resource
                                                 $fail('A category cannot be its own parent.');
                                             }
                                             if ($value && $get('id')) {
-                                                $children = Category::withoutGlobalScope('active')
-                                                    ->where('parent_id', $get('id'))
-                                                    ->pluck('id')
-                                                    ->toArray();
-                                                if (in_array($value, $children)) {
-                                                    $fail('Cannot set a child category as parent (circular reference).');
+                                                $record = Category::withoutGlobalScope('active')->find($get('id'));
+                                                if ($record) {
+                                                    $descendantIds = $record->getAllDescendantIds();
+                                                    if ($descendantIds->contains($value)) {
+                                                        $fail('Cannot set a descendant category as parent (circular reference).');
+                                                    }
                                                 }
                                             }
                                         },
@@ -195,7 +193,12 @@ class CategoryResource extends Resource
 
                 Tables\Columns\TextColumn::make('name')
                     ->label('Name')
-                    ->formatStateUsing(fn(Category $record) => $record->getTranslation('name', 'en'))
+                    ->formatStateUsing(function (Category $record) {
+                        $name = $record->getTranslation('name', 'en');
+                        $depth = $record->depth;
+                        $prefix = $depth > 0 ? str_repeat('── ', $depth) : '';
+                        return $prefix . $name;
+                    })
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->where('name', 'like', "%{$search}%");
                     })
@@ -203,7 +206,10 @@ class CategoryResource extends Resource
 
                 Tables\Columns\TextColumn::make('parent.name')
                     ->label('Parent')
-                    ->formatStateUsing(fn($state, Category $record) => $record->parent?->getTranslation('name', 'en') ?? '—')
+                    ->formatStateUsing(function ($state, Category $record) {
+                        if (!$record->parent) return '—';
+                        return $record->parent->getIndentedName();
+                    })
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('products_count')
@@ -228,8 +234,7 @@ class CategoryResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('parent_id')
                     ->label('Parent Category')
-                    ->relationship('parent', 'name', fn(Builder $query) => $query->withoutGlobalScope('active'))
-                    ->getOptionLabelFromRecordUsing(fn(Category $record) => $record->getTranslation('name', 'en'))
+                    ->options(fn() => Category::getHierarchicalOptions())
                     ->searchable()
                     ->preload(),
 
@@ -286,3 +291,4 @@ class CategoryResource extends Resource
         return $user && ($user->hasRole('Super Admin') || $user->can('categories.view'));
     }
 }
+

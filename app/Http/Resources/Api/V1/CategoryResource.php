@@ -11,6 +11,9 @@ class CategoryResource extends JsonResource
     {
         $locale = app()->getLocale();
 
+        // Use allChildren (recursive) if loaded, fallback to children
+        $childRelation = $this->relationLoaded('allChildren') ? 'allChildren' : 'children';
+
         return [
             'id' => $this->id,
             'name' => $this->getTranslation('name', $locale),
@@ -19,10 +22,11 @@ class CategoryResource extends JsonResource
             'image' => $this->image ? asset('storage/' . $this->image) : null,
             'parentId' => $this->parent_id,
             'productCount' => $this->when(isset($this->products_count), $this->products_count),
-            'children' => $this->whenLoaded('children', fn() =>
-                CategoryResource::collection($this->children->where('is_active', true))
+            'children' => $this->whenLoaded($childRelation, fn() =>
+                CategoryResource::collection($this->$childRelation->where('is_active', true))
             ),
             'sortOrder' => $this->sort_order,
         ];
     }
 }
+

@@ -13,12 +13,12 @@ class CategoryController extends Controller
     use ApiResponse;
 
     /**
-     * GET /api/v1/categories — tree of active categories
+     * GET /api/v1/categories — full tree of active categories (unlimited depth)
      */
     public function index(): JsonResponse
     {
         $categories = Category::whereNull('parent_id')
-            ->with(['children' => fn($q) => $q->withCount('products')->orderBy('sort_order')])
+            ->with(['allChildren' => fn($q) => $q->withCount('products')->orderBy('sort_order')])
             ->withCount('products')
             ->orderBy('sort_order')
             ->get();
@@ -32,7 +32,7 @@ class CategoryController extends Controller
     public function show(string $slug): JsonResponse
     {
         $category = Category::where('slug', $slug)
-            ->with(['children' => fn($q) => $q->withCount('products')->orderBy('sort_order'), 'parent'])
+            ->with(['allChildren' => fn($q) => $q->withCount('products')->orderBy('sort_order'), 'parent'])
             ->withCount('products')
             ->first();
 
@@ -43,3 +43,4 @@ class CategoryController extends Controller
         return $this->success(new CategoryResource($category));
     }
 }
+

@@ -95,14 +95,8 @@ class ProductResource extends Resource
                                             ->schema([
                                                 Forms\Components\Select::make('category_id')
                                                     ->label('Category')
-                                                    ->relationship(
-                                                        'category',
-                                                        'name',
-                                                        fn(Builder $query) => $query->withoutGlobalScope('active')
-                                                    )
-                                                    ->getOptionLabelFromRecordUsing(fn(Category $record) => $record->getTranslation('name', 'en'))
+                                                    ->options(fn() => Category::getHierarchicalOptions())
                                                     ->searchable()
-                                                    ->preload()
                                                     ->required(),
 
                                                 Forms\Components\Select::make('brand_id')
@@ -488,8 +482,7 @@ class ProductResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('category_id')
                     ->label('Category')
-                    ->relationship('category', 'name', fn(Builder $query) => $query->withoutGlobalScope('active'))
-                    ->getOptionLabelFromRecordUsing(fn(Category $record) => $record->getTranslation('name', 'en'))
+                    ->options(fn() => Category::getHierarchicalOptions())
                     ->searchable()
                     ->preload(),
 
