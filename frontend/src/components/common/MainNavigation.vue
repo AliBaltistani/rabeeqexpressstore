@@ -151,7 +151,9 @@ onMounted(() => window.addEventListener('scroll', handleScroll, { passive: true 
 onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 
 /**
- * Recursive CategoryPanel component for unlimited-depth flyout menus
+ * Recursive CategoryPanel component for unlimited-depth flyout menus.
+ * Each child panel is rendered inside the hovered <li> with absolute positioning,
+ * so it aligns vertically with the hovered item (step/flyout pattern).
  */
 const CategoryPanel: ReturnType<typeof defineComponent> = defineComponent({
   name: 'CategoryPanel',
@@ -164,12 +166,6 @@ const CategoryPanel: ReturnType<typeof defineComponent> = defineComponent({
   setup(props, { emit }) {
     const activeSlugAtLevel = computed(() => props.activeTrail[props.level] || null)
 
-    const activeChild = computed(() => {
-      if (!activeSlugAtLevel.value) return null
-      const item = props.items.find(i => i.slug === activeSlugAtLevel.value)
-      return item && item.children && item.children.length > 0 ? item : null
-    })
-
     function onHover(slug: string) {
       emit('hover-item', props.level, slug)
     }
@@ -179,56 +175,54 @@ const CategoryPanel: ReturnType<typeof defineComponent> = defineComponent({
     }
 
     return (): VNode => {
-      const panelChildren: VNode[] = []
+      return h('div', { class: 'mega-panel' }, [
+        h('ul', props.items.map(item => {
+          const hasChildren = item.children && item.children.length > 0
+          const isActive = activeSlugAtLevel.value === item.slug && hasChildren
 
-      // Left panel: list of items at this level
-      panelChildren.push(
-        h('div', { class: 'mega-panel' }, [
-          h('ul', props.items.map(item =>
-            h('li', {
-              key: item.slug,
-              class: { 'is-active': activeSlugAtLevel.value === item.slug && item.children && item.children.length > 0 },
-              onMouseenter: () => onHover(item.slug),
-            }, [
-              h(RouterLink, {
-                to: '/category/' + item.slug,
-                class: 'mega-link',
-                onClick: () => emit('close'),
-              }, () => [
-                h('span', item.label),
-                item.children && item.children.length > 0
-                  ? h('svg', {
-                      class: 'chevron-right',
-                      xmlns: 'http://www.w3.org/2000/svg',
-                      width: '14',
-                      height: '14',
-                      viewBox: '0 0 24 24',
-                      fill: 'none',
-                      stroke: 'currentColor',
-                      'stroke-width': '2.5',
-                      innerHTML: '<polyline points="9 18 15 12 9 6"></polyline>',
-                    })
-                  : null,
-              ]),
-            ])
-          ))
-        ])
-      )
+          const liChildren: VNode[] = [
+            h(RouterLink, {
+              to: '/category/' + item.slug,
+              class: 'mega-link',
+              onClick: () => emit('close'),
+            }, () => [
+              h('span', item.label),
+              hasChildren
+                ? h('svg', {
+                    class: 'chevron-right',
+                    xmlns: 'http://www.w3.org/2000/svg',
+                    width: '14',
+                    height: '14',
+                    viewBox: '0 0 24 24',
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    'stroke-width': '2.5',
+                    innerHTML: '<polyline points="9 18 15 12 9 6"></polyline>',
+                  })
+                : null,
+            ]),
+          ]
 
-      // Right: recursive child panel if an item with children is hovered
-      if (activeChild.value && activeChild.value.children) {
-        panelChildren.push(
-          h(CategoryPanel, {
-            items: activeChild.value.children,
-            level: props.level + 1,
-            activeTrail: props.activeTrail,
-            onHoverItem: bubbleHover,
-            onClose: () => emit('close'),
-          })
-        )
-      }
+          // Render child panel INSIDE the hovered li (absolutely positioned)
+          if (isActive && item.children) {
+            liChildren.push(
+              h(CategoryPanel, {
+                items: item.children,
+                level: props.level + 1,
+                activeTrail: props.activeTrail,
+                onHoverItem: bubbleHover,
+                onClose: () => emit('close'),
+              })
+            )
+          }
 
-      return h('div', { class: 'mega-panels-row' }, panelChildren)
+          return h('li', {
+            key: item.slug,
+            class: { 'is-active': isActive, 'has-submenu': hasChildren },
+            onMouseenter: () => onHover(item.slug),
+          }, liChildren)
+        }))
+      ])
     }
   },
 })
@@ -358,20 +352,30 @@ html[dir="rtl"] .main-nav .mega-dropdown { left: auto; right: 0; }
 
 /* ── Each panel ── */
 .main-nav .mega-panel {
-  min-width: 220px;
+  min-width: 100%;
   max-width: 280px;
-  border-inline-end: 1px solid #e5e7eb;
-  max-height: 480px;
-  overflow-y: auto;
   background: #fff;
-}
-.main-nav .mega-panel:last-child {
-  border-inline-end: none;
 }
 .main-nav .mega-panel ul {
   list-style: none;
   margin: 0;
   padding: 0.375rem 0;
+}
+
+/* Items with submenu get relative positioning for flyout */
+.main-nav .mega-panel li.has-submenu {
+  position: relative;
+}
+
+/* Child mega-panel (nested inside li) — flyout to the right, aligned with hovered item */
+.main-nav .mega-panel li > .mega-panel {
+  position: absolute;
+  top: 0;
+  inset-inline-start: 100%;
+  border-inline-start: 1px solid #e5e7eb;
+  box-shadow: 4px 0 15px rgb(0 0 0 / 0.05);
+  border-radius: 0 0 0.375rem 0;
+  z-index: 10;
 }
 
 .main-nav .mega-link {
