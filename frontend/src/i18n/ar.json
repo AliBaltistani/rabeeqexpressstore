@@ -153,7 +153,10 @@
     "priceFilter": "السعر",
     "reset": "إعادة تعيين",
     "searchPlaceholder": "بحث",
-    "filters": "الفلاتر"
+    "filters": "الفلاتر",
+    "noProducts": "لا توجد منتجات",
+    "tryDifferentFilters": "حاول تغيير الفلاتر.",
+    "clearAll": "مسح الكل"
   },
   "common": {
     "home": "الرئيسية",

@@ -153,7 +153,10 @@
     "priceFilter": "Price",
     "reset": "Reset",
     "searchPlaceholder": "Search",
-    "filters": "Filters"
+    "filters": "Filters",
+    "noProducts": "No products found",
+    "tryDifferentFilters": "Try adjusting your filters.",
+    "clearAll": "Clear All"
   },
   "common": {
     "home": "Home",
