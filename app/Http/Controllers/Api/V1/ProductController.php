@@ -172,6 +172,11 @@ class ProductController extends Controller
             ->withAvg(['reviews' => fn($q) => $q->where('status', 'approved')], 'rating')
             ->having('reviews_avg_rating', '>=', (int) $rating);
         }
+
+        if ($request->boolean('offers')) {
+            $query->whereNotNull('compare_price')
+                  ->whereColumn('compare_price', '>', 'price');
+        }
     }
 
     protected function applySorting(Builder $query, Request $request): void

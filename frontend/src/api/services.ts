@@ -60,6 +60,7 @@ export interface ProductsParams {
   minPrice?: number
   maxPrice?: number
   rating?: number
+  offers?: boolean
   sortBy?: string
   page?: number
   perPage?: number

@@ -42,6 +42,7 @@
                   v-for="cat in filteredCategories"
                   :key="cat.id"
                   class="filter-label"
+                  :class="{ 'filter-label--active': selectedCategory === cat.id }"
                 >
                   <input
                     type="radio"
@@ -71,6 +72,7 @@
                   v-for="brand in filteredBrands"
                   :key="brand.id"
                   class="filter-label"
+                  :class="{ 'filter-label--active': selectedBrand === brand.id }"
                 >
                   <input
                     type="radio"
@@ -97,6 +99,7 @@
                   v-for="r in [5, 4, 3, 2, 1]"
                   :key="r"
                   class="filter-label filter-label--rating"
+                  :class="{ 'filter-label--active': selectedRating === r }"
                 >
                   <input
                     type="radio"
@@ -116,6 +119,7 @@
                       <path d="M29.714 11.839c0 0.321-0.232 0.625-0.464 0.857l-6.482 6.321 1.536 8.929c0.018 0.125 0.018 0.232 0.018 0.357 0 0.464-0.214 0.893-0.732 0.893-0.25 0-0.5-0.089-0.714-0.214l-8.018-4.214-8.018 4.214c-0.232 0.125-0.464 0.214-0.714 0.214-0.518 0-0.75-0.429-0.75-0.893 0-0.125 0.018-0.232 0.036-0.357l1.536-8.929-6.5-6.321c-0.214-0.232-0.446-0.536-0.446-0.857 0-0.536 0.554-0.75 1-0.821l8.964-1.304 4.018-8.125c0.161-0.339 0.464-0.732 0.875-0.732s0.714 0.393 0.875 0.732l4.018 8.125 8.964 1.304c0.429 0.071 1 0.286 1 0.821z"/>
                     </svg>
                   </span>
+                  <span class="rating-label-text">{{ r }}+ {{ $t('category.stars') || 'Stars' }}</span>
                 </label>
               </div>
             </div>
@@ -133,6 +137,7 @@
                   v-for="(range, idx) in priceRanges"
                   :key="idx"
                   class="filter-label"
+                  :class="{ 'filter-label--active': selectedPrice === idx }"
                 >
                   <input
                     type="radio"
@@ -149,14 +154,14 @@
                   <div class="price-range-inputs">
                     <div class="price-range-field">
                       <span class="price-range-currency">SAR</span>
-                      <input type="number" v-model.number="priceFrom" placeholder="from" class="price-range-input" />
+                      <input type="number" v-model.number="priceFrom" placeholder="from" class="price-range-input" @keyup.enter="applyCustomPrice" />
                     </div>
                     <span class="price-range-sep">-</span>
                     <div class="price-range-field">
                       <span class="price-range-currency">SAR</span>
-                      <input type="number" v-model.number="priceTo" placeholder="to" class="price-range-input" />
+                      <input type="number" v-model.number="priceTo" placeholder="to" class="price-range-input" @keyup.enter="applyCustomPrice" />
                     </div>
-                    <button class="price-range-go" aria-label="Apply price">
+                    <button class="price-range-go" aria-label="Apply price" @click="applyCustomPrice">
                       <svg width="18" height="18" viewBox="0 0 32 32"><path d="M29.217 15.465c-0.019-0.044-0.056-0.077-0.080-0.119-0.067-0.116-0.139-0.227-0.236-0.317l-10.667-9.333c-0.553-0.484-1.396-0.429-1.881 0.125-0.484 0.555-0.428 1.396 0.127 1.881l7.996 6.997h-20.452c-0.737 0-1.333 0.597-1.333 1.333s0.596 1.333 1.333 1.333h20.452l-7.996 6.997c-0.555 0.485-0.611 1.327-0.127 1.881 0.264 0.3 0.633 0.455 1.004 0.455 0.312 0 0.625-0.109 0.877-0.331l10.667-9.333c0.097-0.091 0.169-0.201 0.236-0.317 0.024-0.041 0.060-0.075 0.080-0.119 0.073-0.163 0.116-0.343 0.116-0.533s-0.043-0.371-0.116-0.535z" fill="currentColor"/></svg>
                     </button>
                   </div>
@@ -182,7 +187,7 @@
         <div class="main-content">
           <!-- Header Row -->
           <div class="category-header">
-            <h1 class="category-title">{{ categoryTitle }} | Trend Shoes</h1>
+            <h1 class="category-title">{{ categoryTitle }}</h1>
             <div class="category-controls">
               <button
                 class="filter-trigger-btn"
@@ -204,19 +209,77 @@
             </div>
           </div>
 
-          <!-- Product Grid -->
-          <div class="products-grid">
-            <ProductCard
-              v-for="product in visibleProducts"
-              :key="product.id"
-              :product="product"
-            />
+          <!-- Active Filter Chips -->
+          <transition name="chips-fade">
+            <div class="active-filters" v-if="activeFilters.length > 0">
+              <TransitionGroup name="chip" tag="div" class="active-filters__list">
+                <span
+                  v-for="chip in activeFilters"
+                  :key="chip.key"
+                  class="filter-chip"
+                >
+                  <span class="filter-chip__label">{{ chip.label }}</span>
+                  <button class="filter-chip__remove" @click="chip.remove()" aria-label="Remove filter">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </span>
+              </TransitionGroup>
+              <button class="active-filters__clear" @click="resetFilters">
+                {{ $t('category.clearAll') || 'Clear All' }}
+              </button>
+            </div>
+          </transition>
+
+          <!-- Product Grid Wrapper -->
+          <div class="products-grid-wrapper" :class="{ 'products-grid-wrapper--loading': isLoading && allProducts.length > 0 }">
+            <!-- Loading Overlay (shown on filter change when products already exist) -->
+            <transition name="fade">
+              <div v-if="isLoading && allProducts.length > 0" class="products-loading-overlay">
+                <div class="loading-spinner-container">
+                  <div class="loading-spinner"></div>
+                </div>
+              </div>
+            </transition>
+
+            <!-- Skeleton Grid (initial load or empty state while loading) -->
+            <div v-if="isLoading && allProducts.length === 0" class="products-grid">
+              <div v-for="n in 12" :key="'sk-'+n" class="skeleton-card">
+                <div class="skeleton-card__image shimmer"></div>
+                <div class="skeleton-card__body">
+                  <div class="skeleton-card__line skeleton-card__line--title shimmer"></div>
+                  <div class="skeleton-card__line skeleton-card__line--sub shimmer"></div>
+                  <div class="skeleton-card__line skeleton-card__line--price shimmer"></div>
+                  <div class="skeleton-card__line skeleton-card__line--btn shimmer"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actual Product Grid -->
+            <div v-else-if="allProducts.length > 0" class="products-grid">
+              <ProductCard
+                v-for="product in allProducts"
+                :key="product.id"
+                :product="product"
+              />
+            </div>
+
+            <!-- Empty State -->
+            <div v-else-if="!isLoading" class="empty-state">
+              <svg class="empty-state__icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <p class="empty-state__title">{{ $t('category.noProducts') || 'No products found' }}</p>
+              <p class="empty-state__desc">{{ $t('category.tryDifferentFilters') || 'Try adjusting your filters or browse all products.' }}</p>
+              <button class="empty-state__btn" @click="resetFilters">{{ $t('category.reset') }}</button>
+            </div>
           </div>
 
-          <!-- Load More -->
-          <div class="load-more-wrapper" v-if="hasMore">
-            <button class="load-more-btn" @click="loadMore">
-              <span>{{ $t('category.loadMore') }}</span>
+          <!-- Load More / Infinite Scroll Sentinel -->
+          <div v-if="hasMore" class="load-more-wrapper">
+            <div ref="loadMoreSentinel" class="load-more-sentinel"></div>
+            <button class="load-more-btn" :class="{ 'load-more-btn--loading': isLoadingMore }" @click="loadMore" :disabled="isLoadingMore">
+              <span v-if="isLoadingMore" class="load-more-spinner"></span>
+              <span v-else>{{ $t('category.loadMore') }}</span>
             </button>
           </div>
         </div>
@@ -229,7 +292,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
@@ -242,9 +305,13 @@ const props = defineProps<{ isShop?: boolean }>()
 const route = useRoute()
 const { t } = useI18n()
 
+// ─── Offers mode (from ?offers=true query) ───
+const isOffersMode = computed(() => route.query.offers === 'true')
+
 // ─── Category Title (from API or slug fallback) ───
 const categoryData = ref<Category | null>(null)
 const categoryTitle = computed(() => {
+  if (isOffersMode.value) return t('nav.offers') || 'Offers'
   if (props.isShop) return t('header.allProducts') || 'Shop'
   if (categoryData.value) return categoryData.value.name
   const slug = (route.params.slug as string) || 'category'
@@ -300,6 +367,14 @@ const priceRanges = [
   { label: 'more than 2800 SAR', min: 2800, max: Infinity },
 ]
 
+// Apply custom price range (Go button / Enter key)
+function applyCustomPrice() {
+  if (!priceFrom.value && !priceTo.value) return
+  selectedPrice.value = null // deselect any predefined range
+  currentPage.value = 1
+  loadProducts()
+}
+
 // ─── Sort ───
 const sortBy = ref('ourSuggest')
 const sortMap: Record<string, string> = {
@@ -309,6 +384,70 @@ const sortMap: Record<string, string> = {
   priceFromTopToLow: 'price_desc',
   priceFromLowToTop: 'price_asc',
 }
+
+// ─── Active Filter Chips ───
+const activeFilters = computed(() => {
+  const chips: { key: string; label: string; remove: () => void }[] = []
+
+  if (selectedCategory.value) {
+    const cat = categories.value.find(c => c.id === selectedCategory.value)
+    if (cat) {
+      chips.push({
+        key: 'category',
+        label: cat.name,
+        remove: () => { selectedCategory.value = null },
+      })
+    }
+  }
+
+  if (selectedBrand.value) {
+    const brand = brands.value.find(b => b.id === selectedBrand.value)
+    if (brand) {
+      chips.push({
+        key: 'brand',
+        label: brand.name,
+        remove: () => { selectedBrand.value = null },
+      })
+    }
+  }
+
+  if (selectedRating.value) {
+    chips.push({
+      key: 'rating',
+      label: `${selectedRating.value}+ ★`,
+      remove: () => { selectedRating.value = null },
+    })
+  }
+
+  if (selectedPrice.value !== null) {
+    const range = priceRanges[selectedPrice.value]
+    if (range) {
+      chips.push({
+        key: 'price',
+        label: range.label,
+        remove: () => { selectedPrice.value = null },
+      })
+    }
+  } else if (priceFrom.value || priceTo.value) {
+    const from = priceFrom.value || 0
+    const to = priceTo.value ? priceTo.value : '∞'
+    chips.push({
+      key: 'custom-price',
+      label: `${from} - ${to} SAR`,
+      remove: () => { priceFrom.value = undefined; priceTo.value = undefined; currentPage.value = 1; loadProducts() },
+    })
+  }
+
+  if (isOffersMode.value) {
+    chips.push({
+      key: 'offers',
+      label: t('nav.offers') || 'Offers',
+      remove: () => {}, // can't remove route query, just visual
+    })
+  }
+
+  return chips
+})
 
 // ─── Reset ───
 function resetFilters() {
@@ -320,12 +459,14 @@ function resetFilters() {
   priceTo.value = undefined
   categorySearch.value = ''
   brandSearch.value = ''
+  currentPage.value = 1
   loadProducts()
 }
 
 // ─── Product Data (API-driven) ───
 const allProducts = ref<any[]>([])
 const isLoading = ref(false)
+const isLoadingMore = ref(false)
 const currentPage = ref(1)
 const hasMore = ref(false)
 
@@ -336,6 +477,7 @@ function mapProduct(p: Product) {
     name: p.name,
     subtitle: p.category?.name || undefined,
     image: p.primaryImage || '',
+    primaryImage: p.primaryImage || '',
     price: p.flashSalePrice?.raw ?? p.price?.raw ?? 0,
     oldPrice: p.comparePrice?.raw || undefined,
     discount: p.discountPercent || undefined,
@@ -344,12 +486,17 @@ function mapProduct(p: Product) {
 }
 
 async function loadProducts(append = false) {
-  isLoading.value = true
+  if (append) {
+    isLoadingMore.value = true
+  } else {
+    isLoading.value = true
+  }
+
   try {
-    const categorySlug = props.isShop 
+    const categorySlug = props.isShop
       ? (selectedCategory.value ? categories.value.find(c => c.id === selectedCategory.value)?.slug : undefined)
       : (route.params.slug as string)
-    
+
     const brandSlug = selectedBrand.value
       ? brands.value.find(b => b.id === selectedBrand.value)?.slug
       : undefined
@@ -373,6 +520,7 @@ async function loadProducts(append = false) {
       minPrice,
       maxPrice,
       rating: selectedRating.value || undefined,
+      offers: isOffersMode.value || undefined,
       sortBy: sortMap[sortBy.value] || 'newest',
       page: currentPage.value,
       perPage: 12,
@@ -392,17 +540,39 @@ async function loadProducts(append = false) {
     console.error('Failed to load products:', error)
   } finally {
     isLoading.value = false
+    isLoadingMore.value = false
+    // Re-observe sentinel after loading
+    await nextTick()
+    observeSentinel()
   }
 }
 
-// ─── Pagination ───
-const visibleCount = computed(() => allProducts.value.length)
-const visibleProducts = computed(() => allProducts.value)
+// ─── Pagination & Infinite Scroll ───
 function loadMore() {
-  if (hasMore.value) {
+  if (hasMore.value && !isLoadingMore.value) {
     currentPage.value++
     loadProducts(true)
   }
+}
+
+const loadMoreSentinel = ref<HTMLElement | null>(null)
+let intersectionObserver: IntersectionObserver | null = null
+
+function observeSentinel() {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+  }
+  if (!loadMoreSentinel.value || !hasMore.value) return
+
+  intersectionObserver = new IntersectionObserver(
+    (entries) => {
+      if (entries[0]?.isIntersecting && hasMore.value && !isLoadingMore.value && !isLoading.value) {
+        loadMore()
+      }
+    },
+    { rootMargin: '200px' }
+  )
+  intersectionObserver.observe(loadMoreSentinel.value)
 }
 
 // ─── Watch filters and re-fetch ───
@@ -414,6 +584,11 @@ watch([selectedCategory, selectedBrand, selectedRating, selectedPrice, sortBy], 
 watch(() => route.params.slug, () => {
   currentPage.value = 1
   loadPageData()
+})
+
+watch(() => route.query.offers, () => {
+  currentPage.value = 1
+  loadProducts()
 })
 
 // ─── Load page data ───
@@ -458,7 +633,15 @@ async function loadFilterData() {
   } catch {}
 }
 
-onMounted(loadPageData)
+onMounted(() => {
+  loadPageData()
+})
+
+onBeforeUnmount(() => {
+  if (intersectionObserver) {
+    intersectionObserver.disconnect()
+  }
+})
 
 // ─── Testimonials ───
 const customerReviews = [
@@ -672,10 +855,19 @@ const customerReviews = [
   cursor: pointer;
   font-size: 0.8125rem;
   color: var(--store-text-primary, #111827);
-  transition: color 0.15s;
+  transition: all 0.15s;
+  border-radius: 4px;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
 }
 .filter-label:hover {
   color: var(--color-primary, #858585);
+  background: rgba(133, 133, 133, 0.04);
+}
+.filter-label--active {
+  color: var(--color-primary, #858585);
+  font-weight: 600;
+  background: rgba(133, 133, 133, 0.08);
 }
 .filter-radio {
   accent-color: var(--color-primary, #858585);
@@ -702,6 +894,11 @@ const customerReviews = [
 }
 .rating-star.filled {
   fill: #f59e0b;
+}
+.rating-label-text {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin-left: 0.25rem;
 }
 
 /* Price range */
@@ -764,6 +961,7 @@ const customerReviews = [
 .price-range-go:hover {
   border-color: var(--color-primary, #858585);
   color: var(--color-primary, #858585);
+  background: rgba(133, 133, 133, 0.06);
 }
 
 /* Filters footer */
@@ -869,6 +1067,199 @@ const customerReviews = [
   min-width: 140px;
 }
 
+/* ─── Active Filter Chips ─── */
+.active-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.active-filters__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--store-text-primary, #111827);
+  transition: all 0.2s;
+  animation: chipIn 0.2s ease;
+}
+.filter-chip:hover {
+  border-color: var(--color-primary, #858585);
+  background: rgba(133, 133, 133, 0.08);
+}
+.filter-chip__label {
+  line-height: 1.3;
+}
+.filter-chip__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: #e5e7eb;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  transition: all 0.15s;
+}
+.filter-chip__remove:hover {
+  background: #ef4444;
+  color: #fff;
+}
+.active-filters__clear {
+  font-size: 0.75rem;
+  color: #ef4444;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.active-filters__clear:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+@keyframes chipIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Chip transitions */
+.chip-enter-active { transition: all 0.25s ease; }
+.chip-leave-active { transition: all 0.2s ease; }
+.chip-enter-from { opacity: 0; transform: scale(0.8) translateY(-4px); }
+.chip-leave-to { opacity: 0; transform: scale(0.8) translateY(-4px); }
+.chip-move { transition: transform 0.25s ease; }
+
+.chips-fade-enter-active { transition: all 0.3s ease; }
+.chips-fade-leave-active { transition: all 0.2s ease; }
+.chips-fade-enter-from { opacity: 0; transform: translateY(-8px); }
+.chips-fade-leave-to { opacity: 0; transform: translateY(-8px); }
+
+/* ─── Product Grid Wrapper (loading overlay) ─── */
+.products-grid-wrapper {
+  position: relative;
+  min-height: 200px;
+  transition: opacity 0.3s ease;
+}
+.products-grid-wrapper--loading {
+  pointer-events: none;
+}
+.products-grid-wrapper--loading .products-grid {
+  opacity: 0.35;
+  transition: opacity 0.2s ease;
+}
+.products-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 6rem;
+}
+.loading-spinner-container {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: var(--color-primary, #858585);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Fade transition */
+.fade-enter-active { transition: opacity 0.25s ease; }
+.fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* ─── Skeleton Cards ─── */
+.skeleton-card {
+  background: #fff;
+  border: 2px solid #e5e7eb;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.skeleton-card__image {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #f3f4f6;
+}
+.skeleton-card__body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.skeleton-card__line {
+  border-radius: 4px;
+  background: #f3f4f6;
+}
+.skeleton-card__line--title {
+  height: 14px;
+  width: 80%;
+}
+.skeleton-card__line--sub {
+  height: 10px;
+  width: 50%;
+}
+.skeleton-card__line--price {
+  height: 16px;
+  width: 40%;
+  margin: 0 auto;
+}
+.skeleton-card__line--btn {
+  height: 36px;
+  width: 100%;
+  margin-top: 0.25rem;
+  border-radius: 4px;
+}
+
+/* Shimmer animation */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.5) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.6s infinite;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 /* ─── Product Grid ─── */
 .products-grid {
   display: grid;
@@ -886,11 +1277,58 @@ const customerReviews = [
   }
 }
 
-/* ─── Load More ─── */
+/* ─── Empty State ─── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1rem;
+  text-align: center;
+}
+.empty-state__icon {
+  margin-bottom: 1.25rem;
+  opacity: 0.6;
+}
+.empty-state__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--store-text-primary, #111827);
+  margin: 0 0 0.5rem;
+}
+.empty-state__desc {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin: 0 0 1.5rem;
+  max-width: 28rem;
+  line-height: 1.5;
+}
+.empty-state__btn {
+  padding: 0.5rem 1.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--store-text-primary, #111827);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.empty-state__btn:hover {
+  border-color: var(--color-primary, #858585);
+  color: var(--color-primary, #858585);
+}
+
+/* ─── Load More & Infinite Scroll ─── */
 .load-more-wrapper {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   padding: 2rem 0;
+}
+.load-more-sentinel {
+  height: 1px;
+  width: 100%;
 }
 .load-more-btn {
   padding: 0.625rem 2rem;
@@ -902,10 +1340,32 @@ const customerReviews = [
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 160px;
+  min-height: 44px;
 }
 .load-more-btn:hover {
   opacity: 0.9;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.load-more-btn:disabled {
+  cursor: wait;
+  opacity: 0.8;
+  transform: none;
+}
+.load-more-btn--loading {
+  pointer-events: none;
+}
+.load-more-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }
 </style>
