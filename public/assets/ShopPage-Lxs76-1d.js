@@ -1,0 +1,1 @@
+import{bt as e,kt as t,mt as n}from"./services-CsprKrsa.js";import{t as r}from"./CategoryPage-6n3QN-CD.js";var i=e({__name:`ShopPage`,setup(e){return(e,i)=>(t(),n(r,{"is-shop":!0}))}});export{i as default};
