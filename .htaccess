@@ -8,6 +8,11 @@
     RewriteRule ^composer\.(json|lock)$ - [F,L]
     RewriteRule ^package(-lock)?\.json$ - [F,L]
 
+    # ─── Serve storage files directly (fallback if symlink is unavailable) ───
+    # RewriteCond %{REQUEST_URI} ^/storage/(.*)$
+    # RewriteCond %{DOCUMENT_ROOT}/storage/app/public/%1 -f
+    # RewriteRule ^storage/(.*)$ storage/app/public/$1 [L]
+
     # ─── Redirect all requests to public/ directory ───
     # Only rewrite if the request is NOT already inside public/
     RewriteCond %{REQUEST_URI} !^/public/

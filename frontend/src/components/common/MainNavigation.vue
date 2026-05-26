@@ -18,11 +18,18 @@
           <nav class="main-menu-wrap">
             <ul class="main-menu">
               <!-- Offers -->
+              <!--<li class="root-level">-->
+              <!--  <router-link to="/products?offers=true" class="nav-link offers-link" aria-label="Offers">-->
+              <!--    <span>{{ $t('nav.offers') }}</span>-->
+              <!--  </router-link>-->
+              <!--</li>-->
+              
               <li class="root-level">
                 <router-link to="/products?offers=true" class="nav-link offers-link" aria-label="Offers">
-                  <span>{{ $t('nav.offers') }}</span>
+                  <span>Offer Test</span>
                 </router-link>
               </li>
+              
 
               <!-- Category dropdowns with unlimited multi-level -->
               <li

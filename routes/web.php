@@ -80,6 +80,25 @@ Route::prefix('setup')->group(function () {
     Route::get('status', [SetupController::class, 'status']);
 });
 
+
+/*
+|--------------------------------------------------------------------------
+| Cache Clear Route
+|--------------------------------------------------------------------------
+*/
+Route::get('/clear-cache', function () {
+    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+    \Illuminate\Support\Facades\Artisan::call('view:clear');
+    \Illuminate\Support\Facades\Artisan::call('cache:clear');
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    \Illuminate\Support\Facades\Artisan::call('route:clear');
+    
+    return response()->json([
+        'message' => 'All application caches and compiled views have been cleared successfully!',
+        'tip' => 'If you still do not see the Vue changes on the live server, try doing a Hard Refresh in your browser (Ctrl + F5 or Cmd + Shift + R) to clear browser cache.'
+    ]);
+});
+
 /*
 |--------------------------------------------------------------------------
 | Vue SPA Catch-All Route

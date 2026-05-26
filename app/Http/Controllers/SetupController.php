@@ -278,7 +278,7 @@ class SetupController extends Controller
     }
 
     /**
-     * Create storage symlink.
+     * Create storage symlink (with shared-hosting fallback).
      */
     public function storageLink(Request $request)
     {
@@ -286,19 +286,88 @@ class SetupController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        try {
-            if (file_exists(public_path('storage'))) {
-                return response()->json(['message' => 'Storage link already exists']);
-            }
+        $publicStoragePath = public_path('storage');
+        $storagePath = storage_path('app/public');
+        $results = [];
 
-            Artisan::call('storage:link');
-            return response()->json([
-                'message' => 'Storage link created',
-                'output' => trim(Artisan::output()),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+        // Diagnostic info
+        $results['public_path'] = public_path();
+        $results['storage_target'] = $storagePath;
+        $results['link_path'] = $publicStoragePath;
+        $results['target_exists'] = is_dir($storagePath);
+
+        // Ensure the target directory exists
+        if (!is_dir($storagePath)) {
+            mkdir($storagePath, 0755, true);
+            $results['created_target'] = true;
         }
+
+        // Check if link/dir already exists
+        if (is_link($publicStoragePath)) {
+            $currentTarget = readlink($publicStoragePath);
+            $results['status'] = 'symlink_exists';
+            $results['current_target'] = $currentTarget;
+            $results['target_valid'] = is_dir($publicStoragePath);
+
+            // If it points to wrong place, remove and recreate
+            if (realpath($currentTarget) !== realpath($storagePath)) {
+                unlink($publicStoragePath);
+                $results['removed_bad_link'] = true;
+            } else {
+                return response()->json([
+                    'message' => '✅ Storage symlink already exists and is correct',
+                    'details' => $results,
+                ]);
+            }
+        } elseif (is_dir($publicStoragePath)) {
+            $results['status'] = 'directory_exists_not_symlink';
+            return response()->json([
+                'message' => '⚠️ public/storage exists as a real directory (not a symlink). Remove it first if you want a symlink.',
+                'details' => $results,
+            ]);
+        }
+
+        // Attempt 1: Artisan storage:link
+        try {
+            Artisan::call('storage:link');
+            $output = trim(Artisan::output());
+            if (is_link($publicStoragePath) || is_dir($publicStoragePath)) {
+                return response()->json([
+                    'message' => '✅ Storage link created via artisan',
+                    'output' => $output,
+                    'details' => $results,
+                ]);
+            }
+        } catch (\Exception $e) {
+            $results['artisan_error'] = $e->getMessage();
+        }
+
+        // Attempt 2: PHP symlink() directly
+        try {
+            if (function_exists('symlink')) {
+                @symlink($storagePath, $publicStoragePath);
+                if (is_link($publicStoragePath)) {
+                    return response()->json([
+                        'message' => '✅ Storage link created via PHP symlink()',
+                        'details' => $results,
+                    ]);
+                }
+            }
+            $results['symlink_available'] = function_exists('symlink');
+        } catch (\Exception $e) {
+            $results['symlink_error'] = $e->getMessage();
+        }
+
+        // Attempt 3: Provide manual instructions
+        return response()->json([
+            'message' => '❌ Could not create symlink automatically. Use Hostinger File Manager or SSH.',
+            'manual_instructions' => [
+                'option_1_ssh' => "ln -s {$storagePath} {$publicStoragePath}",
+                'option_2_file_manager' => 'In Hostinger File Manager, navigate to public/ and create a symbolic link named "storage" pointing to ../storage/app/public',
+                'option_3_htaccess' => 'Add a rewrite rule to serve storage files directly (see details)',
+            ],
+            'details' => $results,
+        ], 500);
     }
 
     /**
