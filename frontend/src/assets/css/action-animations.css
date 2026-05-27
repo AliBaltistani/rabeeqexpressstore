@@ -303,12 +303,12 @@ html[dir="rtl"] .cart-toast__progress-bar {
 
 .share-pop-enter-from {
     opacity: 0;
-    transform: translate(-100%, -50%) scale(0.8);
+    transform: translateX(-50%) scale(0.85) translateY(-8px);
 }
 
 .share-pop-leave-to {
     opacity: 0;
-    transform: translate(-100%, -50%) scale(0.9);
+    transform: translateX(-50%) scale(0.9) translateY(-4px);
 }
 
 .share-fade-enter-active {

@@ -44,14 +44,14 @@ const copied = ref(false)
 const menuStyle = computed(() => {
   const rect = anchorRect.value
   if (!rect) return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
-  // Position menu to the left of the button, vertically centered
-  const top = rect.top + rect.height / 2
-  const left = rect.left - 8
+  // Position menu directly below the button, centered horizontally
+  const top = rect.bottom + 8
+  const left = rect.left + rect.width / 2
   return {
     position: 'fixed' as const,
     top: `${top}px`,
     left: `${left}px`,
-    transform: 'translate(-100%, -50%)',
+    transform: 'translateX(-50%)',
   }
 })
 
