@@ -158,14 +158,21 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useQuickView } from '@/composables/useQuickView'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
+import { flyToCart, pulseElement } from '@/composables/useActionAnimations'
+import { useCartToast } from '@/composables/useCartToast'
+import { useShareMenu } from '@/composables/useShareMenu'
 
 const { isOpen, product, close } = useQuickView()
 const cartStore = useCartStore()
 const wishlistStore = useWishlistStore()
+const { showToast } = useCartToast()
+const { openShare } = useShareMenu()
 
 const quantity = ref(1)
 const selectedImage = ref('')
 const addingToCart = ref(false)
+const togglingWishlist = ref(false)
+const qvShareBtnRef = ref<HTMLElement | null>(null)
 const selectedAttributes = reactive<Record<string, string>>({})
 const selectedVariantId = ref<number | null>(null)
 
@@ -236,11 +243,22 @@ function formatPrice(price: any): string {
   return `${Number(price).toFixed(0)} ${cur}`
 }
 
+const isWishlisted = computed(() => product.value ? wishlistStore.isInWishlist(product.value.id) : false)
+
 async function addToCart() {
   if (!product.value?.id || addingToCart.value) return
   addingToCart.value = true
   try {
+    // Fly the quickview image to cart
+    const imgEl = document.querySelector('.product-quickview__img') as HTMLElement | null
+    flyToCart(imgEl)
     await cartStore.addItem(product.value.id, quantity.value, selectedVariantId.value)
+    const p = product.value
+    showToast({
+      name: p.name,
+      image: p.primaryImage || p.image || '/storage/dummy/placeholder.jpg',
+      price: formatPrice(p.price),
+    })
   } catch (e) {
     console.error('Quick view - Add to cart failed:', e)
   } finally {
@@ -248,16 +266,24 @@ async function addToCart() {
   }
 }
 
-function toggleWishlist() {
-  if (product.value?.id) {
-    wishlistStore.toggleItem(product.value.id)
+async function toggleWishlist() {
+  if (!product.value?.id) return
+  togglingWishlist.value = true
+  try {
+    await wishlistStore.toggleItem(product.value.id)
+  } catch (e) {
+    console.error('Toggle wishlist failed:', e)
+  } finally {
+    togglingWishlist.value = false
   }
 }
 
 function shareProduct() {
-  if (navigator.share && product.value) {
-    navigator.share({ title: product.value.name, url: `/product/${product.value.slug}` }).catch(() => {})
-  }
+  if (!product.value) return
+  openShare(
+    { title: product.value.name, url: `${window.location.origin}/product/${product.value.slug}` },
+    qvShareBtnRef.value,
+  )
 }
 
 function incrementQty() {
@@ -666,7 +692,6 @@ function decrementQty() {
   gap: 0.875rem;
   margin-bottom: 1.25rem;
 }
-.quickview__variant-group { }
 .quickview__variant-header {
   display: flex;
   justify-content: space-between;

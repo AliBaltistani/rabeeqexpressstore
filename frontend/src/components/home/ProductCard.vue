@@ -17,8 +17,8 @@
 
     <!-- Action Icons (heart + eye) centered below image -->
     <div class="product-card__icons">
-      <button class="product-card__icon-btn" aria-label="Add to wishlist" @click.prevent="toggleWishlist" :disabled="togglingWishlist">
-        <svg v-if="!togglingWishlist" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <button class="product-card__icon-btn" :class="{ 'product-card__icon-btn--active': isWishlisted }" aria-label="Add to wishlist" @click.prevent="toggleWishlist" :disabled="togglingWishlist">
+        <svg v-if="!togglingWishlist" width="20" height="20" viewBox="0 0 24 24" :fill="isWishlisted ? '#ef4444' : 'none'" :stroke="isWishlisted ? '#ef4444' : 'currentColor'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         <span v-else class="btn-spinner"></span>
       </button>
       <button class="product-card__icon-btn" aria-label="Quick view" @click.prevent="openQuickView" :disabled="openingQuickView">
@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useQuickView } from '@/composables/useQuickView'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
@@ -71,6 +71,8 @@ const productImgRef = ref<HTMLImageElement | null>(null)
 const addingToCart = ref(false)
 const togglingWishlist = ref(false)
 const openingQuickView = ref(false)
+
+const isWishlisted = computed(() => wishlist.isInWishlist(props.product.id))
 
 function openQuickView() {
   openingQuickView.value = true

@@ -210,3 +210,116 @@ html[dir="rtl"] .cart-toast__progress-bar {
     transform: translateY(-20px);
     opacity: 0;
 }
+
+/* ─── Share Menu ─── */
+.share-menu__backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10002;
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.share-menu {
+    position: fixed;
+    z-index: 10003;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.04);
+    padding: 0.375rem;
+    min-width: 44px;
+}
+
+.share-menu__close {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.share-menu__close:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.share-menu__item {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #374151;
+    transition: all 0.2s;
+    text-decoration: none;
+    padding: 0;
+    position: relative;
+}
+
+.share-menu__item:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.share-menu__copied {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    background: #22c55e;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* Share menu transitions */
+.share-pop-enter-active {
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.share-pop-leave-active {
+    transition: all 0.15s ease-in;
+}
+
+.share-pop-enter-from {
+    opacity: 0;
+    transform: translate(-100%, -50%) scale(0.8);
+}
+
+.share-pop-leave-to {
+    opacity: 0;
+    transform: translate(-100%, -50%) scale(0.9);
+}
+
+.share-fade-enter-active {
+    transition: opacity 0.2s ease;
+}
+
+.share-fade-leave-active {
+    transition: opacity 0.15s ease;
+}
+
+.share-fade-enter-from,
+.share-fade-leave-to {
+    opacity: 0;
+}

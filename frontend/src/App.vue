@@ -2,6 +2,7 @@
   <router-view />
   <QuickViewModal />
   <CartToastGlobal />
+  <ShareMenu />
 </template>
 
 <script setup lang="ts">
@@ -12,6 +13,7 @@ import { useCartStore } from '@/stores/cartStore'
 import { useLanguage } from '@/composables/useLanguage'
 import QuickViewModal from '@/components/product/QuickViewModal.vue'
 import CartToastGlobal from '@/components/common/CartToastGlobal.vue'
+import ShareMenu from '@/components/common/ShareMenu.vue'
 
 const settings = useSettingsStore()
 const auth = useAuthStore()

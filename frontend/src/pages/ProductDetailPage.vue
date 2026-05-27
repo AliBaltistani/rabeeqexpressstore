@@ -43,8 +43,8 @@
             <button ref="shareBtnRef" class="pdp-icon-btn" aria-label="Share" @click="handleShare">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             </button>
-            <button ref="wishlistBtnRef" class="pdp-icon-btn" aria-label="Add to wishlist" @click="toggleWishlist" :disabled="togglingWishlist">
-              <svg v-if="!togglingWishlist" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <button ref="wishlistBtnRef" class="pdp-icon-btn" :class="{ 'pdp-icon-btn--active': isWishlisted }" aria-label="Add to wishlist" @click="toggleWishlist" :disabled="togglingWishlist">
+              <svg v-if="!togglingWishlist" width="20" height="20" viewBox="0 0 24 24" :fill="isWishlisted ? '#ef4444' : 'none'" :stroke="isWishlisted ? '#ef4444' : 'currentColor'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               <span v-else class="btn-spinner"></span>
             </button>
           </div>
@@ -264,6 +264,7 @@ import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
 import { flyToCart, pulseElement } from '@/composables/useActionAnimations'
 import { useCartToast } from '@/composables/useCartToast'
+import { useShareMenu } from '@/composables/useShareMenu'
 import type { ProductDetail } from '@/types'
 
 const route = useRoute()
@@ -272,6 +273,7 @@ const { t } = useI18n()
 const cart = useCartStore()
 const wishlist = useWishlistStore()
 const { showToast } = useCartToast()
+const { openShare } = useShareMenu()
 
 // ─── Product Data (API-driven) ───
 const product = ref<any>({
@@ -301,6 +303,8 @@ const togglingWishlist = ref(false)
 const mainImgRef = ref<HTMLImageElement | null>(null)
 const shareBtnRef = ref<HTMLElement | null>(null)
 const wishlistBtnRef = ref<HTMLElement | null>(null)
+
+const isWishlisted = computed(() => wishlist.isInWishlist(product.value.id))
 const activeTab = ref('details')
 
 // Compute variant attribute groups from product.variants
@@ -395,14 +399,10 @@ async function toggleWishlist() {
 }
 
 function handleShare() {
-  const url = window.location.href
-  const title = product.value.name
-  if (navigator.share) {
-    navigator.share({ title, url }).catch(() => {})
-  } else {
-    navigator.clipboard.writeText(url).catch(() => {})
-  }
-  pulseElement(shareBtnRef.value)
+  openShare(
+    { title: product.value.name, url: window.location.href },
+    shareBtnRef.value,
+  )
 }
 
 // ─── Related Products ───
