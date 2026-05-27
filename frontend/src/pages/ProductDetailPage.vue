@@ -20,7 +20,7 @@
           <!-- Main Image -->
           <div class="pdp-gallery__main">
             <span class="pdp-gallery__badge">Unisex shoes</span>
-            <img :src="selectedImage" :alt="product.name" class="pdp-gallery__main-img" />
+            <img ref="mainImgRef" :src="selectedImage" :alt="product.name" class="pdp-gallery__main-img" />
           </div>
           <!-- Thumbnails -->
           <div class="pdp-gallery__thumbs">
@@ -40,11 +40,12 @@
         <div class="pdp-info">
           <!-- Share & Wishlist -->
           <div class="pdp-info__actions-top">
-            <button class="pdp-icon-btn" aria-label="Share">
+            <button ref="shareBtnRef" class="pdp-icon-btn" aria-label="Share" @click="handleShare">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             </button>
-            <button class="pdp-icon-btn" aria-label="Add to wishlist" @click="toggleWishlist">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <button ref="wishlistBtnRef" class="pdp-icon-btn" aria-label="Add to wishlist" @click="toggleWishlist" :disabled="togglingWishlist">
+              <svg v-if="!togglingWishlist" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <span v-else class="btn-spinner"></span>
             </button>
           </div>
 
@@ -134,12 +135,14 @@
 
           <!-- Add to Cart & Buy Now -->
           <div class="pdp-info__buttons">
-            <button class="pdp-btn pdp-btn--cart" @click="addToCart">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            <button class="pdp-btn pdp-btn--cart" @click="addToCart" :disabled="addingToCart">
+              <span v-if="addingToCart" class="btn-spinner"></span>
+              <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
               {{ $t('product.addToCart') }}
             </button>
-            <button class="pdp-btn pdp-btn--buy" @click="buyNow">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            <button class="pdp-btn pdp-btn--buy" @click="buyNow" :disabled="buyingNow">
+              <span v-if="buyingNow" class="btn-spinner"></span>
+              <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
               {{ $t('product.buyNow') }}
             </button>
           </div>
@@ -175,7 +178,7 @@
                 <div class="pdp-rating-summary">
                   <span class="pdp-rating-avg">{{ averageRating }}</span>
                   <div class="pdp-rating-avg-stars">
-                    <svg v-for="s in 5" :key="s" width="16" height="16" viewBox="0 0 24 24" :fill="s <= Math.round(averageRating) ? '#fbbf24' : 'none'" :stroke="s <= Math.round(averageRating) ? '#fbbf24' : '#d1d5db'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <svg v-for="s in 5" :key="s" width="16" height="16" viewBox="0 0 24 24" :fill="s <= Math.round(Number(averageRating)) ? '#fbbf24' : 'none'" :stroke="s <= Math.round(Number(averageRating)) ? '#fbbf24' : '#d1d5db'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   </div>
                   <span class="pdp-rating-count">{{ reviews.length }} {{ $t('product.productRating') }}</span>
                 </div>
@@ -259,6 +262,8 @@ import ProductCard from '@/components/home/ProductCard.vue'
 import { fetchProductBySlug, fetchProducts, fetchProductReviews, submitReview } from '@/api/services'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
+import { flyToCart, pulseElement } from '@/composables/useActionAnimations'
+import { useCartToast } from '@/composables/useCartToast'
 import type { ProductDetail } from '@/types'
 
 const route = useRoute()
@@ -266,6 +271,7 @@ const router = useRouter()
 const { t } = useI18n()
 const cart = useCartStore()
 const wishlist = useWishlistStore()
+const { showToast } = useCartToast()
 
 // ─── Product Data (API-driven) ───
 const product = ref<any>({
@@ -289,6 +295,12 @@ const selectedImage = ref('')
 const selectedAttributes = reactive<Record<string, string>>({})
 const selectedVariantId = ref<number | null>(null)
 const quantity = ref(1)
+const addingToCart = ref(false)
+const buyingNow = ref(false)
+const togglingWishlist = ref(false)
+const mainImgRef = ref<HTMLImageElement | null>(null)
+const shareBtnRef = ref<HTMLElement | null>(null)
+const wishlistBtnRef = ref<HTMLElement | null>(null)
 const activeTab = ref('details')
 
 // Compute variant attribute groups from product.variants
@@ -339,15 +351,58 @@ function incrementQty() {
 function decrementQty() {
   if (quantity.value > 1) quantity.value--
 }
-function addToCart() {
-  cart.addItem(product.value.id, quantity.value, selectedVariantId.value)
+async function addToCart() {
+  addingToCart.value = true
+  try {
+    flyToCart(mainImgRef.value)
+    await cart.addItem(product.value.id, quantity.value, selectedVariantId.value)
+    const p = product.value
+    showToast({
+      name: p.name,
+      image: p.images?.[0] || selectedImage.value || '/storage/dummy/placeholder.jpg',
+      price: p.priceFormatted || `${p.salePrice} ${p.currency}`,
+    })
+  } catch (e) {
+    console.error('Add to cart failed:', e)
+  } finally {
+    addingToCart.value = false
+  }
 }
-function buyNow() {
-  cart.addItem(product.value.id, quantity.value, selectedVariantId.value)
-  router.push('/checkout')
+
+async function buyNow() {
+  buyingNow.value = true
+  try {
+    flyToCart(mainImgRef.value)
+    await cart.addItem(product.value.id, quantity.value, selectedVariantId.value)
+    router.push('/checkout')
+  } catch (e) {
+    console.error('Buy now failed:', e)
+  } finally {
+    buyingNow.value = false
+  }
 }
-function toggleWishlist() {
-  wishlist.toggleItem(product.value.id)
+
+async function toggleWishlist() {
+  togglingWishlist.value = true
+  try {
+    await wishlist.toggleItem(product.value.id)
+    pulseElement(wishlistBtnRef.value)
+  } catch (e) {
+    console.error('Toggle wishlist failed:', e)
+  } finally {
+    togglingWishlist.value = false
+  }
+}
+
+function handleShare() {
+  const url = window.location.href
+  const title = product.value.name
+  if (navigator.share) {
+    navigator.share({ title, url }).catch(() => {})
+  } else {
+    navigator.clipboard.writeText(url).catch(() => {})
+  }
+  pulseElement(shareBtnRef.value)
 }
 
 // ─── Related Products ───
@@ -955,6 +1010,14 @@ watch(() => route.params.slug, (newSlug) => {
 .pdp-btn--buy:hover {
   border-color: var(--color-primary, #858585);
   color: var(--color-primary, #858585);
+}
+.pdp-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+.pdp-icon-btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 /* ─── Details Tabs (Vertical Layout) ─── */

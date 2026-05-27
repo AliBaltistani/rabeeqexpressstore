@@ -1,6 +1,7 @@
 <template>
   <router-view />
   <QuickViewModal />
+  <CartToastGlobal />
 </template>
 
 <script setup lang="ts">
@@ -10,6 +11,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useCartStore } from '@/stores/cartStore'
 import { useLanguage } from '@/composables/useLanguage'
 import QuickViewModal from '@/components/product/QuickViewModal.vue'
+import CartToastGlobal from '@/components/common/CartToastGlobal.vue'
 
 const settings = useSettingsStore()
 const auth = useAuthStore()

@@ -47,46 +47,16 @@
         <span>{{ $t('product.addToCart') }}</span>
       </button>
     </div>
-
-    <!-- Added to Cart Toast -->
-    <Teleport to="body">
-      <transition name="toast-slide">
-        <div v-if="showCartToast" class="cart-toast" :class="toastPositionClass" @click="showCartToast = false">
-          <div class="cart-toast__inner" @click.stop>
-            <button class="cart-toast__close" @click="showCartToast = false" aria-label="Close">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-            <div class="cart-toast__header">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span class="cart-toast__title">{{ $t('cart.addedToCart') }}</span>
-            </div>
-            <div class="cart-toast__progress-track">
-              <div class="cart-toast__progress-bar" :class="{ 'cart-toast__progress-bar--active': toastProgressActive }"></div>
-            </div>
-            <div class="cart-toast__product">
-              <img :src="product.primaryImage || product.image || '/storage/dummy/placeholder.jpg'" :alt="product.name" class="cart-toast__img" />
-              <div class="cart-toast__info">
-                <span class="cart-toast__name">{{ product.name }}</span>
-                <span class="cart-toast__price">{{ formatPrice(product.price) }}</span>
-              </div>
-            </div>
-            <div class="cart-toast__actions">
-              <router-link to="/checkout" class="cart-toast__btn cart-toast__btn--primary" @click="showCartToast = false">{{ $t('cart.submitOrder') }}</router-link>
-              <router-link to="/cart" class="cart-toast__btn cart-toast__btn--secondary" @click="showCartToast = false">{{ $t('cart.viewCart') }}</router-link>
-            </div>
-          </div>
-        </div>
-      </transition>
-    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useQuickView } from '@/composables/useQuickView'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
-import type { Product } from '@/types'
+import { flyToCart, pulseElement } from '@/composables/useActionAnimations'
+import { useCartToast } from '@/composables/useCartToast'
 
 const props = defineProps<{
   product: any
@@ -95,20 +65,12 @@ const props = defineProps<{
 const { open: openQuickView_ } = useQuickView()
 const cart = useCartStore()
 const wishlist = useWishlistStore()
+const { showToast } = useCartToast()
 
 const productImgRef = ref<HTMLImageElement | null>(null)
 const addingToCart = ref(false)
 const togglingWishlist = ref(false)
 const openingQuickView = ref(false)
-const showCartToast = ref(false)
-const toastProgressActive = ref(false)
-let toastTimer: ReturnType<typeof setTimeout> | null = null
-
-// Position toast based on document direction
-const toastPositionClass = computed(() => {
-  const dir = document.documentElement.dir || 'ltr'
-  return dir === 'rtl' ? 'cart-toast--left' : 'cart-toast--right'
-})
 
 function openQuickView() {
   openingQuickView.value = true
@@ -117,7 +79,6 @@ function openQuickView() {
 }
 
 function formatPrice(price: any): string {
-  // Support both API PriceValue objects and raw numbers
   if (price && typeof price === 'object' && price.formatted) {
     return price.formatted
   }
@@ -128,76 +89,18 @@ function formatPrice(price: any): string {
 async function addToCart() {
   addingToCart.value = true
   try {
-    // Fly-to-cart animation
-    flyToCart()
+    flyToCart(productImgRef.value)
     await cart.addItem(props.product.id, 1)
-    // Show toast with progress bar
-    if (toastTimer) clearTimeout(toastTimer)
-    toastProgressActive.value = false
-    showCartToast.value = true
-    // Trigger progress bar animation after next frame
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        toastProgressActive.value = true
-      })
+    showToast({
+      name: props.product.name,
+      image: props.product.primaryImage || props.product.image || '/storage/dummy/placeholder.jpg',
+      price: formatPrice(props.product.price),
     })
-    toastTimer = setTimeout(() => { showCartToast.value = false; toastProgressActive.value = false }, 5000)
   } catch (e) {
     console.error('Add to cart failed:', e)
   } finally {
     addingToCart.value = false
   }
-}
-
-function flyToCart() {
-  const imgEl = productImgRef.value
-  if (!imgEl) return
-  // Find the cart icon in the header — try multiple selectors
-  const cartIcon = (document.querySelector('.action-btn[aria-label="Cart"]') ||
-                    document.querySelector('[aria-label="Cart"]') ||
-                    document.querySelector('.cart-badge')?.parentElement) as HTMLElement
-  if (!cartIcon) return
-
-  const imgRect = imgEl.getBoundingClientRect()
-  const cartRect = cartIcon.getBoundingClientRect()
-
-  // Create flying clone
-  const clone = imgEl.cloneNode(true) as HTMLImageElement
-  clone.style.cssText = `
-    position: fixed;
-    top: ${imgRect.top}px;
-    left: ${imgRect.left}px;
-    width: ${imgRect.width}px;
-    height: ${imgRect.height}px;
-    object-fit: contain;
-    z-index: 10000;
-    pointer-events: none;
-    border-radius: 8px;
-    transition: all 0.65s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  `
-  document.body.appendChild(clone)
-
-  // Force reflow then animate
-  clone.getBoundingClientRect()
-  requestAnimationFrame(() => {
-    clone.style.top = `${cartRect.top + cartRect.height / 2 - 10}px`
-    clone.style.left = `${cartRect.left + cartRect.width / 2 - 10}px`
-    clone.style.width = '20px'
-    clone.style.height = '20px'
-    clone.style.opacity = '0.3'
-    clone.style.transform = 'scale(0.2)'
-  })
-
-  // Bounce effect on cart icon when item arrives
-  setTimeout(() => {
-    clone.remove()
-    cartIcon.style.transition = 'transform 0.3s ease'
-    cartIcon.style.transform = 'scale(1.3)'
-    setTimeout(() => {
-      cartIcon.style.transform = 'scale(1)'
-    }, 300)
-  }, 700)
 }
 
 async function toggleWishlist() {
@@ -418,169 +321,4 @@ async function toggleWishlist() {
 .product-card__add-btn svg {
   flex-shrink: 0;
 }
-
-/* ---- Spinner ---- */
-.btn-spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: btn-spin 0.6s linear infinite;
-  flex-shrink: 0;
-}
-@keyframes btn-spin {
-  to { transform: rotate(360deg); }
-}
-</style>
-
-<!-- Cart Toast (unscoped for Teleport) -->
-<style>
-/* ─── Added to Cart Toast ─── */
-.cart-toast {
-  position: fixed;
-  top: 0;
-  z-index: 10001;
-  padding: 1rem;
-  pointer-events: none;
-}
-.cart-toast--right {
-  right: 0;
-  left: auto;
-}
-.cart-toast--left {
-  left: 0;
-  right: auto;
-}
-.cart-toast__inner {
-  pointer-events: auto;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0,0,0,0.05);
-  padding: 1rem 1.25rem;
-  width: 100%;
-  max-width: 380px;
-  position: relative;
-}
-.cart-toast__close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: none;
-  border: none;
-  color: #9ca3af;
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s;
-}
-.cart-toast__close:hover { color: #111827; }
-.cart-toast__header {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-.cart-toast__title {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #22c55e;
-}
-.cart-toast__progress-track {
-  width: 100%;
-  height: 3px;
-  background: #f3f4f6;
-  border-radius: 2px;
-  margin-bottom: 0.75rem;
-  overflow: hidden;
-}
-.cart-toast__progress-bar {
-  width: 100%;
-  height: 100%;
-  background: var(--color-primary, #858585);
-  border-radius: 2px;
-  transform-origin: left;
-  transition: none;
-}
-.cart-toast__progress-bar--active {
-  transition: transform 5s linear;
-  transform: scaleX(0);
-}
-html[dir="rtl"] .cart-toast__progress-bar {
-  transform-origin: right;
-}
-.cart-toast__product {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.625rem 0;
-  border-top: 1px solid #f3f4f6;
-  border-bottom: 1px solid #f3f4f6;
-}
-.cart-toast__img {
-  width: 48px;
-  height: 48px;
-  object-fit: contain;
-  border-radius: 6px;
-  background: #f9fafb;
-  border: 1px solid #f3f4f6;
-  flex-shrink: 0;
-}
-.cart-toast__info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-  min-width: 0;
-}
-.cart-toast__name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #111827;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.cart-toast__price {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: #ef4444;
-}
-.cart-toast__actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-}
-.cart-toast__btn {
-  flex: 1;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-.cart-toast__btn--primary {
-  background: var(--color-primary, #858585);
-  color: #fff;
-}
-.cart-toast__btn--primary:hover { opacity: 0.9; }
-.cart-toast__btn--secondary {
-  background: #f3f4f6;
-  color: #374151;
-}
-.cart-toast__btn--secondary:hover { background: #e5e7eb; }
-
-/* Toast Animation */
-.toast-slide-enter-active { transition: all 0.35s cubic-bezier(0.22, 0.61, 0.36, 1); }
-.toast-slide-leave-active { transition: all 0.25s ease-in; }
-.toast-slide-enter-from { transform: translateY(-20px); opacity: 0; }
-.toast-slide-leave-to { transform: translateY(-20px); opacity: 0; }
 </style>
