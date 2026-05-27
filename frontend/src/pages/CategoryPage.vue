@@ -450,7 +450,9 @@ function buildParams() {
       ? categories.value.find(c => c.id === selectedCategory.value)?.slug
       : undefined
   } else if (isCategoryRoute.value) {
-    categorySlug = route.params.slug as string
+    categorySlug = selectedCategory.value
+      ? categories.value.find(c => c.id === selectedCategory.value)?.slug
+      : (route.params.slug as string)
   } else {
     categorySlug = selectedCategory.value
       ? categories.value.find(c => c.id === selectedCategory.value)?.slug
