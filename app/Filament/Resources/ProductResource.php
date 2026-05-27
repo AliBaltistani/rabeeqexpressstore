@@ -279,41 +279,44 @@ class ProductResource extends Resource
                                     ]),
 
                                 // Product Attributes (dynamic from category)
-                                Schemas\Components\Section::make('Product Attributes')
-                                    ->schema([
-                                        Forms\Components\Select::make('attributeValues')
-                                            ->label('Attribute Values')
-                                            ->relationship('attributeValues', 'value')
-                                            ->getOptionLabelFromRecordUsing(function (ProductAttributeValue $record) {
-                                                $attrName = $record->attribute?->getTranslation('name', 'en') ?? '';
-                                                $valName = $record->getTranslation('value', 'en');
-                                                return "{$attrName}: {$valName}";
-                                            })
-                                            ->options(function (Schemas\Components\Utilities\Get $get) {
-                                                $categoryId = $get('category_id');
-                                                if (!$categoryId) return [];
+                                Schemas\Components\Section::make(__('admin.product.attributes'))
+                                    ->description(__('admin.product.attributes_help'))
+                                    ->schema(function (Schemas\Components\Utilities\Get $get): array {
+                                        $categoryId = $get('category_id');
+                                        if (!$categoryId) return [];
 
-                                                $category = Category::withoutGlobalScope('active')->find($categoryId);
-                                                if (!$category) return [];
+                                        $category = Category::withoutGlobalScope('active')->find($categoryId);
+                                        if (!$category) return [];
 
-                                                $attributeIds = $category->attributes()->pluck('product_attributes.id');
-                                                if ($attributeIds->isEmpty()) return [];
+                                        $attributes = $category->attributes()->with('values')->get();
+                                        if ($attributes->isEmpty()) {
+                                            return [
+                                                Forms\Components\Placeholder::make('no_attributes')
+                                                    ->content(__('admin.product.no_category_attributes')),
+                                            ];
+                                        }
 
-                                                return ProductAttributeValue::whereIn('attribute_id', $attributeIds)
-                                                    ->with('attribute')
-                                                    ->get()
-                                                    ->mapWithKeys(function (ProductAttributeValue $val) {
-                                                        $attrName = $val->attribute?->getTranslation('name', 'en') ?? '';
-                                                        $valName = $val->getTranslation('value', 'en');
-                                                        return [$val->id => "{$attrName}: {$valName}"];
-                                                    })
-                                                    ->toArray();
-                                            })
-                                            ->multiple()
-                                            ->searchable()
-                                            ->preload()
-                                            ->helperText('Select attribute values for this product. Options are based on the selected category\'s attributes.'),
-                                    ])
+                                        $fields = [];
+                                        foreach ($attributes as $attr) {
+                                            $attrNameEn = $attr->getTranslation('name', 'en');
+                                            $attrNameAr = $attr->getTranslation('name', 'ar');
+                                            $label = $attrNameAr ? "{$attrNameEn} / {$attrNameAr}" : $attrNameEn;
+
+                                            $fields[] = Forms\Components\CheckboxList::make("dynamic_attributes.{$attr->id}")
+                                                ->label($label)
+                                                ->options(
+                                                    $attr->values->mapWithKeys(function (ProductAttributeValue $val) {
+                                                        $en = $val->getTranslation('value', 'en');
+                                                        $ar = $val->getTranslation('value', 'ar');
+                                                        return [$val->id => $ar ? "{$en} / {$ar}" : $en];
+                                                    })->toArray()
+                                                )
+                                                ->columns(3)
+                                                ->bulkToggleable();
+                                        }
+
+                                        return $fields;
+                                    })
                                     ->visible(fn(Schemas\Components\Utilities\Get $get): bool => (bool) $get('category_id')),
 
                                 // SEO

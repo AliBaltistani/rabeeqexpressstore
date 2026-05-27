@@ -21,7 +21,22 @@ class CreateProduct extends CreateRecord
             }
         }
 
+        // Remove dynamic_attributes from data (it's not a DB column)
+        unset($data['dynamic_attributes']);
+
         return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        $this->syncDynamicAttributes();
+    }
+
+    protected function syncDynamicAttributes(): void
+    {
+        $dynamicAttributes = $this->form->getState()['dynamic_attributes'] ?? [];
+        $valueIds = collect($dynamicAttributes)->flatten()->filter()->map(fn($v) => (int) $v)->unique()->values()->all();
+        $this->record->attributeValues()->sync($valueIds);
     }
 
     protected function getRedirectUrl(): string
@@ -29,3 +44,4 @@ class CreateProduct extends CreateRecord
         return $this->getResource()::getUrl('index');
     }
 }
+

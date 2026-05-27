@@ -32,6 +32,14 @@ class EditProduct extends EditRecord
             ];
         }
 
+        // Populate dynamic_attributes from pivot
+        $selectedValues = $record->attributeValues()->with('attribute')->get();
+        $grouped = [];
+        foreach ($selectedValues as $val) {
+            $grouped[$val->attribute_id][] = (string) $val->id;
+        }
+        $data['dynamic_attributes'] = $grouped;
+
         return $data;
     }
 
@@ -43,7 +51,22 @@ class EditProduct extends EditRecord
             }
         }
 
+        // Remove dynamic_attributes from data (it's not a DB column)
+        unset($data['dynamic_attributes']);
+
         return $data;
+    }
+
+    protected function afterSave(): void
+    {
+        $this->syncDynamicAttributes();
+    }
+
+    protected function syncDynamicAttributes(): void
+    {
+        $dynamicAttributes = $this->form->getState()['dynamic_attributes'] ?? [];
+        $valueIds = collect($dynamicAttributes)->flatten()->filter()->map(fn($v) => (int) $v)->unique()->values()->all();
+        $this->record->attributeValues()->sync($valueIds);
     }
 
     protected function getRedirectUrl(): string
@@ -51,3 +74,4 @@ class EditProduct extends EditRecord
         return $this->getResource()::getUrl('index');
     }
 }
+
