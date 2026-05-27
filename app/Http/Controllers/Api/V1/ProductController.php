@@ -46,7 +46,7 @@ class ProductController extends Controller
             ->with([
                 'category.attributes.values',
                 'brand', 'images',
-                'variants.attributeValues.attribute',
+                'attributeValues.attribute',
                 'tags', 'reviews' => fn($q) => $q->where('status', 'approved'),
                 'flashSales',
             ])

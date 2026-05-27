@@ -24,13 +24,13 @@ class ProductAttributeValue extends Model
         return $this->belongsTo(ProductAttribute::class, 'attribute_id');
     }
 
-    public function variants(): BelongsToMany
+    public function products(): BelongsToMany
     {
         return $this->belongsToMany(
-            ProductVariant::class,
-            'product_variant_attribute_values',
+            Product::class,
+            'product_attribute_value_product',
             'attribute_value_id',
-            'variant_id'
+            'product_id'
         );
     }
 }

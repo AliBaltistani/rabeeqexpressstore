@@ -12,6 +12,7 @@ export interface QuickViewProduct {
   oldPrice?: number
   discount?: number
   currency?: string
+  attributes?: Array<{ id: number; name: string; values: Array<{ id: number; value: string }> }>
 }
 
 const isOpen = ref(false)

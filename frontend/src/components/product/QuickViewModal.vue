@@ -113,17 +113,13 @@
                   <router-link :to="'/product/' + product.slug" class="link--primary" @click="close">More details</router-link>
                 </div>
 
-                <!-- Variant Selectors -->
-                <div v-if="variantGroups.length > 0" class="quickview__variants">
-                  <div v-for="group in variantGroups" :key="group.name" class="quickview__variant-group">
-                    <div class="quickview__variant-header">
-                      <span class="quickview__variant-label">{{ group.name }} <span class="quickview__variant-req">*</span></span>
-                      <span class="quickview__variant-sublabel">Choose</span>
+                <!-- Product Attributes -->
+                <div v-if="productAttributes.length > 0" class="quickview__attributes">
+                  <div v-for="group in productAttributes" :key="group.id" class="quickview__attr-group">
+                    <span class="quickview__attr-label">{{ group.name }}</span>
+                    <div class="quickview__attr-values">
+                      <span v-for="val in group.values" :key="val.id" class="quickview__attr-chip">{{ val.value }}</span>
                     </div>
-                    <select v-model="selectedAttributes[group.name]" class="quickview__variant-select" @change="onVariantChange">
-                      <option value="" disabled>Choose</option>
-                      <option v-for="opt in group.options" :key="opt" :value="opt">{{ opt }}</option>
-                    </select>
                   </div>
                 </div>
 
@@ -155,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useQuickView } from '@/composables/useQuickView'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
@@ -174,8 +170,6 @@ const selectedImage = ref('')
 const addingToCart = ref(false)
 const togglingWishlist = ref(false)
 const qvShareBtnRef = ref<HTMLElement | null>(null)
-const selectedAttributes = reactive<Record<string, string>>({})
-const selectedVariantId = ref<number | null>(null)
 
 // Build images list from product data
 const productImages = computed(() => {
@@ -188,38 +182,11 @@ const productImages = computed(() => {
   return fallback ? [{ id: 0, url: fallback, alt: product.value.name, isPrimary: true }] : []
 })
 
-// Build variant attribute groups from product.variants
-const variantGroups = computed(() => {
-  if (!product.value?.variants?.length) return []
-  const groups: Record<string, Set<string>> = {}
-  for (const v of product.value.variants) {
-    if (v.attributes && typeof v.attributes === 'object') {
-      for (const [key, val] of Object.entries(v.attributes)) {
-        if (!groups[key]) groups[key] = new Set()
-        groups[key].add(String(val))
-      }
-    } else {
-      // Fallback: use variant name as a single group
-      const label = 'Option'
-      if (!groups[label]) groups[label] = new Set()
-      groups[label].add(v.name || v.sku || `Variant ${v.id}`)
-    }
-  }
-  return Object.entries(groups).map(([name, opts]) => ({ name, options: Array.from(opts) }))
+// Build attribute groups from product data
+const productAttributes = computed(() => {
+  if (!product.value?.attributes?.length) return []
+  return product.value.attributes
 })
-
-function onVariantChange() {
-  if (!product.value?.variants?.length) return
-  // Find the variant that matches all selected attributes
-  const match = product.value.variants.find((v: any) => {
-    if (v.attributes && typeof v.attributes === 'object') {
-      return Object.entries(selectedAttributes).every(([k, val]) => String(v.attributes[k]) === val)
-    }
-    // Fallback for simple variants
-    return (v.name || v.sku) === selectedAttributes['Option']
-  })
-  selectedVariantId.value = match?.id || null
-}
 
 // Auto-select the primary image when product changes
 watch(() => product.value, (p) => {
@@ -228,12 +195,6 @@ watch(() => product.value, (p) => {
   const primary = imgs.find(img => img.isPrimary) || imgs[0]
   selectedImage.value = primary?.url || p.primaryImage || p.image || ''
   quantity.value = 1
-  selectedVariantId.value = null
-  // Reset selected attributes
-  Object.keys(selectedAttributes).forEach(k => delete selectedAttributes[k])
-  for (const g of variantGroups.value) {
-    selectedAttributes[g.name] = ''
-  }
 }, { immediate: true })
 
 function formatPrice(price: any): string {
@@ -253,7 +214,7 @@ async function addToCart() {
     // Fly the quickview image to cart
     const imgEl = document.querySelector('.product-quickview__img') as HTMLElement | null
     flyToCart(imgEl)
-    await cartStore.addItem(product.value.id, quantity.value, selectedVariantId.value)
+    await cartStore.addItem(product.value.id, quantity.value)
     const p = product.value
     showToast({
       name: p.name,
@@ -686,46 +647,41 @@ function decrementQty() {
   opacity: 0.8;
 }
 
-/* Variant Selectors */
-.quickview__variants {
+/* Attribute Chips */
+.quickview__attributes {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
   margin-bottom: 1.25rem;
 }
-.quickview__variant-header {
+.quickview__attr-group {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.375rem;
+  flex-direction: column;
+  gap: 0.375rem;
 }
-.quickview__variant-label {
+.quickview__attr-label {
   font-size: 0.875rem;
   font-weight: 700;
   color: #111827;
 }
-.quickview__variant-req {
-  color: #ef4444;
+.quickview__attr-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
 }
-.quickview__variant-sublabel {
+.quickview__attr-chip {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
   font-size: 0.8125rem;
-  color: #6b7280;
-}
-.quickview__variant-select {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
+  color: #374151;
+  background: #f3f4f6;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: #111827;
-  background: #fff;
-  outline: none;
-  cursor: pointer;
-  appearance: auto;
-  transition: border-color 0.2s;
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: all 0.2s;
 }
-.quickview__variant-select:focus {
-  border-color: var(--color-primary, #858585);
+.quickview__attr-chip:hover {
+  background: #e5e7eb;
 }
 
 /* Spinner */

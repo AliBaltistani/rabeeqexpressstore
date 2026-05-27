@@ -153,7 +153,7 @@ export interface ProductDetail extends Product {
   trackStock: boolean
   allowBackorders: boolean
   images: ProductImage[]
-  variants: ProductVariant[]
+  attributes?: ProductAttributeGroup[]
   tags: ProductTag[]
   reviews: ReviewSummary
   seo: {
@@ -171,14 +171,15 @@ export interface ProductImage {
   sortOrder: number
 }
 
-export interface ProductVariant {
+export interface ProductAttributeGroup {
   id: number
-  sku: string
   name: string
-  price: PriceValue
-  stockQuantity: number
-  inStock: boolean
-  attributes: Record<string, string>
+  values: ProductAttributeGroupValue[]
+}
+
+export interface ProductAttributeGroupValue {
+  id: number
+  value: string
 }
 
 export interface ProductTag {

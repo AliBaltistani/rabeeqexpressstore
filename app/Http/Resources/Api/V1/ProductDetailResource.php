@@ -29,31 +29,21 @@ class ProductDetailResource extends ProductResource
                 'isPrimary' => (bool) ($img->is_primary ?? false),
                 'sortOrder' => $img->sort_order ?? 0,
             ])->sortBy('sortOrder')->values()),
-            'variants' => $this->whenLoaded('variants', fn() => $this->variants->map(function ($variant) use ($currency, $defaultCode, $symbol, $locale) {
-                $variantPrice = (float) $variant->price;
-                if ($currency !== $defaultCode) {
-                    try { $variantPrice = Currency::convert($variantPrice, $defaultCode, $currency); } catch (\Throwable) {}
-                }
-                return [
-                    'id' => $variant->id,
-                    'sku' => $variant->sku,
-                    'name' => $variant->name,
-                    'price' => [
-                        'raw' => round($variantPrice, 2),
-                        'formatted' => $symbol . ' ' . number_format($variantPrice, 2),
-                    ],
-                    'stockQuantity' => $variant->stock_quantity,
-                    'inStock' => $variant->stock_quantity > 0,
-                    'attributes' => $variant->relationLoaded('attributeValues')
-                        ? $variant->attributeValues->map(fn($av) => [
-                            'attributeId' => $av->attribute_id,
-                            'attributeName' => $av->attribute?->getTranslation('name', $locale) ?? '',
-                            'valueId' => $av->id,
-                            'value' => $av->getTranslation('value', $locale),
-                        ])->values()
-                        : [],
-                ];
-            })),
+            'attributes' => $this->whenLoaded('attributeValues', function () use ($locale) {
+                return $this->attributeValues
+                    ->groupBy(fn($av) => $av->attribute_id)
+                    ->map(function ($values) use ($locale) {
+                        $attr = $values->first()->attribute;
+                        return [
+                            'id' => $attr?->id,
+                            'name' => $attr?->getTranslation('name', $locale) ?? '',
+                            'values' => $values->map(fn($v) => [
+                                'id' => $v->id,
+                                'value' => $v->getTranslation('value', $locale),
+                            ])->values(),
+                        ];
+                    })->values();
+            }),
             'categoryAttributes' => $this->whenLoaded('category', function () use ($locale) {
                 if (!$this->category || !$this->category->relationLoaded('attributes')) {
                     return [];

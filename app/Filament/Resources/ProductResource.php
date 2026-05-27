@@ -6,6 +6,8 @@ use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductAttribute;
+use App\Models\ProductAttributeValue;
 use App\Models\Setting;
 use App\Models\Tag;
 use BackedEnum;
@@ -97,7 +99,8 @@ class ProductResource extends Resource
                                                     ->label('Category')
                                                     ->options(fn() => Category::getHierarchicalOptions())
                                                     ->searchable()
-                                                    ->required(),
+                                                    ->required()
+                                                    ->live(),
 
                                                 Forms\Components\Select::make('brand_id')
                                                     ->label('Brand')
@@ -107,14 +110,6 @@ class ProductResource extends Resource
                                                     ->placeholder('No brand'),
                                             ]),
 
-                                        Forms\Components\Select::make('product_type')
-                                            ->options([
-                                                'simple' => 'Simple Product',
-                                                'variable' => 'Variable Product',
-                                            ])
-                                            ->default('simple')
-                                            ->required()
-                                            ->live(),
                                     ]),
 
                                 // Description
@@ -283,62 +278,43 @@ class ProductResource extends Resource
                                             ->helperText('Max 2MB each. Accepted: JPG, PNG, WebP, GIF'),
                                     ]),
 
-                                // Variants (only for variable products)
-                                Schemas\Components\Section::make('Product Variants')
+                                // Product Attributes (dynamic from category)
+                                Schemas\Components\Section::make('Product Attributes')
                                     ->schema([
-                                        Forms\Components\Repeater::make('variants')
-                                            ->relationship()
-                                            ->schema([
-                                                Forms\Components\TextInput::make('sku')
-                                                    ->label('Variant SKU')
-                                                    ->required()
-                                                    ->maxLength(100),
+                                        Forms\Components\Select::make('attributeValues')
+                                            ->label('Attribute Values')
+                                            ->relationship('attributeValues', 'value')
+                                            ->getOptionLabelFromRecordUsing(function (ProductAttributeValue $record) {
+                                                $attrName = $record->attribute?->getTranslation('name', 'en') ?? '';
+                                                $valName = $record->getTranslation('value', 'en');
+                                                return "{$attrName}: {$valName}";
+                                            })
+                                            ->options(function (Schemas\Components\Utilities\Get $get) {
+                                                $categoryId = $get('category_id');
+                                                if (!$categoryId) return [];
 
-                                                Forms\Components\TextInput::make('price')
-                                                    ->label('Price')
-                                                    ->numeric()
-                                                    ->required()
-                                                    ->prefix(currency_symbol())
-                                                    ->minValue(0)
-                                                    ->step(0.01),
+                                                $category = Category::withoutGlobalScope('active')->find($categoryId);
+                                                if (!$category) return [];
 
-                                                Forms\Components\TextInput::make('compare_price')
-                                                    ->label('Compare Price')
-                                                    ->numeric()
-                                                    ->prefix(currency_symbol())
-                                                    ->minValue(0)
-                                                    ->step(0.01),
+                                                $attributeIds = $category->attributes()->pluck('product_attributes.id');
+                                                if ($attributeIds->isEmpty()) return [];
 
-                                                Forms\Components\TextInput::make('stock_quantity')
-                                                    ->label('Stock')
-                                                    ->numeric()
-                                                    ->default(0)
-                                                    ->minValue(0),
-
-                                                Forms\Components\Toggle::make('is_active')
-                                                    ->label('Active')
-                                                    ->default(true),
-
-                                                Forms\Components\Select::make('attributeValues')
-                                                    ->label('Attribute Values')
-                                                    ->relationship('attributeValues', 'value')
-                                                    ->getOptionLabelFromRecordUsing(function (\App\Models\ProductAttributeValue $record) {
-                                                        $attrName = $record->attribute?->getTranslation('name', 'en') ?? '';
-                                                        $valName = $record->getTranslation('value', 'en');
-                                                        return "{$attrName}: {$valName}";
+                                                return ProductAttributeValue::whereIn('attribute_id', $attributeIds)
+                                                    ->with('attribute')
+                                                    ->get()
+                                                    ->mapWithKeys(function (ProductAttributeValue $val) {
+                                                        $attrName = $val->attribute?->getTranslation('name', 'en') ?? '';
+                                                        $valName = $val->getTranslation('value', 'en');
+                                                        return [$val->id => "{$attrName}: {$valName}"];
                                                     })
-                                                    ->multiple()
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->helperText('Select attribute values for this variant (e.g., Size: 42, Color: Black)'),
-                                            ])
-                                            ->columns(3)
-                                            ->collapsible()
-                                            ->defaultItems(0)
-                                            ->addActionLabel('Add Variant')
-                                            ->itemLabel(fn (array $state): ?string => $state['sku'] ?? null),
+                                                    ->toArray();
+                                            })
+                                            ->multiple()
+                                            ->searchable()
+                                            ->preload()
+                                            ->helperText('Select attribute values for this product. Options are based on the selected category\'s attributes.'),
                                     ])
-                                    ->visible(fn(Schemas\Components\Utilities\Get $get): bool => $get('product_type') === 'variable'),
+                                    ->visible(fn(Schemas\Components\Utilities\Get $get): bool => (bool) $get('category_id')),
 
                                 // SEO
                                 Schemas\Components\Section::make('SEO')

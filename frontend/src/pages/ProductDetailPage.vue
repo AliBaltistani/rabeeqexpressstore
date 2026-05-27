@@ -86,16 +86,14 @@
             <img src="https://cdn.salla.sa/RvPxw/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png" alt="tamara" class="pdp-info__installment-logo" style="height:24px; width:auto;" />
           </div>
 
-          <!-- Variant Options -->
-          <div v-for="group in variantGroups" :key="group.name" class="pdp-info__option">
-            <div class="pdp-info__option-header">
-              <span class="pdp-info__option-label">{{ group.name }} <span class="pdp-info__required">*</span></span>
-              <span class="pdp-info__option-sublabel">Choose</span>
+          <!-- Product Attributes -->
+          <div v-if="productAttributes.length > 0" class="pdp-info__attributes">
+            <div v-for="group in productAttributes" :key="group.id" class="pdp-info__attr-group">
+              <span class="pdp-info__attr-label">{{ group.name }}</span>
+              <div class="pdp-info__attr-values">
+                <span v-for="val in group.values" :key="val.id" class="pdp-info__attr-chip">{{ val.value }}</span>
+              </div>
             </div>
-            <select v-model="selectedAttributes[group.name]" class="pdp-info__select" @change="onVariantChange">
-              <option value="" disabled>Choose</option>
-              <option v-for="opt in group.options" :key="opt" :value="opt">{{ opt }}</option>
-            </select>
           </div>
 
           <!-- SKU & Weight -->
@@ -255,7 +253,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
@@ -266,6 +264,7 @@ import { flyToCart, pulseElement } from '@/composables/useActionAnimations'
 import { useCartToast } from '@/composables/useCartToast'
 import { useShareMenu } from '@/composables/useShareMenu'
 import type { ProductDetail } from '@/types'
+import type { ProductAttributeGroup } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -287,15 +286,13 @@ const product = ref<any>({
   weight: '',
   soldCount: 0,
   tags: [],
-  variants: [],
+  attributes: [],
   images: [],
   description: '',
 })
 const isLoading = ref(true)
 
 const selectedImage = ref('')
-const selectedAttributes = reactive<Record<string, string>>({})
-const selectedVariantId = ref<number | null>(null)
 const quantity = ref(1)
 const addingToCart = ref(false)
 const buyingNow = ref(false)
@@ -307,42 +304,10 @@ const wishlistBtnRef = ref<HTMLElement | null>(null)
 const isWishlisted = computed(() => wishlist.isInWishlist(product.value.id))
 const activeTab = ref('details')
 
-// Compute variant attribute groups from product.variants
-const variantGroups = computed(() => {
-  const variants = product.value.variants || []
-  if (!variants.length) return []
-  const groups: Record<string, Set<string>> = {}
-  for (const v of variants) {
-    if (v.attributes && typeof v.attributes === 'object') {
-      for (const [key, val] of Object.entries(v.attributes)) {
-        if (!groups[key]) groups[key] = new Set()
-        groups[key].add(String(val))
-      }
-    } else {
-      const label = 'Option'
-      if (!groups[label]) groups[label] = new Set()
-      groups[label].add(v.name || v.sku || `Variant ${v.id}`)
-    }
-  }
-  return Object.entries(groups).map(([name, opts]) => ({ name, options: Array.from(opts) }))
+// Compute attribute groups from product.attributes
+const productAttributes = computed(() => {
+  return product.value.attributes || []
 })
-
-function onVariantChange() {
-  const variants = product.value.variants || []
-  if (!variants.length) return
-  const match = variants.find((v: any) => {
-    if (v.attributes && typeof v.attributes === 'object') {
-      return Object.entries(selectedAttributes).every(([k, val]) => String(v.attributes[k]) === val)
-    }
-    return (v.name || v.sku) === selectedAttributes['Option']
-  })
-  selectedVariantId.value = match?.id || null
-  // Update price if variant has its own price
-  if (match?.price) {
-    product.value.salePrice = match.price.raw ?? match.price
-    product.value.priceFormatted = match.price.formatted ?? `${Number(match.price).toFixed(0)} ${product.value.currency}`
-  }
-}
 
 const tabs = computed(() => [
   { key: 'details', label: t('product.productDetails') },
@@ -359,7 +324,7 @@ async function addToCart() {
   addingToCart.value = true
   try {
     flyToCart(mainImgRef.value)
-    await cart.addItem(product.value.id, quantity.value, selectedVariantId.value)
+    await cart.addItem(product.value.id, quantity.value)
     const p = product.value
     showToast({
       name: p.name,
@@ -377,7 +342,7 @@ async function buyNow() {
   buyingNow.value = true
   try {
     flyToCart(mainImgRef.value)
-    await cart.addItem(product.value.id, quantity.value, selectedVariantId.value)
+    await cart.addItem(product.value.id, quantity.value)
     router.push('/checkout')
   } catch (e) {
     console.error('Buy now failed:', e)
@@ -504,7 +469,6 @@ async function loadProduct(slug: string) {
 
     // Map API response to component shape
     const images = (data.images || []).map((img: any) => img.url).filter(Boolean)
-    const variants = data.variants || []
 
     product.value = {
       id: data.id,
@@ -517,7 +481,7 @@ async function loadProduct(slug: string) {
       weight: data.weight || '',
       soldCount: data.reviewCount || 0,
       tags: (data.tags || []).map((t: any) => typeof t === 'string' ? t : t.name),
-      variants,
+      attributes: data.attributes || [],
       images: images.length ? images : [data.primaryImage].filter(Boolean),
       description: data.description || data.shortDescription || '',
       priceFormatted: data.flashSalePrice?.formatted ?? data.price?.formatted ?? '',
@@ -579,8 +543,6 @@ watch(() => route.params.slug, (newSlug) => {
   if (newSlug && typeof newSlug === 'string') {
     loadProduct(newSlug)
     quantity.value = 1
-    selectedVariantId.value = null
-    Object.keys(selectedAttributes).forEach(k => delete selectedAttributes[k])
   }
 })
 </script>
@@ -1406,5 +1368,42 @@ html[dir="rtl"] .pdp-tab.active {
     flex: 0 0 calc(20% - 0.8rem);
     min-width: 200px;
   }
+}
+
+/* ─── Product Attributes ─── */
+.pdp-info__attributes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.pdp-info__attr-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.pdp-info__attr-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--store-text-primary, #111827);
+}
+.pdp-info__attr-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.pdp-info__attr-chip {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #374151;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.pdp-info__attr-chip:hover {
+  background: #e5e7eb;
 }
 </style>

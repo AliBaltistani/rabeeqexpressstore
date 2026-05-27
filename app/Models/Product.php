@@ -86,19 +86,19 @@ class Product extends Model
         return $this->hasMany(ProductImage::class);
     }
 
-    public function variants(): HasMany
-    {
-        return $this->hasMany(ProductVariant::class);
-    }
-
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'product_tags');
     }
 
-    public function attributes(): BelongsToMany
+    public function attributeValues(): BelongsToMany
     {
-        return $this->belongsToMany(ProductAttribute::class, 'product_attributes');
+        return $this->belongsToMany(
+            ProductAttributeValue::class,
+            'product_attribute_value_product',
+            'product_id',
+            'attribute_value_id'
+        );
     }
 
     public function reviews(): HasMany
