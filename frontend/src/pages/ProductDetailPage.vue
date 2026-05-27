@@ -89,10 +89,16 @@
           <!-- Product Attributes -->
           <div v-if="productAttributes.length > 0" class="pdp-info__attributes">
             <div v-for="group in productAttributes" :key="group.id" class="pdp-info__attr-group">
-              <span class="pdp-info__attr-label">{{ group.name }}</span>
-              <div class="pdp-info__attr-values">
-                <span v-for="val in group.values" :key="val.id" class="pdp-info__attr-chip">{{ val.value }}</span>
+              <div class="pdp-info__attr-header">
+                <span class="pdp-info__attr-label">{{ group.name }} <span class="pdp-info__attr-req">*</span></span>
               </div>
+              <select
+                v-model="selectedAttributes[group.id]"
+                class="pdp-info__attr-select"
+              >
+                <option value="" disabled>{{ $t('product.chooseOption') || 'Choose' }}</option>
+                <option v-for="val in group.values" :key="val.id" :value="val.id">{{ val.value }}</option>
+              </select>
             </div>
           </div>
 
@@ -253,7 +259,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
@@ -293,6 +299,7 @@ const product = ref<any>({
 const isLoading = ref(true)
 
 const selectedImage = ref('')
+const selectedAttributes = reactive<Record<number, number | string>>({})
 const quantity = ref(1)
 const addingToCart = ref(false)
 const buyingNow = ref(false)
@@ -308,6 +315,18 @@ const activeTab = ref('details')
 const productAttributes = computed(() => {
   return product.value.attributes || []
 })
+
+// Initialize selectedAttributes when product changes
+function initSelectedAttributes() {
+  // Clear previous selections
+  Object.keys(selectedAttributes).forEach(k => delete selectedAttributes[Number(k)])
+  // Set default selection to first value of each attribute group
+  for (const group of productAttributes.value) {
+    if (group.values?.length) {
+      selectedAttributes[group.id] = group.values[0].id
+    }
+  }
+}
 
 const tabs = computed(() => [
   { key: 'details', label: t('product.productDetails') },
@@ -490,6 +509,8 @@ async function loadProduct(slug: string) {
       category: data.category,
       brand: data.brand,
     }
+
+    initSelectedAttributes()
 
     const primaryObj = (data.images || []).find((img: any) => img.isPrimary);
     selectedImage.value = primaryObj ? primaryObj.url : (product.value.images[0] || product.value.primaryImage || '');
@@ -1374,36 +1395,41 @@ html[dir="rtl"] .pdp-tab.active {
 .pdp-info__attributes {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.875rem;
+  margin-bottom: 1.25rem;
 }
 .pdp-info__attr-group {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
 }
+.pdp-info__attr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 .pdp-info__attr-label {
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--store-text-primary, #111827);
 }
-.pdp-info__attr-values {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
+.pdp-info__attr-req {
+  color: #ef4444;
 }
-.pdp-info__attr-chip {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.8125rem;
-  color: #374151;
-  background: #f3f4f6;
+.pdp-info__attr-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
   border: 1px solid #e5e7eb;
-  border-radius: 9999px;
-  font-weight: 500;
-  transition: all 0.2s;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--store-text-primary, #111827);
+  background: var(--bg-primary, #fff);
+  outline: none;
+  cursor: pointer;
+  appearance: auto;
+  transition: border-color 0.2s;
 }
-.pdp-info__attr-chip:hover {
-  background: #e5e7eb;
+.pdp-info__attr-select:focus {
+  border-color: var(--color-primary, #858585);
 }
 </style>

@@ -60,6 +60,15 @@
                 </button>
               </div>
 
+              <!-- Product Attributes -->
+              <div v-if="item.attributes && item.attributes.length > 0" class="cart-item__options-row">
+                <div v-for="attr in item.attributes" :key="attr.id" class="cart-item__option">
+                  <span class="cart-item__option-label">{{ attr.name }} <span class="required">*</span></span>
+                  <select class="cart-item__option-select" disabled>
+                    <option v-for="val in attr.values" :key="val.id" :value="val.id" selected>{{ val.value }}</option>
+                  </select>
+                </div>
+              </div>
 
             </div>
           </div>

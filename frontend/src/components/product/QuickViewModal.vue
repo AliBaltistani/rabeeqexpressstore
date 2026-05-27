@@ -116,10 +116,16 @@
                 <!-- Product Attributes -->
                 <div v-if="productAttributes.length > 0" class="quickview__attributes">
                   <div v-for="group in productAttributes" :key="group.id" class="quickview__attr-group">
-                    <span class="quickview__attr-label">{{ group.name }}</span>
-                    <div class="quickview__attr-values">
-                      <span v-for="val in group.values" :key="val.id" class="quickview__attr-chip">{{ val.value }}</span>
+                    <div class="quickview__attr-header">
+                      <span class="quickview__attr-label">{{ group.name }} <span class="quickview__attr-req">*</span></span>
                     </div>
+                    <select
+                      v-model="selectedAttributes[group.id]"
+                      class="quickview__attr-select"
+                    >
+                      <option value="" disabled>Choose</option>
+                      <option v-for="val in group.values" :key="val.id" :value="val.id">{{ val.value }}</option>
+                    </select>
                   </div>
                 </div>
 
@@ -151,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { useQuickView } from '@/composables/useQuickView'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
@@ -170,6 +176,7 @@ const selectedImage = ref('')
 const addingToCart = ref(false)
 const togglingWishlist = ref(false)
 const qvShareBtnRef = ref<HTMLElement | null>(null)
+const selectedAttributes = reactive<Record<number, number | string>>({})
 
 // Build images list from product data
 const productImages = computed(() => {
@@ -188,13 +195,20 @@ const productAttributes = computed(() => {
   return product.value.attributes
 })
 
-// Auto-select the primary image when product changes
+// Auto-select the primary image and init attributes when product changes
 watch(() => product.value, (p) => {
   if (!p) return
   const imgs = productImages.value
   const primary = imgs.find(img => img.isPrimary) || imgs[0]
   selectedImage.value = primary?.url || p.primaryImage || p.image || ''
   quantity.value = 1
+  // Init attribute selections
+  Object.keys(selectedAttributes).forEach(k => delete selectedAttributes[Number(k)])
+  for (const group of productAttributes.value) {
+    if (group.values?.length) {
+      selectedAttributes[group.id] = group.values[0].id
+    }
+  }
 }, { immediate: true })
 
 function formatPrice(price: any): string {
@@ -647,7 +661,7 @@ function decrementQty() {
   opacity: 0.8;
 }
 
-/* Attribute Chips */
+/* Attribute Select Boxes */
 .quickview__attributes {
   display: flex;
   flex-direction: column;
@@ -659,29 +673,34 @@ function decrementQty() {
   flex-direction: column;
   gap: 0.375rem;
 }
+.quickview__attr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 .quickview__attr-label {
   font-size: 0.875rem;
   font-weight: 700;
   color: #111827;
 }
-.quickview__attr-values {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
+.quickview__attr-req {
+  color: #ef4444;
 }
-.quickview__attr-chip {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.8125rem;
-  color: #374151;
-  background: #f3f4f6;
+.quickview__attr-select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
   border: 1px solid #e5e7eb;
-  border-radius: 9999px;
-  font-weight: 500;
-  transition: all 0.2s;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  cursor: pointer;
+  appearance: auto;
+  transition: border-color 0.2s;
 }
-.quickview__attr-chip:hover {
-  background: #e5e7eb;
+.quickview__attr-select:focus {
+  border-color: var(--color-primary, #858585);
 }
 
 /* Spinner */

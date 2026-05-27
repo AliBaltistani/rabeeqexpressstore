@@ -229,6 +229,7 @@ export interface CartItem {
   unitPrice: PriceValue
   lineTotal: PriceValue
   inStock: boolean
+  attributes?: ProductAttributeGroup[]
 }
 
 // ─── User ───

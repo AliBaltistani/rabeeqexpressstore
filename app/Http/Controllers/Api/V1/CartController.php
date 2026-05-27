@@ -175,7 +175,7 @@ class CartController extends Controller
         $userId = $request->user('sanctum')?->id;
         $sessionId = $userId ? null : $request->session()->getId();
 
-        return CartItem::with(['product' => fn($q) => $q->withoutGlobalScopes(), 'product.images', 'variant'])
+        return CartItem::with(['product' => fn($q) => $q->withoutGlobalScopes(), 'product.images', 'product.attributeValues.attribute', 'variant'])
             ->when($userId, fn($q) => $q->where('user_id', $userId))
             ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
             ->get();

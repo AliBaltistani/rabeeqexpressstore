@@ -32,6 +32,24 @@ class CartResource extends JsonResource
 
             $lineTotal = $price * $item->quantity;
 
+            // Build grouped attributes
+            $attributes = [];
+            if ($product && $product->relationLoaded('attributeValues')) {
+                $grouped = $product->attributeValues->groupBy('attribute_id');
+                foreach ($grouped as $attrId => $values) {
+                    $attr = $values->first()->attribute;
+                    if (!$attr) continue;
+                    $attributes[] = [
+                        'id' => $attr->id,
+                        'name' => $attr->getTranslation('name', $locale),
+                        'values' => $values->map(fn($v) => [
+                            'id' => $v->id,
+                            'value' => $v->getTranslation('value', $locale),
+                        ])->values()->all(),
+                    ];
+                }
+            }
+
             return [
                 'id' => $item->id,
                 'productId' => $item->product_id,
@@ -50,6 +68,7 @@ class CartResource extends JsonResource
                     'formatted' => $symbol . ' ' . number_format($lineTotal, 2),
                 ],
                 'inStock' => !$product?->track_stock || ($product?->stock_quantity ?? 0) > 0,
+                'attributes' => $attributes,
             ];
         });
 
