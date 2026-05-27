@@ -164,6 +164,7 @@ import { useWishlistStore } from '@/stores/wishlistStore'
 import { flyToCart, pulseElement } from '@/composables/useActionAnimations'
 import { useCartToast } from '@/composables/useCartToast'
 import { useShareMenu } from '@/composables/useShareMenu'
+import { fetchProductBySlug } from '@/api/services'
 
 const { isOpen, product, close } = useQuickView()
 const cartStore = useCartStore()
@@ -177,6 +178,8 @@ const addingToCart = ref(false)
 const togglingWishlist = ref(false)
 const qvShareBtnRef = ref<HTMLElement | null>(null)
 const selectedAttributes = reactive<Record<number, number | string>>({})
+const isLoadingDetail = ref(false)
+const fullProduct = ref<any>(null)
 
 // Build images list from product data
 const productImages = computed(() => {
@@ -189,26 +192,50 @@ const productImages = computed(() => {
   return fallback ? [{ id: 0, url: fallback, alt: product.value.name, isPrimary: true }] : []
 })
 
-// Build attribute groups from product data
+// Build attribute groups from full product data (fetched via API)
 const productAttributes = computed(() => {
-  if (!product.value?.attributes?.length) return []
-  return product.value.attributes
+  if (fullProduct.value?.attributes?.length) return fullProduct.value.attributes
+  if (product.value?.attributes?.length) return product.value.attributes
+  return []
 })
 
-// Auto-select the primary image and init attributes when product changes
-watch(() => product.value, (p) => {
+// Auto-select the primary image and fetch full product when product changes
+watch(() => product.value, async (p) => {
   if (!p) return
   const imgs = productImages.value
   const primary = imgs.find(img => img.isPrimary) || imgs[0]
   selectedImage.value = primary?.url || p.primaryImage || p.image || ''
   quantity.value = 1
-  // Init attribute selections
-  Object.keys(selectedAttributes).forEach(k => delete selectedAttributes[Number(k)])
-  for (const group of productAttributes.value) {
-    if (group.values?.length) {
-      selectedAttributes[group.id] = group.values[0].id
+  fullProduct.value = null
+
+  // Fetch full product detail to get attributes
+  if (p.slug) {
+    isLoadingDetail.value = true
+    try {
+      const detail = await fetchProductBySlug(p.slug)
+      fullProduct.value = detail
+      // Build images from fetched detail if available
+      if (detail.images?.length) {
+        const fetchedPrimary = detail.images.find((img: any) => img.isPrimary) || detail.images[0]
+        selectedImage.value = fetchedPrimary?.url || selectedImage.value
+      }
+    } catch (e) {
+      console.error('Failed to fetch product detail for QuickView:', e)
+    } finally {
+      isLoadingDetail.value = false
     }
   }
+
+  // Init attribute selections
+  Object.keys(selectedAttributes).forEach(k => delete selectedAttributes[Number(k)])
+  // Use a short delay to let fullProduct populate
+  setTimeout(() => {
+    for (const group of productAttributes.value) {
+      if (group.values?.length) {
+        selectedAttributes[group.id] = group.values[0].id
+      }
+    }
+  }, 100)
 }, { immediate: true })
 
 function formatPrice(price: any): string {
@@ -228,7 +255,9 @@ async function addToCart() {
     // Fly the quickview image to cart
     const imgEl = document.querySelector('.product-quickview__img') as HTMLElement | null
     flyToCart(imgEl)
-    await cartStore.addItem(product.value.id, quantity.value)
+    await cartStore.addItem(product.value.id, quantity.value, undefined,
+      Object.values(selectedAttributes).filter(Boolean).map(v => Number(v)) || undefined
+    )
     const p = product.value
     showToast({
       name: p.name,

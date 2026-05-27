@@ -69,6 +69,7 @@ class CartResource extends JsonResource
                 ],
                 'inStock' => !$product?->track_stock || ($product?->stock_quantity ?? 0) > 0,
                 'attributes' => $attributes,
+                'selectedAttributeValues' => $item->selected_attribute_values ?? [],
             ];
         });
 

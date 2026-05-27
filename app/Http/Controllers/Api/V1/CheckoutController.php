@@ -109,6 +109,7 @@ class CheckoutController extends Controller
                     $orderItems[] = [
                         'product_id' => $product->id,
                         'variant_id' => $cartItem->variant_id,
+                        'selected_attribute_values' => $cartItem->selected_attribute_values,
                         'product_name' => $cartItem->variant?->name ? $product->getTranslation('name', 'en') . ' - ' . $cartItem->variant->name : $product->getTranslation('name', 'en'),
                         'product_sku' => $cartItem->variant?->sku ?? $product->sku,
                         'quantity' => $qty,

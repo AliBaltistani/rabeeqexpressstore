@@ -343,7 +343,8 @@ async function addToCart() {
   addingToCart.value = true
   try {
     flyToCart(mainImgRef.value)
-    await cart.addItem(product.value.id, quantity.value)
+    const attrValues = Object.values(selectedAttributes).filter(Boolean).map(v => Number(v))
+    await cart.addItem(product.value.id, quantity.value, undefined, attrValues.length ? attrValues : undefined)
     const p = product.value
     showToast({
       name: p.name,
@@ -361,7 +362,8 @@ async function buyNow() {
   buyingNow.value = true
   try {
     flyToCart(mainImgRef.value)
-    await cart.addItem(product.value.id, quantity.value)
+    const attrValues = Object.values(selectedAttributes).filter(Boolean).map(v => Number(v))
+    await cart.addItem(product.value.id, quantity.value, undefined, attrValues.length ? attrValues : undefined)
     router.push('/checkout')
   } catch (e) {
     console.error('Buy now failed:', e)

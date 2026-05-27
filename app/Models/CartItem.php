@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Model;
 
-
 class CartItem extends Model
 {
     use HasFactory;
@@ -16,7 +15,12 @@ class CartItem extends Model
         'user_id',
         'product_id',
         'variant_id',
+        'selected_attribute_values',
         'quantity',
+    ];
+
+    protected $casts = [
+        'selected_attribute_values' => 'array',
     ];
 
     public function user(): BelongsTo

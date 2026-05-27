@@ -49,10 +49,10 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
-  async function addItem(productId: number, quantity = 1, variantId?: number | null) {
+  async function addItem(productId: number, quantity = 1, variantId?: number | null, attributeValues?: number[]) {
     isLoading.value = true
     try {
-      const data = await addCartItem(productId, quantity, variantId)
+      const data = await addCartItem(productId, quantity, variantId, attributeValues)
       syncFromApi(data)
     } finally {
       isLoading.value = false

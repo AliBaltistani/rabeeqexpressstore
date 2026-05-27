@@ -230,6 +230,7 @@ export interface CartItem {
   lineTotal: PriceValue
   inStock: boolean
   attributes?: ProductAttributeGroup[]
+  selectedAttributeValues?: number[]
 }
 
 // ─── User ───

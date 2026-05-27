@@ -34,17 +34,33 @@ class CartController extends Controller
             'productId' => ['required', 'exists:products,id'],
             'variantId' => ['nullable', 'exists:product_variants,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:99'],
+            'attributeValues' => ['nullable', 'array'],
+            'attributeValues.*' => ['integer'],
         ]);
 
         $userId = $request->user('sanctum')?->id;
         $sessionId = $userId ? null : $request->session()->getId();
+        $attributeValues = $validated['attributeValues'] ?? null;
 
-        // Check if item already in cart
-        $existing = CartItem::where('product_id', $validated['productId'])
+        // Sort for consistent matching
+        if ($attributeValues) {
+            sort($attributeValues);
+        }
+
+        // Check if item already in cart (same product + same attribute selections)
+        $query = CartItem::where('product_id', $validated['productId'])
             ->where('variant_id', $validated['variantId'] ?? null)
             ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
-            ->first();
+            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId));
+
+        // Match by attribute values
+        if ($attributeValues) {
+            $query->where('selected_attribute_values', json_encode($attributeValues));
+        } else {
+            $query->whereNull('selected_attribute_values');
+        }
+
+        $existing = $query->first();
 
         if ($existing) {
             /** @var \App\Models\CartItem $existing */
@@ -55,6 +71,7 @@ class CartController extends Controller
                 'session_id' => $sessionId,
                 'product_id' => $validated['productId'],
                 'variant_id' => $validated['variantId'] ?? null,
+                'selected_attribute_values' => $attributeValues,
                 'quantity' => $validated['quantity'],
             ]);
         }

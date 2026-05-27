@@ -63,10 +63,8 @@
               <!-- Product Attributes -->
               <div v-if="item.attributes && item.attributes.length > 0" class="cart-item__options-row">
                 <div v-for="attr in item.attributes" :key="attr.id" class="cart-item__option">
-                  <span class="cart-item__option-label">{{ attr.name }} <span class="required">*</span></span>
-                  <select class="cart-item__option-select" disabled>
-                    <option v-for="val in attr.values" :key="val.id" :value="val.id" selected>{{ val.value }}</option>
-                  </select>
+                  <span class="cart-item__option-label">{{ attr.name }}:</span>
+                  <span class="cart-item__option-value">{{ getSelectedValueName(attr, item.selectedAttributeValues) }}</span>
                 </div>
               </div>
 
@@ -149,6 +147,17 @@ function formatPrice(price: any): string {
     return price.formatted
   }
   return `${Number(price || 0).toFixed(0)} SAR`
+}
+
+function getSelectedValueName(attr: any, selectedValues?: number[]): string {
+  if (!attr?.values?.length) return '-'
+  if (!selectedValues?.length) {
+    // If no specific selection stored, show first value
+    return attr.values[0]?.value || '-'
+  }
+  // Find the value whose id is in the selected array
+  const selected = attr.values.find((v: any) => selectedValues.includes(v.id))
+  return selected?.value || attr.values[0]?.value || '-'
 }
 
 async function applyCoupon() {
@@ -445,11 +454,19 @@ onMounted(async () => {
 .cart-item__option-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--store-text-primary, #111827);
+  color: #6b7280;
   white-space: nowrap;
 }
 .cart-item__option-label .required {
   color: #ef4444;
+}
+.cart-item__option-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--store-text-primary, #111827);
+  padding: 0.125rem 0.5rem;
+  background: #f3f4f6;
+  border-radius: 4px;
 }
 .cart-item__option-select {
   flex: 1;

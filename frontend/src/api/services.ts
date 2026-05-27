@@ -120,8 +120,8 @@ export async function fetchCart(): Promise<CartData> {
   return unwrap(await apiClient.get('/cart'))
 }
 
-export async function addCartItem(productId: number, quantity: number, variantId?: number | null) {
-  return unwrap(await apiClient.post('/cart/items', { productId, quantity, variantId }))
+export async function addCartItem(productId: number, quantity: number, variantId?: number | null, attributeValues?: number[]) {
+  return unwrap(await apiClient.post('/cart/items', { productId, quantity, variantId, attributeValues }))
 }
 
 export async function updateCartItem(id: number, quantity: number) {
