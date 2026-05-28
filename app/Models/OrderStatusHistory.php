@@ -15,9 +15,12 @@ class OrderStatusHistory extends Model
     protected $fillable = [
         'order_id',
         'status',
+        'status_from',
+        'status_to',
         'comment',
         'is_customer_notified',
         'created_by',
+        'changed_by',
     ];
 
     protected $casts = [
@@ -32,5 +35,10 @@ class OrderStatusHistory extends Model
     public function admin(): BelongsTo
     {
         return $this->belongsTo(Admin::class, 'created_by');
+    }
+
+    public function changedByAdmin(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class, 'changed_by');
     }
 }

@@ -221,8 +221,10 @@ export async function deleteAddress(id: number) {
 // ═══════════════════════════════════════════
 // ORDERS
 // ═══════════════════════════════════════════
-export async function fetchOrders(page = 1) {
-  return unwrapPaginated<Order>(await apiClient.get('/orders', { params: { page } }))
+export async function fetchOrders(page = 1, status?: string) {
+  const params: Record<string, any> = { page }
+  if (status) params.status = status
+  return unwrapPaginated<Order>(await apiClient.get('/orders', { params }))
 }
 
 export async function fetchOrderByNumber(orderNumber: string): Promise<Order> {
@@ -264,8 +266,20 @@ export async function fetchShippingRates(addressData: any) {
   return unwrap<any[]>(await apiClient.post('/checkout/shipping-rates', addressData))
 }
 
+export async function fetchDynamicShippingMethods(country: string, city?: string) {
+  return unwrap<any[]>(await apiClient.post('/checkout/shipping-methods', { country, city }))
+}
+
+export async function fetchPaymentMethods() {
+  return unwrap<any[]>(await apiClient.get('/checkout/payment-methods'))
+}
+
 export async function placeOrder(data: any) {
   return unwrap<any>(await apiClient.post('/checkout/place-order', data))
+}
+
+export async function confirmStripePayment(orderNumber: string, paymentIntentId: string) {
+  return unwrap<any>(await apiClient.post('/checkout/stripe/confirm', { orderNumber, paymentIntentId }))
 }
 
 export async function fetchOrderSuccess(orderNumber: string) {

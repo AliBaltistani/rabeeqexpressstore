@@ -1,51 +1,97 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\PlaceOrderRequest;
 use App\Http\Resources\Api\V1\OrderResource;
 use App\Http\Traits\ApiResponse;
-use App\Models\CartItem;
-use App\Models\Coupon;
-use App\Models\CouponUsage;
-use App\Models\Order;
-use App\Models\OrderAddress;
-use App\Models\OrderItem;
-use App\Models\OrderStatusHistory;
-use App\Models\ShippingRate;
+use App\Services\OrderLifecycleService;
+use App\Services\PaymentGatewayService;
+use App\Services\ShippingEngineService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
     use ApiResponse;
 
+    public function __construct(
+        private readonly ShippingEngineService $shippingEngine,
+        private readonly PaymentGatewayService $paymentGateway,
+        private readonly OrderLifecycleService $orderLifecycle,
+    ) {}
+
+    /**
+     * GET /api/v1/checkout/payment-methods
+     * Returns all available payment gateways.
+     */
+    public function paymentMethods(): JsonResponse
+    {
+        $gateways = $this->paymentGateway->getAvailableGateways();
+
+        // Only return enabled gateways to the frontend
+        $enabled = array_values(array_filter($gateways, fn(array $g) => $g['enabled']));
+
+        return $this->success($enabled);
+    }
+
+    /**
+     * POST /api/v1/checkout/shipping-methods
+     * Dynamic shipping engine — resolves methods by country/city.
+     */
+    public function shippingMethods(Request $request): JsonResponse
+    {
+        $request->validate([
+            'country' => ['required', 'string'],
+            'city'    => ['nullable', 'string'],
+        ]);
+
+        $methods = $this->shippingEngine->resolveForDestination(
+            $request->input('country'),
+            $request->input('city'),
+        );
+
+        return $this->success($methods->values()->all());
+    }
+
     /**
      * POST /api/v1/checkout/shipping-rates
+     * Legacy endpoint — kept for backward compatibility.
      */
     public function shippingRates(Request $request): JsonResponse
     {
         $request->validate([
             'country' => ['required', 'string'],
-            'state' => ['nullable', 'string'],
+            'state'   => ['nullable', 'string'],
         ]);
 
-        $rates = ShippingRate::where('is_active', true)
+        // Try dynamic shipping methods first
+        $methods = $this->shippingEngine->resolveForDestination(
+            $request->input('country'),
+            $request->input('city', $request->input('state')),
+        );
+
+        if ($methods->isNotEmpty()) {
+            return $this->success($methods->values()->all());
+        }
+
+        // Fallback to legacy ShippingRate table
+        $rates = \App\Models\ShippingRate::where('is_active', true)
             ->with('zone')
             ->get()
             ->map(function ($rate) {
-                /** @var \App\Models\ShippingRate $rate */
                 return [
-                'id' => $rate->id,
-                'name' => $rate->getTranslation('name', app()->getLocale()),
-                'method' => $rate->method,
-                'price' => [
-                    'raw' => (float) $rate->price,
-                    'formatted' => currency_symbol() . ' ' . number_format((float) $rate->price, 2),
-                ],
-                'freeAbove' => $rate->min_order_for_free ? (float) $rate->min_order_for_free : null,
+                    'id'        => $rate->id,
+                    'name'      => $rate->getTranslation('name', app()->getLocale()),
+                    'method'    => $rate->method,
+                    'price'     => [
+                        'raw'       => (float) $rate->price,
+                        'formatted' => currency_symbol() . ' ' . number_format((float) $rate->price, 2),
+                    ],
+                    'freeAbove' => $rate->min_order_for_free ? (float) $rate->min_order_for_free : null,
                 ];
             });
 
@@ -54,255 +100,94 @@ class CheckoutController extends Controller
 
     /**
      * POST /api/v1/checkout/place-order
+     * Atomic order placement via OrderLifecycleService.
      */
-    public function placeOrder(Request $request): JsonResponse
+    public function placeOrder(PlaceOrderRequest $request): JsonResponse
     {
         $user = $request->user('sanctum');
-
-        $validated = $request->validate([
-            'shippingAddress' => ['required', 'array'],
-            'shippingAddress.firstName' => ['required', 'string'],
-            'shippingAddress.lastName' => ['required', 'string'],
-            'shippingAddress.phone' => ['required', 'string'],
-            'shippingAddress.addressLine1' => ['required', 'string'],
-            'shippingAddress.city' => ['required', 'string'],
-            'shippingAddress.country' => ['required', 'string'],
-            'billingAddress' => ['nullable', 'array'],
-            'paymentMethod' => ['required', 'string', 'in:cod,bank_transfer,stripe,paypal'],
-            'shippingRateId' => ['nullable', 'exists:shipping_rates,id'],
-            'couponCode' => ['nullable', 'string'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'currency' => ['nullable', 'string'],
-            'guestEmail' => [$user ? 'nullable' : 'required', 'email'],
-            'guestName' => ['nullable', 'string'],
-            'guestPhone' => ['nullable', 'string'],
-        ]);
+        $validated = $request->validated();
 
         // Check guest checkout enabled
         if (!$user && !setting('general.enable_guest_checkout', true)) {
             return $this->error('Guest checkout is not enabled. Please log in.', 403);
         }
 
-        // Get cart items
-        $cartItems = $this->getCartItems($request);
-        if ($cartItems->isEmpty()) {
-            return $this->error('Your cart is empty.', 422);
-        }
-
-        $currencyCode = $validated['currency'] ?? currency_code();
-
         try {
-            $order = DB::transaction(function () use ($validated, $user, $cartItems, $currencyCode, $request) {
-                // Calculate totals
-                $subtotal = 0;
-                $orderItems = [];
+            $result = $this->orderLifecycle->placeOrder($validated, $user, $request);
 
-                foreach ($cartItems as $cartItem) {
-                    $product = $cartItem->product;
-                    if (!$product) continue;
-
-                    $price = (float) ($cartItem->variant?->price ?? $product->price);
-                    $qty = $cartItem->quantity;
-                    $lineTotal = $price * $qty;
-                    $subtotal += $lineTotal;
-
-                    $orderItems[] = [
-                        'product_id' => $product->id,
-                        'variant_id' => $cartItem->variant_id,
-                        'selected_attribute_values' => $cartItem->selected_attribute_values,
-                        'product_name' => $cartItem->variant?->name ? $product->getTranslation('name', 'en') . ' - ' . $cartItem->variant->name : $product->getTranslation('name', 'en'),
-                        'product_sku' => $cartItem->variant?->sku ?? $product->sku,
-                        'quantity' => $qty,
-                        'unit_price' => $price,
-                        'total' => $lineTotal,
-                    ];
-
-                    // Reduce stock
-                    if ($product->track_stock) {
-                        $product->decrement('stock_quantity', $qty);
-                    }
-                }
-
-                // Coupon discount
-                $discount = 0;
-                $couponId = null;
-                $couponCode = null;
-                if (!empty($validated['couponCode'])) {
-                    $coupon = Coupon::where('code', strtoupper($validated['couponCode']))->first();
-                    if ($coupon && $coupon->isValid()) {
-                        $discount = $coupon->calculateDiscount($subtotal);
-                        $couponId = $coupon->id;
-                        $couponCode = $coupon->code;
-                        $coupon->increment('usage_count');
-                    }
-                }
-
-                // Shipping
-                $shippingAmount = 0;
-                $shippingRateId = null;
-                $shippingMethod = null;
-                if (!empty($validated['shippingRateId'])) {
-                    $rate = ShippingRate::find($validated['shippingRateId']);
-                    if ($rate) {
-                        $shippingAmount = (float) $rate->price;
-                        $shippingRateId = $rate->id;
-                        $shippingMethod = $rate->getTranslation('name', 'en') . ' (' . ucfirst($rate->method) . ')';
-                        if ($rate->min_order_for_free && $subtotal >= $rate->min_order_for_free) {
-                            $shippingAmount = 0;
-                        }
-                    }
-                }
-
-                // COD fee
-                $codFee = 0;
-                if ($validated['paymentMethod'] === 'cod') {
-                    $codFee = (float) setting('payment.cod_fee', 0);
-                }
-
-                $total = $subtotal - $discount + $shippingAmount + $codFee;
-
-                // Create order
-                $order = Order::create([
-                    'order_number' => 'ORD-' . strtoupper(Str::random(8)),
-                    'user_id' => $user?->id,
-                    'guest_email' => $validated['guestEmail'] ?? null,
-                    'guest_name' => $validated['guestName'] ?? null,
-                    'guest_phone' => $validated['guestPhone'] ?? null,
-                    'status' => 'pending',
-                    'payment_status' => 'unpaid',
-                    'payment_method' => $validated['paymentMethod'],
-                    'shipping_rate_id' => $shippingRateId,
-                    'shipping_method' => $shippingMethod,
-                    'subtotal' => $subtotal,
-                    'discount_amount' => $discount,
-                    'shipping_amount' => $shippingAmount,
-                    'tax_amount' => 0,
-                    'total' => $total,
-                    'currency_code' => $currencyCode,
-                    'currency_rate' => 1,
-                    'coupon_id' => $couponId,
-                    'coupon_code' => $couponCode,
-                    'notes' => $validated['notes'] ?? null,
-                    'ip_address' => $request->ip(),
-                ]);
-
-                // Create order items
-                foreach ($orderItems as $item) {
-                    $order->items()->create($item);
-                }
-
-                // Create addresses
-                $shippingAddr = $validated['shippingAddress'];
-                OrderAddress::create([
-                    'order_id' => $order->id,
-                    'type' => 'shipping',
-                    'first_name' => $shippingAddr['firstName'],
-                    'last_name' => $shippingAddr['lastName'],
-                    'phone' => $shippingAddr['phone'],
-                    'address_line_1' => $shippingAddr['addressLine1'],
-                    'address_line_2' => $shippingAddr['addressLine2'] ?? null,
-                    'city' => $shippingAddr['city'],
-                    'state' => $shippingAddr['state'] ?? '',
-                    'country' => $shippingAddr['country'],
-                    'postal_code' => $shippingAddr['postalCode'] ?? '',
-                ]);
-
-                $billingAddr = $validated['billingAddress'] ?? $validated['shippingAddress'];
-                OrderAddress::create([
-                    'order_id' => $order->id,
-                    'type' => 'billing',
-                    'first_name' => $billingAddr['firstName'],
-                    'last_name' => $billingAddr['lastName'],
-                    'phone' => $billingAddr['phone'],
-                    'address_line_1' => $billingAddr['addressLine1'],
-                    'address_line_2' => $billingAddr['addressLine2'] ?? null,
-                    'city' => $billingAddr['city'],
-                    'state' => $billingAddr['state'] ?? '',
-                    'country' => $billingAddr['country'],
-                    'postal_code' => $billingAddr['postalCode'] ?? '',
-                ]);
-
-                // Status history
-                OrderStatusHistory::create([
-                    'order_id' => $order->id,
-                    'status' => 'pending',
-                    'note' => 'Order placed.',
-                ]);
-
-                // Record coupon usage
-                if ($couponId && $user) {
-                    CouponUsage::create([
-                        'coupon_id' => $couponId,
-                        'user_id' => $user->id,
-                        'order_id' => $order->id,
-                    ]);
-                }
-
-                // Clear cart
-                $userId = $user?->id;
-                $sessionId = $userId ? null : $request->session()->getId();
-                CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
-                    ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
-                    ->delete();
-                session()->forget(['cart_coupon', 'cart_discount']);
-
-                return $order;
-            });
+            /** @var \App\Models\Order $order */
+            $order = $result['order'];
+            $payment = $result['payment'];
 
             $order->load(['items', 'shippingAddress', 'billingAddress', 'user']);
 
-            // --- Email Notifications ---
-            $recipient = $user?->email ?? $validated['guestEmail'];
-            if ($recipient && setting('email.notify_order_placed', true)) {
-                \Illuminate\Support\Facades\Mail::to($recipient)->queue(new \App\Mail\Customer\OrderPlacedMail($order));
-            }
+            // ── Email Notifications ──
+            $this->sendOrderNotifications($order, $validated, $user);
 
-            $adminEmails = setting('email.admin_email');
-            if ($adminEmails) {
-                $admins = array_filter(array_map('trim', explode(',', $adminEmails)));
-                if (!empty($admins)) {
-                    if (setting('email.admin_notify_new_order', true)) {
-                        \Illuminate\Support\Facades\Mail::to($admins)->queue(new \App\Mail\Admin\NewOrderAdminMail($order));
-                    }
-                    if (setting('email.admin_notify_low_stock', true)) {
-                        foreach ($order->items as $item) {
-                            $product = $item->product;
-                            if ($product && $product->track_stock && $product->stock_quantity <= setting('general.low_stock_threshold', 5)) {
-                                \Illuminate\Support\Facades\Mail::to($admins)->queue(new \App\Mail\Admin\LowStockAdminMail($product));
-                            }
-                        }
-                    }
-                }
-            }
-            // ---------------------------
-
-            // Payment method responses
+            // ── Build response ──
             $response = [
-                'orderId' => $order->id,
-                'orderNumber' => $order->order_number,
-                'status' => $order->status,
-                'total' => (float) $order->total,
+                'orderId'        => $order->id,
+                'orderNumber'    => $order->order_number,
+                'status'         => $order->status,
+                'paymentStatus'  => $order->payment_status,
+                'total'          => (float) $order->total,
             ];
 
             if ($validated['paymentMethod'] === 'stripe') {
-                // In a true production environment, create a Stripe PaymentIntent here
-                // e.g. using \Stripe\PaymentIntent::create(...) and return its client_secret
-                
-                // Simulated checkout completion
-                $order->update(['payment_status' => 'paid', 'status' => 'processing']);
-                $response['status'] = 'processing';
-                $response['requiresAction'] = false;
-                $response['clientSecret'] = null;
+                $response['clientSecret']    = $payment['client_secret'] ?? null;
+                $response['paymentIntentId'] = $payment['payment_intent_id'] ?? null;
+                $response['requiresAction']  = $payment['requires_action'] ?? false;
             } elseif ($validated['paymentMethod'] === 'paypal') {
-                // Simulated redirect or actual paypal SDK creation
                 $response['redirectUrl'] = url('/api/v1/checkout/paypal/' . $order->order_number);
             }
 
             return $this->success($response, 'Order placed successfully.', 201);
 
+        } catch (\RuntimeException $e) {
+            return $this->error($e->getMessage(), 422);
         } catch (\Throwable $e) {
             return $this->error('Failed to place order: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * POST /api/v1/checkout/stripe/confirm
+     * Confirm Stripe payment after frontend-side 3DS/card authentication.
+     */
+    public function confirmStripe(Request $request): JsonResponse
+    {
+        $request->validate([
+            'orderNumber'     => ['required', 'string'],
+            'paymentIntentId' => ['required', 'string'],
+        ]);
+
+        $user = $request->user('sanctum');
+        $order = \App\Models\Order::withoutGlobalScopes()
+            ->where('order_number', $request->input('orderNumber'))
+            ->when($user, fn($q) => $q->where('user_id', $user->id))
+            ->first();
+
+        if (!$order) {
+            return $this->notFound('Order not found.');
+        }
+
+        $result = $this->paymentGateway->confirmStripePayment(
+            $order,
+            $request->input('paymentIntentId')
+        );
+
+        if ($result['success']) {
+            // Log status transition
+            $this->orderLifecycle->transitionStatus($order, 'processing');
+
+            return $this->success([
+                'orderNumber'   => $order->order_number,
+                'status'        => $order->fresh()->status,
+                'paymentStatus' => $order->fresh()->payment_status,
+            ], 'Payment confirmed.');
+        }
+
+        return $this->error($result['error'] ?? 'Payment confirmation failed.', 422);
     }
 
     /**
@@ -310,7 +195,7 @@ class CheckoutController extends Controller
      */
     public function orderSuccess(string $orderNumber): JsonResponse
     {
-        $order = Order::withoutGlobalScopes()
+        $order = \App\Models\Order::withoutGlobalScopes()
             ->where('order_number', $orderNumber)
             ->with(['items', 'shippingAddress', 'billingAddress'])
             ->first();
@@ -322,14 +207,32 @@ class CheckoutController extends Controller
         return $this->success(new OrderResource($order));
     }
 
-    protected function getCartItems(Request $request)
+    /**
+     * Send order placement email notifications.
+     */
+    private function sendOrderNotifications(\App\Models\Order $order, array $validated, ?\App\Models\User $user): void
     {
-        $userId = $request->user('sanctum')?->id;
-        $sessionId = $userId ? null : $request->session()->getId();
+        $recipient = $user?->email ?? ($validated['guestEmail'] ?? null);
+        if ($recipient && setting('email.notify_order_placed', true)) {
+            \Illuminate\Support\Facades\Mail::to($recipient)->queue(new \App\Mail\Customer\OrderPlacedMail($order));
+        }
 
-        return CartItem::with(['product' => fn($q) => $q->withoutGlobalScopes(), 'variant'])
-            ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
-            ->get();
+        $adminEmails = setting('email.admin_email');
+        if ($adminEmails) {
+            $admins = array_filter(array_map('trim', explode(',', $adminEmails)));
+            if (!empty($admins)) {
+                if (setting('email.admin_notify_new_order', true)) {
+                    \Illuminate\Support\Facades\Mail::to($admins)->queue(new \App\Mail\Admin\NewOrderAdminMail($order));
+                }
+                if (setting('email.admin_notify_low_stock', true)) {
+                    foreach ($order->items as $item) {
+                        $product = $item->product;
+                        if ($product && $product->track_stock && $product->stock_quantity <= setting('general.low_stock_threshold', 5)) {
+                            \Illuminate\Support\Facades\Mail::to($admins)->queue(new \App\Mail\Admin\LowStockAdminMail($product));
+                        }
+                    }
+                }
+            }
+        }
     }
 }

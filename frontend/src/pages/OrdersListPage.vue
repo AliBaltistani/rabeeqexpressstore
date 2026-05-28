@@ -4,6 +4,19 @@
         <h2>{{ $t('account.orderHistory') || 'Order History' }}</h2>
       </div>
 
+      <!-- Status Filter Tabs -->
+      <div class="order-status-tabs">
+        <button
+          v-for="tab in statusTabs"
+          :key="tab.value"
+          class="status-tab"
+          :class="{ active: currentStatus === tab.value }"
+          @click="filterByStatus(tab.value)"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
+
       <div class="recent-orders">
         <div v-if="isLoading" class="loading-state">
           <p>{{ $t('common.loading') }}...</p>
@@ -13,7 +26,7 @@
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
           </svg>
-          <p>{{ $t('account.noOrders') }}</p>
+          <p>{{ currentStatus ? ($t('account.noOrdersInStatus') || 'No orders with this status.') : $t('account.noOrders') }}</p>
           <router-link to="/products" class="btn-shop">{{ $t('common.shopNow') }}</router-link>
         </div>
 
@@ -29,8 +42,8 @@
           </thead>
           <tbody>
             <tr v-for="order in orders" :key="order.id">
-              <td>{{ order.orderNumber }}</td>
-              <td>{{ new Date(order.createdAt || '').toLocaleDateString() }}</td>
+              <td class="order-number">{{ order.orderNumber }}</td>
+              <td>{{ formatDate(order.createdAt) }}</td>
               <td><span :class="'status-badge ' + order.status.toLowerCase()">{{ order.statusLabel || order.status }}</span></td>
               <td>{{ order.total?.formatted }}</td>
               <td>
@@ -67,22 +80,44 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/authStore'
 import { fetchOrders } from '@/api/services'
 import type { Order, PaginationMeta } from '@/types'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { t, locale } = useI18n()
 
 const orders = ref<Order[]>([])
 const pagination = ref<PaginationMeta | undefined>()
 const isLoading = ref(true)
+const currentStatus = ref('')
+
+const statusTabs = computed(() => [
+  { value: '', label: t('common.all') || 'All' },
+  { value: 'pending', label: t('checkout.pending') || 'Pending' },
+  { value: 'processing', label: t('checkout.processing') || 'Processing' },
+  { value: 'shipped', label: t('checkout.shipped') || 'Shipped' },
+  { value: 'delivered', label: t('checkout.delivered') || 'Delivered' },
+  { value: 'cancelled', label: t('checkout.cancelled') || 'Cancelled' },
+])
+
+function formatDate(dateStr: string | undefined): string {
+  if (!dateStr) return '—'
+  const date = new Date(dateStr)
+  return date.toLocaleDateString(locale.value === 'ar' ? 'ar-SA' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 async function loadOrders(page = 1) {
   if (!auth.isAuthenticated) return
   isLoading.value = true
   try {
-    const res = await fetchOrders(page)
+    const res = await fetchOrders(page, currentStatus.value || undefined)
     orders.value = res.data
     pagination.value = res.meta
   } catch (error) {
@@ -90,6 +125,11 @@ async function loadOrders(page = 1) {
   } finally {
     isLoading.value = false
   }
+}
+
+function filterByStatus(status: string) {
+  currentStatus.value = status
+  loadOrders(1)
 }
 
 function changePage(page: number) {
@@ -114,12 +154,43 @@ onMounted(() => {
 }
 
 .header-row {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 .header-row h2 {
   font-size: 1.5rem;
   color: var(--store-text-primary, #111827);
   margin: 0;
+}
+
+/* Status Filter Tabs */
+.order-status-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem;
+}
+.status-tab {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  background: #fff;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.status-tab:hover {
+  border-color: #d1d5db;
+  color: #374151;
+}
+.status-tab.active {
+  background: var(--color-primary, #858585);
+  border-color: var(--color-primary, #858585);
+  color: #fff;
 }
 
 .recent-orders {
@@ -153,6 +224,12 @@ html[dir="rtl"] .orders-table {
   border-bottom: 1px solid #f3f4f6;
   vertical-align: middle;
 }
+.order-number {
+  font-weight: 600;
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: #111827;
+}
 .status-badge {
   display: inline-block;
   padding: 0.25rem 0.75rem;
@@ -166,6 +243,7 @@ html[dir="rtl"] .orders-table {
 .status-badge.shipped { background: #dbeafe; color: #1d4ed8; }
 .status-badge.delivered { background: #d1fae5; color: #059669; }
 .status-badge.cancelled { background: #fee2e2; color: #b91c1c; }
+.status-badge.refunded { background: #f3f4f6; color: #6b7280; }
 
 .view-link {
   color: var(--color-primary, #858585);

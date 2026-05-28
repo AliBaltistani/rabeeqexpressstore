@@ -103,8 +103,11 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
 
     // Checkout (partially public — guest checkout allowed if enabled)
     Route::prefix('checkout')->group(function () {
+        Route::get('payment-methods', [CheckoutController::class, 'paymentMethods']);
+        Route::post('shipping-methods', [CheckoutController::class, 'shippingMethods']);
         Route::post('shipping-rates', [CheckoutController::class, 'shippingRates']);
         Route::post('place-order', [CheckoutController::class, 'placeOrder']);
+        Route::post('stripe/confirm', [CheckoutController::class, 'confirmStripe']);
         Route::get('order-success/{orderNumber}', [CheckoutController::class, 'orderSuccess']);
     });
 

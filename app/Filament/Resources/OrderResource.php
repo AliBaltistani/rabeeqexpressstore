@@ -1,9 +1,9 @@
 <?php
 
 namespace App\Filament\Resources;
-
 use App\Filament\Resources\OrderResource\Pages;
 use App\Models\Order;
+use App\Services\SmsaShipmentService;
 use BackedEnum;
 use Filament\Actions;
 use Filament\Forms;
@@ -168,6 +168,25 @@ class OrderResource extends Resource
                     ->label('Date')
                     ->dateTime(admin_date_format(withTime: true))
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('tracking_number')
+                    ->label('Tracking #')
+                    ->placeholder('—')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('shipping_status')
+                    ->label('Shipping')
+                    ->badge()
+                    ->color(fn(?string $state): string => match ($state) {
+                        'pending'    => 'warning',
+                        'booked'     => 'info',
+                        'in_transit' => 'primary',
+                        'delivered'  => 'success',
+                        default      => 'gray',
+                    })
+                    ->formatStateUsing(fn(?string $state): string => ucfirst(str_replace('_', ' ', $state ?? 'pending')))
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
@@ -219,6 +238,63 @@ class OrderResource extends Resource
             ])
             ->actions([
                 Actions\ViewAction::make(),
+
+                // Book SMSA Shipment
+                Actions\Action::make('book_smsa')
+                    ->label('Book SMSA')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('info')
+                    ->visible(fn(Order $record): bool => (
+                        in_array($record->status, ['processing', 'paid']) &&
+                        empty($record->tracking_number)
+                    ))
+                    ->requiresConfirmation()
+                    ->modalHeading('Book SMSA Shipment')
+                    ->modalDescription('This will create a shipment with SMSA Express and assign a tracking number.')
+                    ->action(function (Order $record): void {
+                        $service = app(SmsaShipmentService::class);
+                        $result = $service->bookShipment($record);
+
+                        if ($result['success']) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('SMSA Shipment Booked')
+                                ->body('AWB: ' . $result['awb'])
+                                ->success()
+                                ->send();
+                        } else {
+                            \Filament\Notifications\Notification::make()
+                                ->title('SMSA Booking Failed')
+                                ->body($result['error'])
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
+                // Download Shipping PDF
+                Actions\Action::make('download_shipping_pdf')
+                    ->label('Shipping PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('gray')
+                    ->visible(fn(Order $record): bool => !empty($record->tracking_number))
+                    ->action(function (Order $record) {
+                        $service = app(SmsaShipmentService::class);
+                        $result = $service->getShipmentPdf($record->tracking_number);
+
+                        if ($result['success'] && $result['pdf_base64']) {
+                            $pdfContent = base64_decode($result['pdf_base64']);
+                            return response()->streamDownload(
+                                fn() => print($pdfContent),
+                                "shipment-{$record->order_number}.pdf",
+                                ['Content-Type' => 'application/pdf']
+                            );
+                        }
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('PDF Download Failed')
+                            ->body($result['error'] ?? 'Unable to download PDF.')
+                            ->danger()
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 Actions\BulkActionGroup::make([

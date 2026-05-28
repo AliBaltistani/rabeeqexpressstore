@@ -310,8 +310,11 @@
             <label v-for="opt in shippingOptions" :key="opt.id" class="checkout-shipping-card" :class="{ selected: selectedShippingId === opt.id }">
               <input type="radio" name="shipping" :value="opt.id" v-model="selectedShippingId" class="checkout-radio" />
               <div class="checkout-shipping-info">
-                <span class="checkout-shipping-name">{{ opt.name }}</span>
-                <span class="checkout-shipping-time" v-if="opt.time">{{ opt.time }}</span>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <span class="checkout-shipping-name">{{ opt.name }}</span>
+                  <span v-if="opt.carrier_type" class="checkout-carrier-badge" :class="opt.carrier_type">{{ opt.carrier_type === 'smsa' ? 'SMSA Express' : opt.carrier_type === 'local' ? $t('checkout.localDelivery') || 'Local' : $t('checkout.standard') || 'Standard' }}</span>
+                </div>
+                <span class="checkout-shipping-time" v-if="opt.estimated_delivery || opt.time">{{ opt.estimated_delivery || opt.time }}</span>
               </div>
               <span class="checkout-shipping-price">{{ typeof opt.price === 'object' ? (opt.price as any).formatted : opt.price }}</span>
             </label>
@@ -323,7 +326,6 @@
 
       <div class="checkout-divider"></div>
 
-      <!-- STEP 4: Payment -->
       <section class="checkout-step" :class="{ locked: currentStep < 4 }">
         <div class="checkout-step__header">
           <div class="checkout-step__num">4</div>
@@ -333,44 +335,38 @@
           </div>
         </div>
         <div v-if="currentStep === 4" class="checkout-step__content">
-          <!-- Payment Methods from admin -->
-          <div class="checkout-payment-methods">
-            <label v-for="pm in paymentMethods" :key="pm.id" class="checkout-payment-card" :class="{ selected: selectedPayment === pm.id }">
-              <input type="radio" name="payment" :value="pm.id" v-model="selectedPayment" class="checkout-radio" />
-              <span class="checkout-payment-name">{{ pm.name }}</span>
+          <!-- Dynamic Payment Methods from API -->
+          <div v-if="paymentMethodsLoading" class="empty-shipping">
+            <p>{{ $t('common.loading') }}...</p>
+          </div>
+          <div v-else class="checkout-payment-methods">
+            <label v-for="pm in dynamicPaymentMethods" :key="pm.id" class="checkout-payment-card" :class="{ selected: selectedPayment === pm.id, disabled: !pm.enabled }">
+              <input type="radio" name="payment" :value="pm.id" v-model="selectedPayment" class="checkout-radio" :disabled="!pm.enabled" />
+              <div class="checkout-payment-details">
+                <span class="checkout-payment-name">{{ pm.name }}</span>
+                <span v-if="pm.description" class="checkout-payment-desc">{{ pm.description }}</span>
+                <span v-if="!pm.enabled" class="checkout-payment-badge coming-soon">{{ $t('common.comingSoon') || 'Coming Soon' }}</span>
+              </div>
               <span v-if="pm.fee" class="checkout-payment-fee">+{{ pm.fee }}</span>
             </label>
           </div>
           <span v-if="errors.payment" class="field-error">{{ errors.payment }}</span>
 
-          <!-- Stripe Card Details -->
+          <!-- Stripe Card Element -->
           <div v-if="selectedPayment === 'stripe'" class="checkout-card-form">
-            <p class="card-form-note">{{ $t('checkout.cardDetails') }}</p>
-            <div class="checkout-form-grid">
-              <div class="checkout-field">
-                <label class="checkout-label">Card Number <span class="req">*</span></label>
-                <input type="text" v-model="cardNumber" placeholder="4242 4242 4242 4242" class="checkout-input" maxlength="19" />
-              </div>
-              <div class="checkout-field">
-                <label class="checkout-label">{{ $t('checkout.cardHolderName') }} <span class="req">*</span></label>
-                <input type="text" v-model="cardName" class="checkout-input" />
-              </div>
-            </div>
-            <div class="checkout-form-grid">
-              <div class="checkout-field">
-                <label class="checkout-label">MM/YY <span class="req">*</span></label>
-                <input type="text" v-model="cardExpiry" placeholder="12/28" class="checkout-input" maxlength="5" />
-              </div>
-              <div class="checkout-field">
-                <label class="checkout-label">CVV <span class="req">*</span></label>
-                <input type="text" v-model="cardCvv" placeholder="123" class="checkout-input" maxlength="4" />
-              </div>
-            </div>
+            <p class="card-form-note">{{ $t('checkout.cardDetails') || 'Enter your card details below' }}</p>
+            <div id="stripe-card-element" class="stripe-element-mount"></div>
+            <p v-if="stripeError" class="field-error" style="margin-top: 0.5rem;">{{ stripeError }}</p>
           </div>
 
           <!-- Bank Transfer Info -->
           <div v-if="selectedPayment === 'bank_transfer'" class="checkout-card-form">
             <p class="card-form-note">{{ $t('checkout.bankTransferNote') || 'You will receive bank details after placing your order. Your order will be confirmed once payment is received.' }}</p>
+          </div>
+
+          <!-- COD Info -->
+          <div v-if="selectedPayment === 'cod'" class="checkout-card-form">
+            <p class="card-form-note">{{ $t('checkout.codNote') || 'Pay cash when your order is delivered to your doorstep.' }}</p>
           </div>
 
           <!-- T&C -->
@@ -404,7 +400,7 @@ import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { fetchShippingRates, placeOrder } from '@/api/services'
+import { fetchShippingRates, fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, confirmStripePayment } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
@@ -486,39 +482,23 @@ const selectedShipping = computed(() => shippingOptions.value.find((s: any) => s
 // Payment
 const selectedPayment = ref('')
 const selectedPaymentName = computed(() => {
-  const pm = paymentMethods.value.find((p: any) => p.id === selectedPayment.value)
+  const pm = dynamicPaymentMethods.value.find((p: any) => p.id === selectedPayment.value)
   return pm?.name || ''
 })
-const paymentMethods = computed(() => settings.storeSettings.paymentMethods || [])
-const cardNumber = ref('')
-const cardName = ref('')
-const cardExpiry = ref('')
-const cardCvv = ref('')
 
-watch(cardNumber, (val) => {
-  const cleaned = val.replace(/\D/g, '')
-  let formatted = cleaned.replace(/(.{4})/g, '$1 ').trim()
-  if (cleaned.length > 16) formatted = formatted.substring(0, 19)
-  if (cardNumber.value !== formatted) cardNumber.value = formatted
-})
-
-watch(cardExpiry, (val) => {
-  let cleaned = val.replace(/\D/g, '')
-  let formatted = cleaned
-  if (cleaned.length >= 2) {
-    if (parseInt(cleaned.substring(0, 2)) > 12) cleaned = '12' + cleaned.substring(2)
-    formatted = cleaned.substring(0, 2) + '/' + cleaned.substring(2, 4)
-  }
-  if (cardExpiry.value !== formatted) cardExpiry.value = formatted
-})
-
-watch(cardCvv, (val) => {
-  const cleaned = val.replace(/\D/g, '').substring(0, 4)
-  if (cardCvv.value !== cleaned) cardCvv.value = cleaned
-})
 const agreeTerms = ref(false)
 const orderLoading = ref(false)
 const orderError = ref('')
+
+// Dynamic payment methods from API
+const dynamicPaymentMethods = ref<any[]>([])
+const paymentMethodsLoading = ref(false)
+
+// Stripe Elements
+let stripeInstance: any = null
+let stripeCard: any = null
+const stripeError = ref('')
+const stripeReady = ref(false)
 
 // Step 1 summary
 const step1Summary = computed(() => {
@@ -698,7 +678,13 @@ async function submitAddress() {
   shippingLoading.value = true
   shippingRatesFetched.value = false
   try {
-    const rates = await fetchShippingRates({ country: addressForm.value.country, state: addressForm.value.state })
+    // Try dynamic shipping methods first, fallback to legacy rates
+    let rates: any[] = []
+    try {
+      rates = await fetchDynamicShippingMethods(addressForm.value.country, addressForm.value.city)
+    } catch {
+      rates = await fetchShippingRates({ country: addressForm.value.country, state: addressForm.value.state })
+    }
     shippingRatesFetched.value = true
     if (rates && rates.length) {
       shippingOptions.value = rates
@@ -720,6 +706,85 @@ function submitShipping() {
   clearErrors()
   if (!selectedShippingId.value) { errors.shipping = t('checkout.required') || 'Please select a shipping option'; return }
   currentStep.value = 4
+  // Load payment methods dynamically
+  loadPaymentMethods()
+}
+
+async function loadPaymentMethods() {
+  paymentMethodsLoading.value = true
+  try {
+    const gateways = await fetchPaymentMethods()
+    dynamicPaymentMethods.value = gateways
+    // Auto-select first enabled
+    const firstEnabled = gateways.find((g: any) => g.enabled)
+    if (firstEnabled) {
+      selectedPayment.value = firstEnabled.id
+    }
+  } catch {
+    // Fallback to store settings payment methods
+    const fallback = settings.storeSettings.paymentMethods || []
+    dynamicPaymentMethods.value = fallback.map((pm: any) => ({ ...pm, enabled: true, description: null }))
+    if (fallback.length) selectedPayment.value = fallback[0].id
+  } finally {
+    paymentMethodsLoading.value = false
+  }
+}
+
+// Mount Stripe Elements when Stripe is selected
+watch(selectedPayment, async (val) => {
+  if (val === 'stripe') {
+    await nextTick()
+    await initStripeElements()
+  }
+})
+
+async function initStripeElements() {
+  stripeError.value = ''
+  const stripeKey = (settings.storeSettings as any)?.stripePublishableKey || import.meta.env.VITE_STRIPE_KEY || ''
+  if (!stripeKey) {
+    // No Stripe key — simulated mode, skip Elements mount
+    stripeReady.value = true
+    return
+  }
+
+  try {
+    // Dynamically load Stripe.js
+    if (!(window as any).Stripe) {
+      await new Promise<void>((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = 'https://js.stripe.com/v3/'
+        script.onload = () => resolve()
+        script.onerror = () => reject(new Error('Failed to load Stripe.js'))
+        document.head.appendChild(script)
+      })
+    }
+
+    stripeInstance = (window as any).Stripe(stripeKey)
+    const elements = stripeInstance.elements()
+    stripeCard = elements.create('card', {
+      style: {
+        base: {
+          fontSize: '16px',
+          color: '#32325d',
+          fontFamily: 'inherit',
+          '::placeholder': { color: '#aab7c4' },
+        },
+        invalid: { color: '#fa755a', iconColor: '#fa755a' },
+      },
+    })
+
+    const mount = document.getElementById('stripe-card-element')
+    if (mount) {
+      stripeCard.mount('#stripe-card-element')
+      stripeCard.on('change', (event: any) => {
+        stripeError.value = event.error?.message || ''
+      })
+      stripeReady.value = true
+    }
+  } catch (e: any) {
+    console.error('Stripe init error:', e)
+    stripeError.value = 'Failed to initialize payment form'
+  }
 }
 
 // ── Coupon ──
@@ -746,41 +811,14 @@ async function confirmPayment() {
   if (!selectedPayment.value) { errors.payment = t('checkout.selectPayment') || 'Select a payment method'; return }
   if (!agreeTerms.value) { errors.terms = t('checkout.agreeTermsRequired') || 'You must agree to the terms'; return }
 
-  if (selectedPayment.value === 'stripe') {
-    const rawCard = cardNumber.value.replace(/\s/g, '')
-    if (rawCard.length < 15 || rawCard.length > 16) {
-      orderError.value = t('checkout.invalidCardNumber') || 'Invalid card number format'
-      return
-    }
-    if (!cardName.value.trim()) {
-      orderError.value = t('checkout.invalidCardName') || 'Please provide cardholder name'
-      return
-    }
-    
-    if (cardExpiry.value.length < 5) {
-      orderError.value = t('checkout.invalidExpiry') || 'Invalid expiry date (MM/YY)'
-      return
-    }
-    const [month, year] = cardExpiry.value.split('/')
-    const currentYear = parseInt(new Date().getFullYear().toString().substring(2, 4))
-    const currentMonth = new Date().getMonth() + 1
-    if (!month || !year || parseInt(month) < 1 || parseInt(month) > 12) {
-      orderError.value = t('checkout.invalidExpiry') || 'Invalid expiry date (MM/YY)'
-      return
-    }
-    if (parseInt(year) < currentYear || (parseInt(year) === currentYear && parseInt(month) < currentMonth)) {
-      orderError.value = t('checkout.expiredCard') || 'This card appears to be expired'
-      return
-    }
-    if (cardCvv.value.length < 3 || cardCvv.value.length > 4) {
-      orderError.value = t('checkout.invalidCvv') || 'Invalid CVV (3 or 4 digits)'
-      return
-    }
-  }
-
   orderLoading.value = true
   try {
     const isGuestMode = authMode.value === 'guest' && !auth.isAuthenticated
+
+    // Determine if using new ShippingMethod or legacy ShippingRate
+    const selectedOpt = shippingOptions.value.find((s: any) => s.id === selectedShippingId.value)
+    const isNewMethod = selectedOpt?.slug || selectedOpt?.carrier_type
+
     const payload: any = {
       shippingAddress: {
         firstName: addressForm.value.firstName,
@@ -793,7 +831,9 @@ async function confirmPayment() {
         postalCode: addressForm.value.postalCode,
       },
       paymentMethod: selectedPayment.value,
-      shippingRateId: selectedShippingId.value,
+      ...(isNewMethod
+        ? { shippingMethodId: selectedShippingId.value }
+        : { shippingRateId: selectedShippingId.value }),
       couponCode: couponCode.value || cart.couponCode || undefined,
       notes: '',
       currency: settings.currentCurrencyCode,
@@ -805,10 +845,30 @@ async function confirmPayment() {
     }
 
     const response = await placeOrder(payload)
+
+    // Handle Stripe payment intent confirmation
+    if (selectedPayment.value === 'stripe' && response.clientSecret && stripeInstance && stripeCard) {
+      // Real Stripe flow — confirm card payment client-side
+      const { error, paymentIntent } = await stripeInstance.confirmCardPayment(response.clientSecret, {
+        payment_method: { card: stripeCard },
+      })
+
+      if (error) {
+        orderError.value = error.message || 'Payment failed'
+        orderLoading.value = false
+        return
+      }
+
+      if (paymentIntent?.status === 'succeeded') {
+        // Confirm on backend
+        await confirmStripePayment(response.orderNumber, response.paymentIntentId)
+      }
+    }
+
     cart.clearCart()
     router.push('/checkout/success/' + response.orderNumber)
   } catch (e: any) {
-    orderError.value = e.response?.data?.message || t('common.error')
+    orderError.value = e.response?.data?.message || e.message || t('common.error')
   } finally {
     orderLoading.value = false
   }
@@ -817,6 +877,10 @@ async function confirmPayment() {
 onUnmounted(() => {
   if (otpCooldownTimer) {
     clearInterval(otpCooldownTimer)
+  }
+  // Clean up Stripe Elements
+  if (stripeCard) {
+    try { stripeCard.destroy() } catch {}
   }
 })
 
@@ -831,9 +895,6 @@ onMounted(() => {
       addressForm.value.lastName = parts.slice(1).join(' ') || ''
       addressForm.value.phone = auth.user.phone || ''
     }
-  }
-  if (paymentMethods.value.length) {
-    selectedPayment.value = paymentMethods.value[0].id
   }
 })
 </script>
@@ -942,12 +1003,27 @@ html[dir="rtl"] .checkout-input--phone { border-radius: var(--radius-md) 0 0 var
 
 /* Payment */
 .checkout-payment-methods { display: flex; flex-wrap: wrap; gap: var(--space-lg); margin-bottom: var(--space-lg); }
-.checkout-payment-card { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-lg) var(--space-lg); border: 1.5px solid var(--product-border-color, #eee); border-radius: var(--radius-xl); cursor: pointer; transition: border-color var(--transition-normal); min-width: 100px; }
+.checkout-payment-card { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-lg) var(--space-lg); border: 1.5px solid var(--product-border-color, #eee); border-radius: var(--radius-xl); cursor: pointer; transition: border-color var(--transition-normal); min-width: 100px; flex: 1; min-width: 200px; }
 .checkout-payment-card.selected { border-color: var(--color-primary); background: var(--bg-secondary, #f5f5f5); }
+.checkout-payment-card.disabled { opacity: 0.5; cursor: not-allowed; }
+.checkout-payment-details { display: flex; flex-direction: column; gap: 0.125rem; flex: 1; }
 .checkout-payment-name { font-size: 0.875rem; font-weight: 600; color: var(--store-text-primary); }
+.checkout-payment-desc { font-size: 0.75rem; color: var(--footer-text-color, #6b7280); line-height: 1.4; }
 .checkout-payment-fee { font-size: 0.75rem; color: var(--footer-text-color, #374151); }
+.checkout-payment-badge { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.625rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.checkout-payment-badge.coming-soon { background: #fef3c7; color: #d97706; }
 .checkout-card-form { border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-xl); padding: var(--space-lg); margin-bottom: var(--space-md); }
 .card-form-note { margin: 0 0 var(--space-md); font-size: 0.875rem; color: var(--footer-text-color, #374151); }
+
+/* Stripe Elements */
+.stripe-element-mount { padding: 0.75rem 1rem; border: 1px solid var(--product-border-color, #e5e7eb); border-radius: var(--radius-md); background: var(--bg-primary, #fff); min-height: 44px; transition: border-color 0.2s; }
+.stripe-element-mount:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 79, 70, 229), 0.08); }
+
+/* Carrier Type Badges */
+.checkout-carrier-badge { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.checkout-carrier-badge.smsa { background: #dbeafe; color: #1d4ed8; }
+.checkout-carrier-badge.standard { background: #f3f4f6; color: #6b7280; }
+.checkout-carrier-badge.local { background: #d1fae5; color: #059669; }
 
 /* Order Summary */
 .checkout-order-summary { border: 1px solid var(--product-border-color, #eee); border-radius: var(--radius-xl); padding: var(--space-md) var(--space-lg); margin: var(--space-lg) 0 0; }

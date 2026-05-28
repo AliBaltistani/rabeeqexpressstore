@@ -55,4 +55,14 @@ return [
         'key_id' => env('APPLE_KEY_ID'),
     ],
 
+    'stripe' => [
+        'key'    => env('STRIPE_KEY'),
+        'secret' => env('STRIPE_SECRET'),
+    ],
+
+    'smsa' => [
+        'pass_key' => env('SMSA_PASS_KEY'),
+        'wsdl_url' => env('SMSA_WSDL_URL', 'https://track.smsaexpress.com/SELOAPI/ServiceSELO.svc?wsdl'),
+    ],
+
 ];

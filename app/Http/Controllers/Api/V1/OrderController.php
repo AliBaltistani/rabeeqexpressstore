@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
@@ -16,14 +18,23 @@ class OrderController extends Controller
 
     /**
      * GET /api/v1/orders
+     * Supports optional ?status= filter for the order history page.
      */
     public function index(Request $request): JsonResponse
     {
-        $orders = Order::withoutGlobalScopes()
+        $query = Order::withoutGlobalScopes()
             ->where('user_id', $request->user()->id)
-            ->with(['items'])
-            ->orderByDesc('created_at')
-            ->paginate(10);
+            ->with(['items']);
+
+        // Optional status filter
+        if ($status = $request->input('status')) {
+            $validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+            if (in_array($status, $validStatuses, true)) {
+                $query->where('status', $status);
+            }
+        }
+
+        $orders = $query->orderByDesc('created_at')->paginate(10);
 
         return $this->paginated($orders, OrderResource::class);
     }
@@ -36,7 +47,13 @@ class OrderController extends Controller
         $order = Order::withoutGlobalScopes()
             ->where('order_number', $orderNumber)
             ->where('user_id', $request->user()->id)
-            ->with(['items', 'shippingAddress', 'billingAddress', 'tracking', 'statusHistories'])
+            ->with([
+                'items',
+                'shippingAddress',
+                'billingAddress',
+                'tracking',
+                'statusHistories' => fn($q) => $q->orderBy('created_at', 'asc'),
+            ])
             ->first();
 
         if (!$order) {

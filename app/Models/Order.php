@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
@@ -23,9 +25,13 @@ class Order extends Model
         'status',
         'payment_status',
         'payment_method',
+        'payment_gateway',
+        'payment_intent_id',
         'shipping_rate_id',
         'shipping_method',
+        'shipping_status',
         'transaction_id',
+        'tracking_number',
         'subtotal',
         'discount_amount',
         'shipping_amount',
@@ -108,6 +114,16 @@ class Order extends Model
         return $query->where('status', 'delivered');
     }
 
+    public function scopePaid(Builder $query): Builder
+    {
+        return $query->where('payment_status', 'paid');
+    }
+
+    public function scopeCancelled(Builder $query): Builder
+    {
+        return $query->where('status', 'cancelled');
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
@@ -135,5 +151,16 @@ class Order extends Model
     public function getFormattedTotalAttribute(): string
     {
         return number_format((float) $this->total, 2) . ' ' . $this->currency_code;
+    }
+
+    public function getShippingStatusLabelAttribute(): string
+    {
+        return match ($this->shipping_status) {
+            'pending'    => 'Pending',
+            'booked'     => 'Booked',
+            'in_transit'  => 'In Transit',
+            'delivered'  => 'Delivered',
+            default      => ucfirst($this->shipping_status ?? 'pending'),
+        };
     }
 }

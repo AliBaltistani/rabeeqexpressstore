@@ -8,6 +8,8 @@ use App\Models\OrderStatusHistory;
 use App\Models\OrderTracking;
 use App\Notifications\OrderStatusNotification;
 use App\Services\InvoiceService;
+use App\Services\OrderLifecycleService;
+use App\Services\SmsaShipmentService;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -57,25 +59,26 @@ class ViewOrder extends ViewRecord
                     $record = $this->getRecord();
                     $oldStatus = $record->status;
 
-                    // Update order status
-                    $record->update(['status' => $data['status']]);
-
-                    // Create status history entry
-                    OrderStatusHistory::create([
-                        'order_id' => $record->id,
-                        'status' => $data['status'],
-                        'comment' => $data['comment'] ?? null,
-                        'is_customer_notified' => $data['notify_customer'] ?? false,
-                        'created_by' => auth()->guard('admin')->id(),
-                    ]);
+                    // Use OrderLifecycleService for audit-logged transitions
+                    $lifecycle = app(OrderLifecycleService::class);
+                    $lifecycle->transitionStatus(
+                        $record,
+                        $data['status'],
+                        auth()->guard('admin')->id(),
+                        $data['comment'] ?? null,
+                    );
 
                     // Notify customer if checked
                     if ($data['notify_customer'] && $record->user) {
-                        $record->user->notify(new OrderStatusNotification(
-                            $record,
-                            $data['status'],
-                            $data['comment'] ?? null,
-                        ));
+                        try {
+                            $record->user->notify(new OrderStatusNotification(
+                                $record,
+                                $data['status'],
+                                $data['comment'] ?? null,
+                            ));
+                        } catch (\Throwable $e) {
+                            // Notification class might not exist yet
+                        }
                     }
 
                     Notification::make()
@@ -85,6 +88,65 @@ class ViewOrder extends ViewRecord
                         ->send();
 
                     $this->refreshFormData(['status']);
+                }),
+
+            // Book SMSA Shipment
+            Actions\Action::make('book_smsa_shipment')
+                ->label('Book SMSA Shipment')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('info')
+                ->visible(fn() => (
+                    in_array($this->getRecord()->status, ['processing', 'paid']) &&
+                    empty($this->getRecord()->tracking_number)
+                ))
+                ->requiresConfirmation()
+                ->modalHeading('Book SMSA Shipment')
+                ->modalDescription('This will create a shipment with SMSA Express and assign a tracking number to this order.')
+                ->action(function (): void {
+                    $service = app(SmsaShipmentService::class);
+                    $result = $service->bookShipment($this->getRecord());
+
+                    if ($result['success']) {
+                        Notification::make()
+                            ->title('SMSA Shipment Booked')
+                            ->body('AWB/Tracking: ' . $result['awb'])
+                            ->success()
+                            ->send();
+
+                        $this->refreshFormData(['tracking_number', 'shipping_status']);
+                    } else {
+                        Notification::make()
+                            ->title('SMSA Booking Failed')
+                            ->body($result['error'])
+                            ->danger()
+                            ->send();
+                    }
+                }),
+
+            // Download SMSA Shipping PDF
+            Actions\Action::make('download_smsa_pdf')
+                ->label('Shipping PDF')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('gray')
+                ->visible(fn() => !empty($this->getRecord()->tracking_number))
+                ->action(function () {
+                    $service = app(SmsaShipmentService::class);
+                    $result = $service->getShipmentPdf($this->getRecord()->tracking_number);
+
+                    if ($result['success'] && $result['pdf_base64']) {
+                        $pdfContent = base64_decode($result['pdf_base64']);
+                        return response()->streamDownload(
+                            fn() => print($pdfContent),
+                            "shipment-{$this->getRecord()->order_number}.pdf",
+                            ['Content-Type' => 'application/pdf']
+                        );
+                    }
+
+                    Notification::make()
+                        ->title('PDF Download Failed')
+                        ->body($result['error'] ?? 'Unable to download shipping PDF.')
+                        ->danger()
+                        ->send();
                 }),
 
             // Save Tracking Action
@@ -129,6 +191,11 @@ class ViewOrder extends ViewRecord
                             'tracking_url' => $data['tracking_url'] ?? null,
                         ]
                     );
+
+                    // Also update the orders table tracking_number
+                    if (!empty($data['tracking_number'])) {
+                        $record->update(['tracking_number' => $data['tracking_number']]);
+                    }
 
                     Notification::make()
                         ->title('Tracking Updated')
@@ -197,15 +264,15 @@ class ViewOrder extends ViewRecord
                                     ])
                                     ->collapsible(),
 
-                                // Status History
-                                Schemas\Components\Section::make('Status History')
+                                // Order Timeline — Interactive Status History
+                                Schemas\Components\Section::make('Order Timeline')
                                     ->schema([
-                                        Schemas\Components\View::make('filament.resources.order-resource.status-history')
+                                        Schemas\Components\View::make('filament.resources.order-resource.order-timeline')
                                             ->viewData([
-                                                'histories' => $this->getRecord()->statusHistories()->with('admin')->latest()->get(),
+                                                'histories' => $this->getRecord()->statusHistories()->with('admin', 'changedByAdmin')->orderBy('created_at', 'asc')->get(),
+                                                'currentStatus' => $this->getRecord()->status,
                                             ]),
-                                    ])
-                                    ->collapsible(),
+                                    ]),
                             ])
                             ->columnSpan(2),
 
@@ -218,6 +285,8 @@ class ViewOrder extends ViewRecord
                                         Schemas\Components\View::make('filament.resources.order-resource.tracking-info')
                                             ->viewData([
                                                 'tracking' => $this->getRecord()->tracking,
+                                                'trackingNumber' => $this->getRecord()->tracking_number,
+                                                'shippingStatus' => $this->getRecord()->shipping_status,
                                             ]),
                                     ]),
 
@@ -236,9 +305,17 @@ class ViewOrder extends ViewRecord
                                             ->label('Payment Method')
                                             ->content(fn(): string => ucfirst(str_replace('_', ' ', $this->getRecord()->payment_method ?? '—'))),
 
+                                        Forms\Components\Placeholder::make('payment_gateway_display')
+                                            ->label('Payment Gateway')
+                                            ->content(fn(): string => ucfirst($this->getRecord()->payment_gateway ?? '—')),
+
                                         Forms\Components\Placeholder::make('transaction_id_display')
                                             ->label('Transaction ID')
                                             ->content(fn(): string => $this->getRecord()->transaction_id ?? '—'),
+
+                                        Forms\Components\Placeholder::make('payment_intent_display')
+                                            ->label('Payment Intent')
+                                            ->content(fn(): string => $this->getRecord()->payment_intent_id ?? '—'),
 
                                         Forms\Components\Placeholder::make('ip_display')
                                             ->label('IP Address')
@@ -250,7 +327,7 @@ class ViewOrder extends ViewRecord
 
                                         Forms\Components\Placeholder::make('currency_display')
                                             ->label('Currency')
-                                            ->content(fn(): string => $this->getRecord()->currency_code . ' (Rate: ' . number_format($this->getRecord()->currency_rate, 4) . ')'),
+                                            ->content(fn(): string => $this->getRecord()->currency_code . ' (Rate: ' . number_format((float) $this->getRecord()->currency_rate, 4) . ')'),
                                     ]),
 
                                 // Customer Info
