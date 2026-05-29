@@ -15,7 +15,7 @@
                     <td class="py-3 px-2">
                         <div class="flex items-center gap-3">
                             @if($item->product_image)
-                                <img src="{{ asset('storage/' . $item->product_image) }}" alt="" class="w-10 h-10 rounded-lg object-cover">
+                                <img src="{{ asset('storage/' . $item->product_image) }}" alt="" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" style="width: 3rem; height: 3rem; min-width: 3rem;">
                             @else
                                 <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                                     <x-heroicon-o-cube class="w-5 h-5 text-gray-400" />

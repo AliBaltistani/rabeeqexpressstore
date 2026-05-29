@@ -242,27 +242,32 @@ class ViewOrder extends ViewRecord
                                             ]),
                                     ]),
 
-                                // Billing Address
-                                Schemas\Components\Section::make('Billing Address')
+                                Schemas\Components\Grid::make(2)
                                     ->schema([
-                                        Schemas\Components\View::make('filament.resources.order-resource.address-card')
-                                            ->viewData([
-                                                'address' => $this->getRecord()->billingAddress,
-                                                'type' => 'billing',
-                                            ]),
-                                    ])
-                                    ->collapsible(),
+                                        // Billing Address
+                                        Schemas\Components\Section::make('Billing Address')
+                                            ->schema([
+                                                Schemas\Components\View::make('filament.resources.order-resource.address-card')
+                                                    ->viewData([
+                                                        'address' => $this->getRecord()->billingAddress,
+                                                        'type' => 'billing',
+                                                    ]),
+                                            ])
+                                            ->columnSpan(1)
+                                            ->collapsible(),
 
-                                // Shipping Address
-                                Schemas\Components\Section::make('Shipping Address')
-                                    ->schema([
-                                        Schemas\Components\View::make('filament.resources.order-resource.address-card')
-                                            ->viewData([
-                                                'address' => $this->getRecord()->shippingAddress,
-                                                'type' => 'shipping',
-                                            ]),
-                                    ])
-                                    ->collapsible(),
+                                        // Shipping Address
+                                        Schemas\Components\Section::make('Shipping Address')
+                                            ->schema([
+                                                Schemas\Components\View::make('filament.resources.order-resource.address-card')
+                                                    ->viewData([
+                                                        'address' => $this->getRecord()->shippingAddress,
+                                                        'type' => 'shipping',
+                                                    ]),
+                                            ])
+                                            ->columnSpan(1)
+                                            ->collapsible(),
+                                    ]),
 
                                 // Order Timeline — Interactive Status History
                                 Schemas\Components\Section::make('Order Timeline')

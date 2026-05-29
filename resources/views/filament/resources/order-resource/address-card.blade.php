@@ -19,9 +19,9 @@
                 {{ $address->country }}
             </div>
             @if($address->phone)
-                <div class="text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-2">
-                    <x-heroicon-o-phone class="w-4 h-4" />
-                    {{ $address->phone }}
+                <div class="text-gray-600 dark:text-gray-400 flex items-center gap-2 mt-2">
+                    <x-heroicon-o-phone class="w-4 h-4 flex-shrink-0" style="width: 1rem; height: 1rem;" />
+                    <span>{{ $address->phone }}</span>
                 </div>
             @endif
         </div>
