@@ -400,7 +400,7 @@ import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { fetchShippingRates, fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, confirmStripePayment } from '@/api/services'
+import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, confirmStripePayment } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
@@ -679,13 +679,7 @@ async function submitAddress() {
   shippingLoading.value = true
   shippingRatesFetched.value = false
   try {
-    // Try dynamic shipping methods first, fallback to legacy rates
-    let rates: any[] = []
-    try {
-      rates = await fetchDynamicShippingMethods(addressForm.value.country, addressForm.value.city)
-    } catch {
-      rates = await fetchShippingRates({ country: addressForm.value.country, state: addressForm.value.state })
-    }
+    const rates = await fetchDynamicShippingMethods(addressForm.value.country, addressForm.value.city)
     shippingRatesFetched.value = true
     if (rates && rates.length) {
       shippingOptions.value = rates

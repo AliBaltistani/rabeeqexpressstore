@@ -60,7 +60,7 @@ class CheckoutController extends Controller
 
     /**
      * POST /api/v1/checkout/shipping-rates
-     * Legacy endpoint — kept for backward compatibility.
+     * Backward-compatible endpoint — delegates to the unified ShippingMethod system.
      */
     public function shippingRates(Request $request): JsonResponse
     {
@@ -69,34 +69,12 @@ class CheckoutController extends Controller
             'state'   => ['nullable', 'string'],
         ]);
 
-        // Try dynamic shipping methods first
         $methods = $this->shippingEngine->resolveForDestination(
             $request->input('country'),
             $request->input('city', $request->input('state')),
         );
 
-        if ($methods->isNotEmpty()) {
-            return $this->success($methods->values()->all());
-        }
-
-        // Fallback to legacy ShippingRate table
-        $rates = \App\Models\ShippingRate::where('is_active', true)
-            ->with('zone')
-            ->get()
-            ->map(function ($rate) {
-                return [
-                    'id'        => $rate->id,
-                    'name'      => $rate->getTranslation('name', app()->getLocale()),
-                    'method'    => $rate->method,
-                    'price'     => [
-                        'raw'       => (float) $rate->price,
-                        'formatted' => currency_symbol() . ' ' . number_format((float) $rate->price, 2),
-                    ],
-                    'freeAbove' => $rate->min_order_for_free ? (float) $rate->min_order_for_free : null,
-                ];
-            });
-
-        return $this->success($rates);
+        return $this->success($methods->values()->all());
     }
 
     /**

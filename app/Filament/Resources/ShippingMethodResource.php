@@ -82,8 +82,7 @@ class ShippingMethodResource extends Resource
                                     ->maxLength(255)
                                     ->unique(ignoreRecord: true)
                                     ->placeholder('e.g. standard-delivery')
-                                    ->helperText('Unique identifier. Auto-generated if left empty.')
-                                    ->dehydrateStateUsing(fn(?string $state, $get) => $state ?: \Illuminate\Support\Str::slug($get('name.en') ?? '')),
+                                    ->helperText('Unique identifier used internally.'),
 
                                 Forms\Components\Select::make('carrier_type')
                                     ->required()
@@ -95,7 +94,11 @@ class ShippingMethodResource extends Resource
                                     ->default('standard')
                                     ->label('Carrier Type'),
                             ]),
+                    ]),
 
+                Components\Section::make('Pricing & Rates')
+                    ->icon('heroicon-o-currency-dollar')
+                    ->schema([
                         Components\Grid::make(3)
                             ->schema([
                                 Forms\Components\TextInput::make('base_cost')
@@ -106,11 +109,34 @@ class ShippingMethodResource extends Resource
                                     ->step(0.01)
                                     ->label('Base Cost'),
 
+                                Forms\Components\TextInput::make('min_order_for_free')
+                                    ->numeric()
+                                    ->prefix(currency_symbol())
+                                    ->step(0.01)
+                                    ->label('Free Shipping Above')
+                                    ->helperText('Min order total for free shipping. Leave empty if never free.')
+                                    ->placeholder('e.g. 200.00'),
+
                                 Forms\Components\TextInput::make('estimated_days_min')
                                     ->numeric()
                                     ->minValue(0)
                                     ->label('Est. Days (Min)')
                                     ->placeholder('e.g. 3'),
+                            ]),
+
+                        Components\Grid::make(3)
+                            ->schema([
+                                Forms\Components\TextInput::make('min_weight')
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->label('Min Weight (kg)')
+                                    ->placeholder('Optional'),
+
+                                Forms\Components\TextInput::make('max_weight')
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->label('Max Weight (kg)')
+                                    ->placeholder('Optional'),
 
                                 Forms\Components\TextInput::make('estimated_days_max')
                                     ->numeric()
@@ -118,7 +144,11 @@ class ShippingMethodResource extends Resource
                                     ->label('Est. Days (Max)')
                                     ->placeholder('e.g. 7'),
                             ]),
+                    ]),
 
+                Components\Section::make('Availability')
+                    ->icon('heroicon-o-globe-alt')
+                    ->schema([
                         Forms\Components\Select::make('supported_countries')
                             ->multiple()
                             ->options(Country::where('is_active', true)->pluck('name_en', 'code'))
@@ -155,12 +185,6 @@ class ShippingMethodResource extends Resource
                     ->sortable()
                     ->weight('bold'),
 
-                Tables\Columns\TextColumn::make('slug')
-                    ->label('Slug')
-                    ->badge()
-                    ->color('gray')
-                    ->searchable(),
-
                 Tables\Columns\TextColumn::make('carrier_type')
                     ->label('Carrier')
                     ->badge()
@@ -180,6 +204,12 @@ class ShippingMethodResource extends Resource
                 Tables\Columns\TextColumn::make('base_cost')
                     ->label('Price')
                     ->money(currency_code())
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('min_order_for_free')
+                    ->label('Free Above')
+                    ->money(currency_code())
+                    ->placeholder('Never')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('estimated_delivery')

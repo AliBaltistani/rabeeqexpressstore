@@ -12,7 +12,7 @@ final class ShippingEngineService
     /**
      * Resolve available shipping methods for a given destination.
      *
-     * @return Collection<int, array{id: int, slug: string, name: string, carrier_type: string, price: array, estimated_delivery: string}>
+     * @return Collection<int, array{id: int, slug: string, name: string, carrier_type: string, price: array, freeAbove: ?float, estimated_delivery: string}>
      */
     public function resolveForDestination(string $country, ?string $city = null): Collection
     {
@@ -24,7 +24,7 @@ final class ShippingEngineService
             ->orderBy('sort_order')
             ->get();
 
-        // If no specific methods found, always return standard fallback
+        // If no specific methods found for this country, return standard fallback
         if ($methods->isEmpty()) {
             $methods = ShippingMethod::active()
                 ->byCarrier('standard')
@@ -40,6 +40,7 @@ final class ShippingEngineService
                 'raw'       => (float) $method->base_cost,
                 'formatted' => currency_symbol() . ' ' . number_format((float) $method->base_cost, 2),
             ],
+            'freeAbove'          => $method->min_order_for_free ? (float) $method->min_order_for_free : null,
             'estimated_delivery' => $method->getEstimatedDeliveryLabel(),
         ]);
     }

@@ -11,7 +11,6 @@ use App\Models\Order;
 use App\Models\OrderAddress;
 use App\Models\OrderStatusHistory;
 use App\Models\ShippingMethod;
-use App\Models\ShippingRate;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -102,25 +101,13 @@ final class OrderLifecycleService
 
             // ── Shipping cost ──
             $shippingAmount = 0;
-            $shippingRateId = null;
             $shippingMethodName = null;
 
             if (!empty($data['shippingMethodId'])) {
                 $method = ShippingMethod::find($data['shippingMethodId']);
                 if ($method) {
-                    $shippingAmount = (float) $method->base_cost;
+                    $shippingAmount = $method->getEffectiveCost($subtotal);
                     $shippingMethodName = $method->getTranslation('name', 'en') . ' (' . ucfirst($method->carrier_type) . ')';
-                }
-            } elseif (!empty($data['shippingRateId'])) {
-                // Backward compatibility with existing ShippingRate system
-                $rate = ShippingRate::find($data['shippingRateId']);
-                if ($rate) {
-                    $shippingAmount = (float) $rate->price;
-                    $shippingRateId = $rate->id;
-                    $shippingMethodName = $rate->getTranslation('name', 'en') . ' (' . ucfirst($rate->method) . ')';
-                    if ($rate->min_order_for_free && $subtotal >= $rate->min_order_for_free) {
-                        $shippingAmount = 0;
-                    }
                 }
             }
 
@@ -143,7 +130,7 @@ final class OrderLifecycleService
                 'payment_status'    => 'unpaid',
                 'payment_method'    => $data['paymentMethod'],
                 'payment_gateway'   => $data['paymentMethod'] === 'stripe' ? 'stripe' : null,
-                'shipping_rate_id'  => $shippingRateId,
+                'shipping_rate_id'  => null,
                 'shipping_method'   => $shippingMethodName,
                 'shipping_status'   => 'pending',
                 'subtotal'          => $subtotal,

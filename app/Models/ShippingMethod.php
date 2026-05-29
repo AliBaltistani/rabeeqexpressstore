@@ -21,6 +21,9 @@ class ShippingMethod extends Model
         'name',
         'description',
         'base_cost',
+        'min_order_for_free',
+        'min_weight',
+        'max_weight',
         'carrier_type',
         'is_active',
         'supported_countries',
@@ -32,6 +35,9 @@ class ShippingMethod extends Model
     /** @var array<string, string> */
     protected $casts = [
         'base_cost'             => 'decimal:2',
+        'min_order_for_free'    => 'decimal:2',
+        'min_weight'            => 'decimal:2',
+        'max_weight'            => 'decimal:2',
         'is_active'             => 'boolean',
         'supported_countries'   => 'array',
         'estimated_days_min'    => 'integer',
@@ -79,4 +85,17 @@ class ShippingMethod extends Model
         }
         return in_array(strtoupper($countryCode), $this->supported_countries, true);
     }
+
+    /**
+     * Calculate the effective shipping cost for a given order subtotal.
+     * Returns 0 if the order qualifies for free shipping.
+     */
+    public function getEffectiveCost(float $orderSubtotal = 0): float
+    {
+        if ($this->min_order_for_free && $orderSubtotal >= (float) $this->min_order_for_free) {
+            return 0.00;
+        }
+        return (float) $this->base_cost;
+    }
 }
+

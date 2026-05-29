@@ -23,6 +23,8 @@ class ShippingZoneResource extends Resource
     
     protected static ?int $navigationSort = 6;
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function getNavigationGroup(): ?string
     {
         return trans('admin.nav.settings');
@@ -30,7 +32,7 @@ class ShippingZoneResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return 'Shipping Zones';
+        return 'Shipping Zones (Legacy)';
     }
 
     public static function form(Schema $form): Schema
