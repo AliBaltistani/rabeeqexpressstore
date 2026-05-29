@@ -16,4 +16,9 @@ class ListShippingZones extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    public function getSubheading(): ?string
+    {
+        return '⚠️ Legacy fallback — Use "Shipping Methods" for primary checkout configuration.';
+    }
 }

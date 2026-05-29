@@ -94,7 +94,7 @@ class InitController extends Controller
             $methods[] = [
                 'id' => 'cod',
                 'name' => 'Cash on Delivery',
-                'fee' => (float) setting('payment.cod_fee', 0),
+                'fee' => (float) setting('payment.cod_extra_fee', 0),
             ];
         }
 

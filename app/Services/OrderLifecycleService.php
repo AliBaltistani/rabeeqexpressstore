@@ -127,7 +127,7 @@ final class OrderLifecycleService
             // ── COD fee ──
             $codFee = 0;
             if (($data['paymentMethod'] ?? '') === 'cod') {
-                $codFee = (float) setting('payment.cod_fee', 0);
+                $codFee = (float) setting('payment.cod_extra_fee', 0);
             }
 
             $total = $subtotal - $discount + $shippingAmount + $codFee;

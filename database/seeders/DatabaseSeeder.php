@@ -23,6 +23,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Seed in correct order: roles first, then admins, then other data
-        $this->call([RolePermissionSeeder::class, AdminUserSeeder::class, CurrencySeeder::class, LanguageSeeder::class, DummyDataSeeder::class]);
+        $this->call([RolePermissionSeeder::class, AdminUserSeeder::class, CurrencySeeder::class, LanguageSeeder::class, ShippingMethodSeeder::class, ShippingCarrierSeeder::class, DummyDataSeeder::class]);
     }
 }
