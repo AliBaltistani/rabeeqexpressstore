@@ -32,10 +32,11 @@ class CheckoutController extends Controller
     {
         $gateways = $this->paymentGateway->getAvailableGateways();
 
-        // Only return enabled gateways to the frontend
-        $enabled = array_values(array_filter($gateways, fn(array $g) => $g['enabled']));
-
-        return $this->success($enabled);
+        // Return all gateways — frontend handles showing disabled/coming-soon
+        return $this->success([
+            'gateways'             => $gateways,
+            'stripePublishableKey' => $this->paymentGateway->getStripePublishableKey(),
+        ]);
     }
 
     /**
@@ -162,6 +163,8 @@ class CheckoutController extends Controller
         ]);
 
         $user = $request->user('sanctum');
+
+        /** @var \App\Models\Order|null $order */
         $order = \App\Models\Order::withoutGlobalScopes()
             ->where('order_number', $request->input('orderNumber'))
             ->when($user, fn($q) => $q->where('user_id', $user->id))
@@ -180,10 +183,12 @@ class CheckoutController extends Controller
             // Log status transition
             $this->orderLifecycle->transitionStatus($order, 'processing');
 
+            $order->refresh();
+
             return $this->success([
                 'orderNumber'   => $order->order_number,
-                'status'        => $order->fresh()->status,
-                'paymentStatus' => $order->fresh()->payment_status,
+                'status'        => $order->status,
+                'paymentStatus' => $order->payment_status,
             ], 'Payment confirmed.');
         }
 

@@ -499,6 +499,7 @@ let stripeInstance: any = null
 let stripeCard: any = null
 const stripeError = ref('')
 const stripeReady = ref(false)
+const stripePublishableKey = ref('')
 
 // Step 1 summary
 const step1Summary = computed(() => {
@@ -713,8 +714,16 @@ function submitShipping() {
 async function loadPaymentMethods() {
   paymentMethodsLoading.value = true
   try {
-    const gateways = await fetchPaymentMethods()
+    const response = await fetchPaymentMethods()
+    // New API shape: { gateways: [...], stripePublishableKey: '...' }
+    const gateways = response.gateways || response || []
     dynamicPaymentMethods.value = gateways
+
+    // Store Stripe publishable key for Elements initialization
+    if (response.stripePublishableKey) {
+      stripePublishableKey.value = response.stripePublishableKey
+    }
+
     // Auto-select first enabled
     const firstEnabled = gateways.find((g: any) => g.enabled)
     if (firstEnabled) {
@@ -740,7 +749,7 @@ watch(selectedPayment, async (val) => {
 
 async function initStripeElements() {
   stripeError.value = ''
-  const stripeKey = (settings.storeSettings as any)?.stripePublishableKey || import.meta.env.VITE_STRIPE_KEY || ''
+  const stripeKey = stripePublishableKey.value || (settings.storeSettings as any)?.stripePublishableKey || import.meta.env.VITE_STRIPE_KEY || ''
   if (!stripeKey) {
     // No Stripe key — simulated mode, skip Elements mount
     stripeReady.value = true

@@ -103,10 +103,10 @@
         </div>
 
         <!-- Status History Timeline -->
-        <div v-if="order.statusHistories?.length" class="info-card">
+        <div v-if="order.statusHistory?.length" class="info-card">
           <h3>Order History</h3>
           <div class="status-timeline">
-            <div v-for="(h, i) in order.statusHistories" :key="i" class="timeline-entry" :class="{ latest: i === order.statusHistories.length - 1 }">
+            <div v-for="(h, i) in order.statusHistory" :key="i" class="timeline-entry" :class="{ latest: i === order.statusHistory.length - 1 }">
               <div class="timeline-dot" :style="{ background: statusColor(h.statusTo || h.status) }"></div>
               <div class="timeline-content">
                 <span class="timeline-status" :style="{ color: statusColor(h.statusTo || h.status) }">{{ h.statusTo || h.status }}</span>
@@ -150,9 +150,9 @@ const trackingSteps = computed(() => {
   ]
 })
 
-function statusColor(status: string): string {
+function statusColor(status?: string): string {
   const colors: Record<string, string> = { pending: '#f59e0b', processing: '#6366f1', shipped: '#3b82f6', delivered: '#10b981', cancelled: '#ef4444', refunded: '#6b7280' }
-  return colors[status?.toLowerCase()] || '#9ca3af'
+  return colors[(status || '').toLowerCase()] || '#9ca3af'
 }
 
 function formatDate(d: string | undefined): string {

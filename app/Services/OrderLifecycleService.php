@@ -73,7 +73,7 @@ final class OrderLifecycleService
                         ? $product->getTranslation('name', 'en') . ' – ' . $cartItem->variant->name
                         : $product->getTranslation('name', 'en'),
                     'product_sku'              => $cartItem->variant?->sku ?? $product->sku,
-                    'product_image'            => $product->getFirstMediaUrl('images') ?: null,
+                    'product_image'            => $product->images->where('is_primary', true)->first()?->image_path ?? $product->images->first()?->image_path ?? null,
                     'quantity'                 => $qty,
                     'unit_price'               => $price,
                     'total'                    => $lineTotal,

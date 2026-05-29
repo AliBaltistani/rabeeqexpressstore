@@ -278,6 +278,8 @@ export interface Order {
   items?: OrderItem[]
   shippingAddress?: Partial<Address>
   billingAddress?: Partial<Address>
+  trackingNumber?: string
+  paymentGateway?: string
   tracking?: {
     carrier?: string
     trackingNumber?: string
@@ -285,7 +287,9 @@ export interface Order {
     estimatedDelivery?: string
   }
   statusHistory?: {
-    status: string
+    status?: string
+    statusTo?: string
+    comment?: string
     note?: string
     createdAt: string
   }[]

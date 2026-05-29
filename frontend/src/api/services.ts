@@ -271,7 +271,7 @@ export async function fetchDynamicShippingMethods(country: string, city?: string
 }
 
 export async function fetchPaymentMethods() {
-  return unwrap<any[]>(await apiClient.get('/checkout/payment-methods'))
+  return unwrap<any>(await apiClient.get('/checkout/payment-methods'))
 }
 
 export async function placeOrder(data: any) {

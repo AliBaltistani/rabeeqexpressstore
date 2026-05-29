@@ -17,8 +17,8 @@ final class SmsaShipmentService
 
     public function __construct()
     {
-        $this->passKey = config('services.smsa.pass_key', '');
-        $this->wsdlUrl = config('services.smsa.wsdl_url', 'https://track.smsaexpress.com/SELOAPI/ServiceSELO.svc?wsdl');
+        $this->passKey = setting('shipping.smsa_pass_key') ?: config('services.smsa.pass_key', '');
+        $this->wsdlUrl = setting('shipping.smsa_wsdl_url') ?: config('services.smsa.wsdl_url', 'https://track.smsaexpress.com/SELOAPI/ServiceSELO.svc?wsdl');
     }
 
     /**

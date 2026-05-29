@@ -16,45 +16,97 @@ final class PaymentGatewayService
      */
     public function getAvailableGateways(): array
     {
+        $locale = app()->getLocale();
+        $stripeEnabled = (bool) setting('payment.stripe_enabled', false)
+            || !empty(config('services.stripe.secret'));
+
+        $codFee = (float) setting('payment.cod_extra_fee', 0);
+
+        $codLabel = $locale === 'ar'
+            ? (setting('payment.cod_label_ar') ?: 'الدفع عند الاستلام')
+            : (setting('payment.cod_label_en') ?: 'Cash on Delivery');
+
+        $bankLabel = $locale === 'ar'
+            ? (setting('payment.bank_label_ar') ?: 'تحويل بنكي')
+            : (setting('payment.bank_label_en') ?: 'Bank Transfer');
+
+        $codDesc = $locale === 'ar'
+            ? (setting('payment.cod_description_ar') ?: 'ادفع عند استلام طلبك.')
+            : (setting('payment.cod_description_en') ?: 'Pay when you receive your order.');
+
         return [
+            [
+                'id'          => 'cod',
+                'name'        => $codLabel,
+                'enabled'     => (bool) setting('payment.cod_enabled', true),
+                'fee'         => $codFee > 0
+                    ? currency_symbol() . ' ' . number_format($codFee, 2)
+                    : null,
+                'description' => $codDesc,
+            ],
             [
                 'id'          => 'stripe',
                 'name'        => 'Credit / Debit Card',
-                'enabled'     => !empty(config('services.stripe.secret')),
+                'enabled'     => $stripeEnabled,
                 'fee'         => null,
                 'description' => 'Pay securely with Visa, Mastercard, or Amex.',
             ],
             [
-                'id'          => 'cod',
-                'name'        => 'Cash on Delivery',
-                'enabled'     => (bool) setting('payment.cod_enabled', true),
-                'fee'         => setting('payment.cod_fee', 0) > 0
-                    ? currency_symbol() . ' ' . number_format((float) setting('payment.cod_fee', 0), 2)
-                    : null,
-                'description' => 'Pay when you receive your order.',
-            ],
-            [
                 'id'          => 'bank_transfer',
-                'name'        => 'Bank Transfer',
-                'enabled'     => (bool) setting('payment.bank_transfer_enabled', true),
+                'name'        => $bankLabel,
+                'enabled'     => (bool) setting('payment.bank_enabled', true),
                 'fee'         => null,
                 'description' => 'Transfer to our bank account. Order confirmed upon receipt.',
             ],
             [
+                'id'          => 'paypal',
+                'name'        => 'PayPal',
+                'enabled'     => (bool) setting('payment.paypal_enabled', false),
+                'fee'         => null,
+                'description' => 'Pay with your PayPal account.',
+            ],
+            [
                 'id'          => 'tamara',
                 'name'        => 'Tamara — Buy Now Pay Later',
-                'enabled'     => false, // Stub: enable when integrated
+                'enabled'     => false,
                 'fee'         => null,
                 'description' => 'Split into 3 interest-free payments.',
             ],
             [
                 'id'          => 'tabby',
                 'name'        => 'Tabby — Pay in 4',
-                'enabled'     => false, // Stub: enable when integrated
+                'enabled'     => false,
                 'fee'         => null,
                 'description' => 'Pay in 4 interest-free installments.',
             ],
         ];
+    }
+
+    /**
+     * Get the Stripe secret key — prioritize admin settings over config.
+     */
+    public function getStripeSecret(): ?string
+    {
+        $stored = setting('payment.stripe_secret_key');
+        if ($stored) {
+            try {
+                return decrypt($stored);
+            } catch (\Throwable) {
+                // Value may not be encrypted (set via config), use as-is
+                return $stored;
+            }
+        }
+        return config('services.stripe.secret');
+    }
+
+    /**
+     * Get the Stripe publishable key — prioritize admin settings over config.
+     * Note: publishable keys are NOT encrypted by the admin page.
+     */
+    public function getStripePublishableKey(): ?string
+    {
+        return setting('payment.stripe_publishable_key')
+            ?: config('services.stripe.key');
     }
 
     /**
@@ -64,7 +116,7 @@ final class PaymentGatewayService
      */
     public function createStripeIntent(Order $order): array
     {
-        $stripeSecret = config('services.stripe.secret');
+        $stripeSecret = $this->getStripeSecret();
 
         if (empty($stripeSecret)) {
             // Simulated mode: mark order as paid directly
@@ -133,7 +185,7 @@ final class PaymentGatewayService
      */
     public function confirmStripePayment(Order $order, string $paymentIntentId): array
     {
-        $stripeSecret = config('services.stripe.secret');
+        $stripeSecret = $this->getStripeSecret();
 
         if (empty($stripeSecret)) {
             // Simulated confirmation

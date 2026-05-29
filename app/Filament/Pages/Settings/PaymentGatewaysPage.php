@@ -25,12 +25,12 @@ class PaymentGatewaysPage extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('admin.settings_pages.payment');
+        return __('admin.settings_pages.payment') . ' & Shipping';
     }
 
     public function getTitle(): string
     {
-        return __('admin.settings_pages.payment');
+        return __('admin.settings_pages.payment') . ' & Shipping';
     }
 
     public ?array $data = [];
@@ -38,11 +38,22 @@ class PaymentGatewaysPage extends Page
     public function mount(): void
     {
         $fields = [
+            // Stripe
             'stripe_enabled', 'stripe_publishable_key', 'stripe_secret_key', 'stripe_webhook_secret', 'stripe_mode',
+            // PayPal
             'paypal_enabled', 'paypal_client_id', 'paypal_client_secret', 'paypal_mode',
+            // COD
             'cod_enabled', 'cod_label_en', 'cod_label_ar', 'cod_description_en', 'cod_description_ar', 'cod_extra_fee',
+            // Bank Transfer
             'bank_enabled', 'bank_label_en', 'bank_label_ar', 'bank_name', 'bank_account_name', 'bank_iban', 'bank_swift', 'bank_instructions_en', 'bank_instructions_ar',
         ];
+
+        // Shipping fields (stored under 'shipping.' prefix)
+        $shippingFields = [
+            'smsa_enabled', 'smsa_pass_key', 'smsa_wsdl_url',
+            'default_method', 'free_shipping_threshold',
+        ];
+
         foreach ($fields as $key) {
             $value = Setting::get("payment.{$key}");
             if (in_array($key, ['stripe_secret_key', 'stripe_webhook_secret', 'paypal_client_secret'])) {
@@ -51,6 +62,17 @@ class PaymentGatewaysPage extends Page
                 $this->data[$key] = $value;
             }
         }
+
+        foreach ($shippingFields as $key) {
+            $this->data["shipping_{$key}"] = Setting::get("shipping.{$key}");
+        }
+
+        // Sensible defaults for shipping
+        $this->data['shipping_smsa_enabled'] ??= false;
+        $this->data['shipping_smsa_wsdl_url'] ??= 'https://track.smsaexpress.com/SELOAPI/ServiceSELO.svc?wsdl';
+        $this->data['shipping_default_method'] ??= 'standard';
+        $this->data['shipping_free_shipping_threshold'] ??= 0;
+
         $this->form->fill($this->data);
     }
 
@@ -58,6 +80,10 @@ class PaymentGatewaysPage extends Page
     {
         return $form
             ->schema([
+                // ═══════════════════════════════════════
+                // PAYMENT GATEWAYS
+                // ═══════════════════════════════════════
+
                 // Stripe
                 Components\Section::make('Stripe')
                     ->icon('heroicon-o-credit-card')
@@ -123,6 +149,52 @@ class PaymentGatewaysPage extends Page
                             Forms\Components\Textarea::make('bank_instructions_ar')->label('Instructions (Arabic)')->rows(2)->extraInputAttributes(['dir' => 'rtl']),
                         ]),
                     ])->collapsible(),
+
+                // ═══════════════════════════════════════
+                // SHIPPING CONFIGURATION
+                // ═══════════════════════════════════════
+
+                Components\Section::make('Shipping Configuration')
+                    ->icon('heroicon-o-globe-alt')
+                    ->schema([
+                        Components\Grid::make(2)->schema([
+                            Forms\Components\Select::make('shipping_default_method')
+                                ->label('Default Shipping Method')
+                                ->options([
+                                    'standard' => 'Standard Delivery',
+                                    'smsa'     => 'SMSA Express',
+                                    'local'    => 'Local Pickup',
+                                ])
+                                ->default('standard'),
+                            Forms\Components\TextInput::make('shipping_free_shipping_threshold')
+                                ->label('Free Shipping Threshold (' . currency_symbol() . ')')
+                                ->numeric()
+                                ->default(0)
+                                ->helperText('Minimum order total for free shipping (0 = disabled)'),
+                        ]),
+                    ])->collapsible(),
+
+                // SMSA Express
+                Components\Section::make('SMSA Express Integration')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->schema([
+                        Forms\Components\Toggle::make('shipping_smsa_enabled')
+                            ->label('Enable SMSA Express')
+                            ->helperText('Use SMSA SOAP API for shipment booking and tracking')
+                            ->default(false),
+                        Components\Grid::make(2)->schema([
+                            Forms\Components\TextInput::make('shipping_smsa_pass_key')
+                                ->label('SMSA Pass Key')
+                                ->password()
+                                ->revealable()
+                                ->placeholder('Your SMSA API passkey'),
+                            Forms\Components\TextInput::make('shipping_smsa_wsdl_url')
+                                ->label('SMSA WSDL URL')
+                                ->url()
+                                ->default('https://track.smsaexpress.com/SELOAPI/ServiceSELO.svc?wsdl')
+                                ->helperText('SMSA SOAP API endpoint'),
+                        ]),
+                    ])->collapsible(),
             ])
             ->statePath('data');
     }
@@ -132,14 +204,24 @@ class PaymentGatewaysPage extends Page
         $data = $this->form->getState();
         $encrypted = ['stripe_secret_key', 'stripe_webhook_secret', 'paypal_client_secret'];
 
+        // Shipping fields use 'shipping.' prefix
+        $shippingKeys = ['shipping_smsa_enabled', 'shipping_smsa_pass_key', 'shipping_smsa_wsdl_url', 'shipping_default_method', 'shipping_free_shipping_threshold'];
+
         foreach ($data as $key => $value) {
-            if (in_array($key, $encrypted) && $value) {
-                $value = encrypt($value);
+            if (in_array($key, $shippingKeys)) {
+                // Save under shipping.* prefix
+                $settingKey = 'shipping.' . str_replace('shipping_', '', $key);
+                Setting::set($settingKey, $value);
+            } else {
+                // Save under payment.* prefix
+                if (in_array($key, $encrypted) && $value) {
+                    $value = encrypt($value);
+                }
+                Setting::set("payment.{$key}", $value);
             }
-            Setting::set("payment.{$key}", $value);
         }
 
-        Notification::make()->title('Payment Settings Saved')->success()->send();
+        Notification::make()->title('Payment & Shipping Settings Saved')->success()->send();
     }
 
     public static function canAccess(): bool
