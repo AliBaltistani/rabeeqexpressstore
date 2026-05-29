@@ -18,7 +18,7 @@ class ShippingMethodSeeder extends Seeder
                 'min_order_for_free'  => 200.00,
                 'min_weight'          => null,
                 'max_weight'          => null,
-                'carrier_type'        => 'standard',
+                'carrier_type'        => 'SMSA',  // matches ShippingCarrier.code
                 'is_active'           => true,
                 'supported_countries' => null, // all countries
                 'estimated_days_min'  => 5,
@@ -33,12 +33,27 @@ class ShippingMethodSeeder extends Seeder
                 'min_order_for_free'  => 500.00,
                 'min_weight'          => null,
                 'max_weight'          => 30.00,
-                'carrier_type'        => 'smsa',
+                'carrier_type'        => 'SMSA',  // matches ShippingCarrier.code
                 'is_active'           => true,
                 'supported_countries' => ['SA', 'BH', 'AE', 'KW', 'OM', 'QA'],
                 'estimated_days_min'  => 1,
                 'estimated_days_max'  => 3,
                 'sort_order'          => 5,
+            ],
+            [
+                'slug'                => 'aramex-standard',
+                'name'                => ['en' => 'Aramex Standard', 'ar' => 'أرامكس عادي'],
+                'description'         => ['en' => 'Standard delivery via Aramex within 3-5 days', 'ar' => 'توصيل عادي عبر أرامكس خلال 3-5 أيام'],
+                'base_cost'           => 20.00,
+                'min_order_for_free'  => 300.00,
+                'min_weight'          => null,
+                'max_weight'          => null,
+                'carrier_type'        => 'Aramex',  // matches ShippingCarrier.code
+                'is_active'           => true,
+                'supported_countries' => null,
+                'estimated_days_min'  => 3,
+                'estimated_days_max'  => 5,
+                'sort_order'          => 8,
             ],
             [
                 'slug'                => 'local-pickup',
@@ -48,7 +63,7 @@ class ShippingMethodSeeder extends Seeder
                 'min_order_for_free'  => null,
                 'min_weight'          => null,
                 'max_weight'          => null,
-                'carrier_type'        => 'local',
+                'carrier_type'        => 'OTHER',  // matches ShippingCarrier.code
                 'is_active'           => true,
                 'supported_countries' => ['BH'],
                 'estimated_days_min'  => 0,

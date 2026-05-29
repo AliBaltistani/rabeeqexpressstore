@@ -160,12 +160,17 @@ class PaymentGatewaysPage extends Page
                         Components\Grid::make(2)->schema([
                             Forms\Components\Select::make('shipping_default_method')
                                 ->label('Default Shipping Method')
-                                ->options([
-                                    'standard' => 'Standard Delivery',
-                                    'smsa'     => 'SMSA Express',
-                                    'local'    => 'Local Pickup',
-                                ])
-                                ->default('standard'),
+                                ->options(function () {
+                                    return \App\Models\ShippingMethod::where('is_active', true)
+                                        ->orderBy('sort_order')
+                                        ->get()
+                                        ->mapWithKeys(function (\App\Models\ShippingMethod $m) {
+                                            return [$m->slug => $m->getTranslation('name', 'en')];
+                                        })
+                                        ->toArray();
+                                })
+                                ->searchable()
+                                ->placeholder('Select a shipping method'),
                             Forms\Components\TextInput::make('shipping_free_shipping_threshold')
                                 ->label('Free Shipping Threshold (' . currency_symbol() . ')')
                                 ->numeric()

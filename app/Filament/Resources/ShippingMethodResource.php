@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ShippingMethodResource\Pages;
 use App\Models\Country;
+use App\Models\ShippingCarrier;
 use App\Models\ShippingMethod;
 use Filament\Actions;
 use Filament\Forms;
@@ -12,6 +13,7 @@ use Filament\Schemas\Components;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 
 class ShippingMethodResource extends Resource
 {
@@ -55,7 +57,13 @@ class ShippingMethodResource extends Resource
                                         Forms\Components\TextInput::make('name.en')
                                             ->required()
                                             ->maxLength(255)
-                                            ->label('Name (English)'),
+                                            ->label('Name (English)')
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(function ($state, $set, ?string $operation) {
+                                                if ($operation === 'create' && $state) {
+                                                    $set('slug', Str::slug($state));
+                                                }
+                                            }),
                                         Forms\Components\Textarea::make('description.en')
                                             ->rows(2)
                                             ->label('Description (English)'),
@@ -81,18 +89,15 @@ class ShippingMethodResource extends Resource
                                     ->required()
                                     ->maxLength(255)
                                     ->unique(ignoreRecord: true)
-                                    ->placeholder('e.g. standard-delivery')
-                                    ->helperText('Unique identifier used internally.'),
+                                    ->helperText('Auto-generated from name. You can customize it.')
+                                    ->dehydrateStateUsing(fn(?string $state, $get) => $state ?: Str::slug($get('name.en') ?? '')),
 
                                 Forms\Components\Select::make('carrier_type')
                                     ->required()
-                                    ->options([
-                                        'standard' => 'Standard Delivery',
-                                        'smsa'     => 'SMSA Express',
-                                        'local'    => 'Local Pickup',
-                                    ])
-                                    ->default('standard')
-                                    ->label('Carrier Type'),
+                                    ->options(fn() => ShippingCarrier::active()->ordered()->pluck('name', 'code')->toArray())
+                                    ->searchable()
+                                    ->label('Shipping Carrier')
+                                    ->helperText('Select the shipping company for this method.'),
                             ]),
                     ]),
 
@@ -188,17 +193,10 @@ class ShippingMethodResource extends Resource
                 Tables\Columns\TextColumn::make('carrier_type')
                     ->label('Carrier')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
-                        'standard' => 'primary',
-                        'smsa'     => 'success',
-                        'local'    => 'warning',
-                        default    => 'gray',
-                    })
-                    ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'standard' => 'Standard',
-                        'smsa'     => 'SMSA Express',
-                        'local'    => 'Local Pickup',
-                        default    => ucfirst($state),
+                    ->color('primary')
+                    ->formatStateUsing(function (string $state): string {
+                        $carrier = ShippingCarrier::where('code', $state)->first();
+                        return $carrier ? $carrier->name : ucfirst($state);
                     }),
 
                 Tables\Columns\TextColumn::make('base_cost')
@@ -238,11 +236,8 @@ class ShippingMethodResource extends Resource
             ->defaultSort('sort_order')
             ->filters([
                 Tables\Filters\SelectFilter::make('carrier_type')
-                    ->options([
-                        'standard' => 'Standard',
-                        'smsa'     => 'SMSA Express',
-                        'local'    => 'Local Pickup',
-                    ]),
+                    ->label('Carrier')
+                    ->options(fn() => ShippingCarrier::active()->ordered()->pluck('name', 'code')->toArray()),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active')
                     ->placeholder('All')
