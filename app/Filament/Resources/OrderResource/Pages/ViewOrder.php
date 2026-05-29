@@ -6,6 +6,7 @@ use App\Filament\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\OrderTracking;
+use App\Models\ShippingCarrier;
 use App\Notifications\OrderStatusNotification;
 use App\Services\InvoiceService;
 use App\Services\OrderLifecycleService;
@@ -186,17 +187,8 @@ class ViewOrder extends ViewRecord
                 ->form([
                     Forms\Components\Select::make('carrier')
                         ->label('Shipping Company')
-                        ->options([
-                            'SMSA'       => 'SMSA Express',
-                            'Aramex'     => 'Aramex',
-                            'DHL'        => 'DHL',
-                            'FedEx'      => 'FedEx',
-                            'UPS'        => 'UPS',
-                            'USPS'       => 'USPS',
-                            'J&T'        => 'J&T Express',
-                            'Saudi Post' => 'Saudi Post (SPL)',
-                            'Other'      => 'Other',
-                        ])
+                        ->options(fn () => ShippingCarrier::active()->ordered()->pluck('name', 'code')->toArray())
+                        ->searchable()
                         ->default(fn() => $this->getRecord()->tracking?->carrier)
                         ->required()
                         ->live()
@@ -415,22 +407,17 @@ class ViewOrder extends ViewRecord
     }
 
     /**
-     * Generate a tracking URL based on carrier and tracking number.
+     * Generate a tracking URL based on carrier code and tracking number.
+     * Fetches the URL template from the ShippingCarrier database record.
      */
-    public static function generateTrackingUrl(string $carrier, string $trackingNumber): string
+    public static function generateTrackingUrl(string $carrierCode, string $trackingNumber): string
     {
-        $encoded = urlencode($trackingNumber);
+        $carrier = ShippingCarrier::where('code', $carrierCode)->first();
 
-        return match ($carrier) {
-            'SMSA'       => "https://www.smsaexpress.com/tracking?tracknumbers={$encoded}",
-            'Aramex'     => "https://www.aramex.com/track/results?ShipmentNumber={$encoded}",
-            'DHL'        => "https://www.dhl.com/en/express/tracking.html?AWB={$encoded}",
-            'FedEx'      => "https://www.fedex.com/fedextrack/?trknbr={$encoded}",
-            'UPS'        => "https://www.ups.com/track?tracknum={$encoded}",
-            'USPS'       => "https://tools.usps.com/go/TrackConfirmAction?tLabels={$encoded}",
-            'J&T'        => "https://www.jtexpress.sa/trajectoryQuery?waybillNo={$encoded}",
-            'Saudi Post' => "https://tracking.spl.com.sa/tracking?lang=en&trackId={$encoded}",
-            default      => '',
-        };
+        if ($carrier) {
+            return $carrier->getTrackingUrl($trackingNumber) ?? '';
+        }
+
+        return '';
     }
 }
