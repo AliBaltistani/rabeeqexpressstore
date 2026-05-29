@@ -16,6 +16,11 @@ class OrderTracking extends Model
         'tracking_number',
         'carrier',
         'tracking_url',
+        'estimated_delivery',
+    ];
+
+    protected $casts = [
+        'estimated_delivery' => 'datetime',
     ];
 
     public function order(): BelongsTo

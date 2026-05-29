@@ -11,6 +11,7 @@ use App\Services\InvoiceService;
 use App\Services\OrderLifecycleService;
 use App\Services\SmsaShipmentService;
 use Filament\Actions;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
@@ -69,21 +70,49 @@ class ViewOrder extends ViewRecord
                     );
 
                     // Notify customer if checked
-                    if ($data['notify_customer'] && $record->user) {
+                    $notified = false;
+                    if ($data['notify_customer']) {
                         try {
-                            $record->user->notify(new OrderStatusNotification(
-                                $record,
+                            $notification = new OrderStatusNotification(
+                                $record->fresh(),
                                 $data['status'],
                                 $data['comment'] ?? null,
-                            ));
+                            );
+
+                            if ($record->user) {
+                                // Registered user
+                                $record->user->notify($notification);
+                                $notified = true;
+                            } elseif ($record->guest_email) {
+                                // Guest order — use on-demand notification
+                                NotificationFacade::route('mail', $record->guest_email)
+                                    ->notify($notification);
+                                $notified = true;
+                            }
+
+                            if ($notified) {
+                                // Record that customer was notified in the status history
+                                $record->statusHistories()
+                                    ->where('status_to', $data['status'])
+                                    ->latest()
+                                    ->first()
+                                    ?->update(['is_customer_notified' => true]);
+                            }
                         } catch (\Throwable $e) {
-                            // Notification class might not exist yet
+                            Notification::make()
+                                ->title('Email Notification Failed')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
                         }
                     }
 
                     Notification::make()
                         ->title('Status Updated')
-                        ->body("Order status changed from {$oldStatus} to {$data['status']}")
+                        ->body(
+                            "Order status changed from {$oldStatus} to {$data['status']}"
+                            . ($notified ? ' — Customer notified via email.' : '')
+                        )
                         ->success()
                         ->send();
 
@@ -155,40 +184,69 @@ class ViewOrder extends ViewRecord
                 ->icon('heroicon-o-truck')
                 ->color('gray')
                 ->form([
-                    Forms\Components\TextInput::make('tracking_number')
-                        ->label('Tracking Number')
-                        ->default(fn() => $this->getRecord()->tracking?->tracking_number)
-                        ->placeholder('Enter tracking number'),
-
                     Forms\Components\Select::make('carrier')
-                        ->label('Carrier')
+                        ->label('Shipping Company')
                         ->options([
-                            'DHL' => 'DHL',
-                            'Aramex' => 'Aramex',
-                            'SMSA' => 'SMSA',
-                            'USPS' => 'USPS',
-                            'FedEx' => 'FedEx',
-                            'UPS' => 'UPS',
-                            'Other' => 'Other',
+                            'SMSA'       => 'SMSA Express',
+                            'Aramex'     => 'Aramex',
+                            'DHL'        => 'DHL',
+                            'FedEx'      => 'FedEx',
+                            'UPS'        => 'UPS',
+                            'USPS'       => 'USPS',
+                            'J&T'        => 'J&T Express',
+                            'Saudi Post' => 'Saudi Post (SPL)',
+                            'Other'      => 'Other',
                         ])
                         ->default(fn() => $this->getRecord()->tracking?->carrier)
-                        ->placeholder('Select carrier'),
+                        ->required()
+                        ->live()
+                        ->afterStateUpdated(function ($set, $get, ?string $state) {
+                            $trackingNumber = $get('tracking_number');
+                            if ($state && $state !== 'Other' && $trackingNumber) {
+                                $set('tracking_url', self::generateTrackingUrl($state, $trackingNumber));
+                            }
+                        }),
+
+                    Forms\Components\TextInput::make('tracking_number')
+                        ->label('Tracking / AWB Number')
+                        ->default(fn() => $this->getRecord()->tracking?->tracking_number)
+                        ->placeholder('Enter tracking number')
+                        ->required()
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(function ($set, $get, ?string $state) {
+                            $carrier = $get('carrier');
+                            if ($carrier && $carrier !== 'Other' && $state) {
+                                $set('tracking_url', self::generateTrackingUrl($carrier, $state));
+                            }
+                        }),
 
                     Forms\Components\TextInput::make('tracking_url')
                         ->label('Tracking URL')
                         ->url()
                         ->default(fn() => $this->getRecord()->tracking?->tracking_url)
-                        ->placeholder('https://...'),
+                        ->placeholder('Auto-generated from carrier + tracking number')
+                        ->helperText('Auto-filled based on carrier. You can override if needed.'),
+
+                    Forms\Components\DatePicker::make('estimated_delivery')
+                        ->label('Estimated Delivery')
+                        ->default(fn() => $this->getRecord()->tracking?->estimated_delivery)
+                        ->placeholder('Select estimated delivery date'),
                 ])
                 ->action(function (array $data): void {
                     $record = $this->getRecord();
 
+                    // Auto-generate URL if not manually provided
+                    if (empty($data['tracking_url']) && !empty($data['carrier']) && $data['carrier'] !== 'Other' && !empty($data['tracking_number'])) {
+                        $data['tracking_url'] = self::generateTrackingUrl($data['carrier'], $data['tracking_number']);
+                    }
+
                     OrderTracking::updateOrCreate(
                         ['order_id' => $record->id],
                         [
-                            'tracking_number' => $data['tracking_number'] ?? null,
-                            'carrier' => $data['carrier'] ?? null,
-                            'tracking_url' => $data['tracking_url'] ?? null,
+                            'tracking_number'    => $data['tracking_number'] ?? null,
+                            'carrier'            => $data['carrier'] ?? null,
+                            'tracking_url'       => $data['tracking_url'] ?? null,
+                            'estimated_delivery' => $data['estimated_delivery'] ?? null,
                         ]
                     );
 
@@ -199,7 +257,7 @@ class ViewOrder extends ViewRecord
 
                     Notification::make()
                         ->title('Tracking Updated')
-                        ->body('Tracking information has been saved.')
+                        ->body('Tracking information has been saved for ' . ($data['carrier'] ?? 'carrier') . '.')
                         ->success()
                         ->send();
                 }),
@@ -354,5 +412,25 @@ class ViewOrder extends ViewRecord
                             ->columnSpan(1),
                     ]),
             ]);
+    }
+
+    /**
+     * Generate a tracking URL based on carrier and tracking number.
+     */
+    public static function generateTrackingUrl(string $carrier, string $trackingNumber): string
+    {
+        $encoded = urlencode($trackingNumber);
+
+        return match ($carrier) {
+            'SMSA'       => "https://www.smsaexpress.com/tracking?tracknumbers={$encoded}",
+            'Aramex'     => "https://www.aramex.com/track/results?ShipmentNumber={$encoded}",
+            'DHL'        => "https://www.dhl.com/en/express/tracking.html?AWB={$encoded}",
+            'FedEx'      => "https://www.fedex.com/fedextrack/?trknbr={$encoded}",
+            'UPS'        => "https://www.ups.com/track?tracknum={$encoded}",
+            'USPS'       => "https://tools.usps.com/go/TrackConfirmAction?tLabels={$encoded}",
+            'J&T'        => "https://www.jtexpress.sa/trajectoryQuery?waybillNo={$encoded}",
+            'Saudi Post' => "https://tracking.spl.com.sa/tracking?lang=en&trackId={$encoded}",
+            default      => '',
+        };
     }
 }
