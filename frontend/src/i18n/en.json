@@ -138,7 +138,22 @@
     "shipping": "Shipping",
     "orderSummary": "Order Summary",
     "qty": "Qty",
-    "tax": "Tax"
+    "tax": "Tax",
+    "searchAddress": "Search for an address...",
+    "shortAddressHint": "Short address must be 4 letters followed by 4 digits (e.g. ABCD1234)",
+    "currentLocation": "Current location",
+    "enterManually": "Enter The Address Manually",
+    "locateOnMap": "Locate Your Address From The Map",
+    "mobileNumber": "Mobile Number",
+    "privacyPolicy": "Privacy Policy",
+    "joinMailingList": "I would like to join the mailing list to receive promotional and advertising campaigns",
+    "registerAgreement": "By completing registration, you agree to",
+    "verificationRequired": "Verification code is required to proceed, A verification code has been sent to you",
+    "resendAfter": "You will be able to resend after",
+    "welcome": "Welcome, {name}!",
+    "codNote": "Pay cash when your order is delivered.",
+    "cashbackMessage": "Congrats! You got {amount} cashback",
+    "comingSoon": "Coming Soon"
   },
   "category": {
     "sortBy": "Sort By",
@@ -176,7 +191,8 @@
     "learnMore": "Learn more",
     "shopNow": "Shop Now",
     "wishlist": "Wishlist",
-    "optional": "Optional"
+    "optional": "Optional",
+    "comingSoon": "Coming Soon"
   },
   "auth": {
     "login": "Login",

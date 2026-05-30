@@ -260,6 +260,13 @@ export async function removeWishlistItem(productId: number) {
 }
 
 // ═══════════════════════════════════════════
+// COUNTRIES
+// ═══════════════════════════════════════════
+export async function fetchActiveCountries() {
+  return unwrap<any[]>(await apiClient.get('/countries/active'))
+}
+
+// ═══════════════════════════════════════════
 // CHECKOUT
 // ═══════════════════════════════════════════
 export async function fetchShippingRates(addressData: any) {

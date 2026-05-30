@@ -48,6 +48,7 @@ class GeneralSettings extends Page
             'general.enable_reviews', 'general.reviews_require_approval', 'general.show_out_of_stock',
             'general.low_stock_threshold',
             'general.maintenance_mode', 'general.maintenance_message_en', 'general.maintenance_message_ar',
+            'general.google_maps_api_key',
         ];
 
         $this->data = [];
@@ -183,6 +184,16 @@ class GeneralSettings extends Page
                                     ->label(__('admin.settings.show_out_of_stock'))
                                     ->default(true),
                             ]),
+                    ]),
+
+                // Integrations
+                Components\Section::make('Integrations')
+                    ->schema([
+                        Forms\Components\TextInput::make('google_maps_api_key')
+                            ->label('Google Maps API Key')
+                            ->helperText('Required for address autocomplete on checkout. Enable Maps JavaScript API & Places API in Google Cloud Console.')
+                            ->password()
+                            ->revealable(),
                     ]),
 
                 // Maintenance Mode

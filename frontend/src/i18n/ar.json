@@ -138,7 +138,22 @@
     "shipping": "الشحن",
     "orderSummary": "ملخص الطلب",
     "qty": "الكمية",
-    "tax": "الضريبة"
+    "tax": "الضريبة",
+    "searchAddress": "ابحث عن عنوان...",
+    "shortAddressHint": "العنوان المختصر يجب أن يكون 4 أحرف يتبعها 4 أرقام (مثال: ABCD1234)",
+    "currentLocation": "موقعي الحالي",
+    "enterManually": "أدخل العنوان يدوياً",
+    "locateOnMap": "حدد عنوانك من الخريطة",
+    "mobileNumber": "رقم الجوال",
+    "privacyPolicy": "سياسة الخصوصية",
+    "joinMailingList": "أرغب في الانضمام إلى القائمة البريدية لتلقي الحملات الترويجية والإعلانية",
+    "registerAgreement": "بإكمال التسجيل، فإنك توافق على",
+    "verificationRequired": "مطلوب رمز التحقق للمتابعة، تم إرسال رمز التحقق إليك",
+    "resendAfter": "ستتمكن من إعادة الإرسال بعد",
+    "welcome": "مرحباً، {name}!",
+    "codNote": "ادفع نقداً عند استلام الطلب.",
+    "cashbackMessage": "تهانينا! حصلت على {amount} استرداد نقدي",
+    "comingSoon": "قريباً"
   },
   "category": {
     "sortBy": "ترتيب حسب",
@@ -176,7 +191,8 @@
     "learnMore": "اعرف المزيد",
     "shopNow": "تسوق الآن",
     "wishlist": "المفضلة",
-    "optional": "اختياري"
+    "optional": "اختياري",
+    "comingSoon": "قريباً"
   },
   "auth": {
     "login": "تسجيل الدخول",

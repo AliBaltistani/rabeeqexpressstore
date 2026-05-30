@@ -67,6 +67,7 @@ export const useSettingsStore = defineStore('settings', () => {
       reviews: true,
       reviewsRequireApproval: true,
     },
+    googleMapsApiKey: '' as string,
   })
 
   // Navigation categories (populated from /categories API)
@@ -178,6 +179,7 @@ export const useSettingsStore = defineStore('settings', () => {
           apps: storeSettings.value.apps,
           paymentMethods: data.paymentMethods || [],
           features: data.features || storeSettings.value.features,
+          googleMapsApiKey: (data as any).googleMapsApiKey || '',
         }
 
         // Set default currency/language if no user preference saved

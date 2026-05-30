@@ -83,6 +83,7 @@ class InitController extends Controller
                 'enabled' => (bool) setting('general.maintenance_mode', false),
                 'message' => setting('general.maintenance_message_' . $locale),
             ],
+            'googleMapsApiKey' => setting('general.google_maps_api_key', ''),
         ]);
     }
 
