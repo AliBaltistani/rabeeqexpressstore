@@ -244,6 +244,29 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        // ── Migrate guest cart items to the authenticated user ──
+        $sessionId = $request->session()->getId();
+        if ($sessionId) {
+            $guestItems = \App\Models\CartItem::where('session_id', $sessionId)->get();
+            /** @var \App\Models\CartItem $guestItem */
+            foreach ($guestItems as $guestItem) {
+                // Check if user already has this exact item
+                /** @var \App\Models\CartItem|null $existing */
+                $existing = \App\Models\CartItem::where('user_id', $user->id)
+                    ->where('product_id', $guestItem->product_id)
+                    ->where('variant_id', $guestItem->variant_id)
+                    ->where('selected_attribute_values', $guestItem->selected_attribute_values)
+                    ->first();
+
+                if ($existing) {
+                    $existing->update(['quantity' => $existing->quantity + $guestItem->quantity]);
+                    $guestItem->delete();
+                } else {
+                    $guestItem->update(['user_id' => $user->id, 'session_id' => null]);
+                }
+            }
+        }
+
         return $this->success([
             'user' => new UserResource($user),
             'token' => $token,

@@ -29,6 +29,48 @@
       <div class="checkout-header__details-toggle container">
         <button class="checkout-details-btn" @click="showOrderDetails = !showOrderDetails">{{ $t('checkout.orderDetails') }}</button>
       </div>
+
+    <!-- ORDER DETAILS DRAWER -->
+    <Teleport to="body">
+      <Transition name="drawer-fade">
+        <div v-if="showOrderDetails" class="drawer-overlay" @click.self="showOrderDetails = false">
+          <Transition name="drawer-slide">
+            <div v-if="showOrderDetails" class="drawer-panel">
+              <div class="drawer-header">
+                <h3 class="drawer-title">{{ $t('checkout.orderDetails') }}</h3>
+                <button class="drawer-close" @click="showOrderDetails = false">&times;</button>
+              </div>
+              <div class="drawer-body">
+                <div v-if="cart.items.length === 0" class="drawer-empty">
+                  <p>{{ $t('cart.emptyTitle') }}</p>
+                </div>
+                <div v-else class="drawer-items">
+                  <div v-for="item in cart.items" :key="item.id" class="drawer-item">
+                    <img :src="item.image || ''" :alt="item.productName" class="drawer-item__img" />
+                    <div class="drawer-item__info">
+                      <p class="drawer-item__name">{{ item.productName }}</p>
+                      <p v-if="item.attributes && item.attributes.length" class="drawer-item__attrs">
+                        <span v-for="attr in item.attributes" :key="attr.id" class="drawer-item__attr">{{ attr.name }}: {{ attr.values.map(v => v.value).join(', ') }}</span>
+                      </p>
+                      <p class="drawer-item__price">{{ item.unitPrice?.formatted || '' }}</p>
+                      <div class="drawer-item__qty">
+                        <button class="qty-btn" @click="updateCartQty(item, -1)" :disabled="item.quantity <= 1">−</button>
+                        <span class="qty-val">{{ item.quantity }}</span>
+                        <button class="qty-btn" @click="updateCartQty(item, 1)">+</button>
+                        <button class="qty-remove" @click="removeCartItem(item)">🗑</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="drawer-footer">
+                <div class="drawer-total-row"><span>{{ $t('cart.total') }}</span><strong>{{ cart.total?.formatted || '' }}</strong></div>
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </Transition>
+    </Teleport>
     </div>
 
     <!-- MAIN BODY -->
@@ -451,7 +493,7 @@ import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, confirmStripePayment, fetchActiveCountries } from '@/api/services'
+import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, confirmStripePayment, fetchActiveCountries, updateProfile } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
@@ -543,7 +585,17 @@ const addressSummary = computed(() => { const a = addressForm.value; return [a.c
 // ── Helpers ──
 function clearErrors() { Object.keys(errors).forEach(k => delete errors[k]) }
 function isEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) }
-function showCountryPicker(_ctx: string) { /* Could open a modal; for now country code is editable via countries list */ }
+function showCountryPicker(_ctx: string) { /* Could open a modal */ }
+
+// ── Drawer cart helpers ──
+async function updateCartQty(item: any, delta: number) {
+  const newQty = item.quantity + delta
+  if (newQty < 1) return
+  await cart.updateQuantity(item.id, newQty)
+}
+async function removeCartItem(item: any) {
+  await cart.removeItem(item.id)
+}
 
 // ── Step 1: Email-first flow ──
 async function handleEmailEnter() {
@@ -585,6 +637,8 @@ async function handleVerifyOtp() {
   authLoading.value = false
   if (result.success) {
     if ((result as any).isNewUser) { otpStep.value = 'register'; return }
+    // Refresh cart after auth (backend migrates guest cart items)
+    await cart.loadCart()
     prefillAddressFromUser()
     currentStep.value = 2
   } else {
@@ -621,8 +675,14 @@ async function handleRegister() {
   if (Object.keys(errors).length) return
   authLoading.value = true
   try {
+    // User was already created by verifyOtp — just update their profile name/phone
     const fullName = `${registerForm.value.name} ${registerForm.value.lastName}`.trim()
-    await auth.register({ name: fullName, email: registerForm.value.email, password: otpEmail.value + '_auto', password_confirmation: otpEmail.value + '_auto' })
+    const phone = registerForm.value.phone ? `${registerCountryCode.value}${registerForm.value.phone}` : ''
+    await updateProfile({ name: fullName, phone: phone || undefined })
+    // Refresh user data in auth store
+    await auth.fetchUser()
+    // Refresh cart after registration (backend migrates guest cart items)
+    await cart.loadCart()
     prefillAddressFromUser()
     currentStep.value = 2
   } catch (e: any) { authError.value = e.response?.data?.message || t('common.error') }
@@ -981,4 +1041,39 @@ html[dir="rtl"] .phone-input { border-radius: 8px 0 0 8px !important; }
 .card-note { margin: 0; font-size: 0.875rem; color: #666; }
 .stripe-mount { padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; min-height: 44px; }
 .stripe-mount:focus-within { border-color: #111; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+
+/* ─ Drawer ─ */
+.drawer-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 9999; display: flex; justify-content: flex-end; }
+.drawer-panel { width: 400px; max-width: 90vw; height: 100vh; background: #fff; display: flex; flex-direction: column; box-shadow: -4px 0 24px rgba(0,0,0,0.12); }
+.drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid #eee; }
+.drawer-title { font-size: 1.125rem; font-weight: 700; color: #111; margin: 0; }
+.drawer-close { width: 36px; height: 36px; border: none; background: #f5f5f5; border-radius: 50%; font-size: 1.25rem; color: #666; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.drawer-close:hover { background: #eee; }
+.drawer-body { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; }
+.drawer-empty { text-align: center; padding: 3rem 1rem; color: #888; }
+.drawer-items { display: flex; flex-direction: column; gap: 1rem; }
+.drawer-item { display: flex; gap: 0.75rem; padding: 0.75rem; border: 1px solid #eee; border-radius: 12px; }
+.drawer-item__img { width: 72px; height: 72px; object-fit: contain; border-radius: 8px; background: #f9f9f9; flex-shrink: 0; }
+.drawer-item__info { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+.drawer-item__name { font-size: 0.875rem; font-weight: 600; color: #111; margin: 0; line-height: 1.3; }
+.drawer-item__attrs { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0; }
+.drawer-item__attr { font-size: 0.6875rem; color: #666; background: #f3f3f3; padding: 0.125rem 0.5rem; border-radius: 4px; }
+.drawer-item__price { font-size: 0.875rem; font-weight: 700; color: #111; margin: 0; }
+.drawer-item__qty { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
+.qty-btn { width: 28px; height: 28px; border: 1px solid #ddd; border-radius: 6px; background: #fff; font-size: 1rem; color: #111; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.qty-btn:hover:not(:disabled) { border-color: #999; background: #f5f5f5; }
+.qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.qty-val { font-size: 0.875rem; font-weight: 700; min-width: 20px; text-align: center; }
+.qty-remove { width: 28px; height: 28px; border: none; background: #fee2e2; border-radius: 6px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: auto; }
+.qty-remove:hover { background: #fecaca; }
+.drawer-footer { padding: 1rem 1.5rem; border-top: 1px solid #eee; }
+.drawer-total-row { display: flex; justify-content: space-between; align-items: center; font-size: 1.0625rem; }
+.drawer-total-row strong { font-size: 1.25rem; color: #111; }
+
+/* Drawer transitions */
+.drawer-fade-enter-active, .drawer-fade-leave-active { transition: opacity 0.3s ease; }
+.drawer-fade-enter-from, .drawer-fade-leave-to { opacity: 0; }
+.drawer-slide-enter-active, .drawer-slide-leave-active { transition: transform 0.3s ease; }
+.drawer-slide-enter-from, .drawer-slide-leave-to { transform: translateX(100%); }
+html[dir="rtl"] .drawer-slide-enter-from, html[dir="rtl"] .drawer-slide-leave-to { transform: translateX(-100%); }
 </style>
