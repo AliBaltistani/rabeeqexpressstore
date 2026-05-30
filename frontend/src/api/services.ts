@@ -345,6 +345,9 @@ export async function fetchLoyaltyPoints() {
 export async function fetchLoyaltyTransactions() {
   return unwrap(await apiClient.get('/loyalty/transactions'))
 }
+export async function redeemLoyaltyToWallet(points: number) {
+  return unwrap<any>(await apiClient.post('/loyalty/redeem-to-wallet', { points }))
+}
 
 // ═══════════════════════════════════════════
 // HOMEPAGE SECTIONS

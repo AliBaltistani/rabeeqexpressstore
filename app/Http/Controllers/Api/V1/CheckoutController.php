@@ -28,14 +28,23 @@ class CheckoutController extends Controller
      * GET /api/v1/checkout/payment-methods
      * Returns all available payment gateways.
      */
-    public function paymentMethods(): JsonResponse
+    public function paymentMethods(Request $request): JsonResponse
     {
         $gateways = $this->paymentGateway->getAvailableGateways();
 
-        // Return all gateways — frontend handles showing disabled/coming-soon
+        // Add wallet info if enabled
+        $walletEnabled = (bool) setting('wallet.enabled', false);
+        $user = $request->user('sanctum');
+        $walletBalance = $user ? round((float) $user->wallet_balance, 2) : 0;
+
         return $this->success([
             'gateways'             => $gateways,
             'stripePublishableKey' => $this->paymentGateway->getStripePublishableKey(),
+            'wallet' => [
+                'enabled' => $walletEnabled,
+                'balance' => $walletBalance,
+                'currency' => currency_code(),
+            ],
         ]);
     }
 

@@ -709,7 +709,7 @@ async function loadPaymentMethods() {
   paymentMethodsLoading.value = true
   try {
     const response = await fetchPaymentMethods()
-    // New API shape: { gateways: [...], stripePublishableKey: '...' }
+    // New API shape: { gateways: [...], stripePublishableKey: '...', wallet: { enabled, balance, currency } }
     const gateways = response.gateways || response || []
     dynamicPaymentMethods.value = gateways
 
@@ -718,8 +718,20 @@ async function loadPaymentMethods() {
       stripePublishableKey.value = response.stripePublishableKey
     }
 
+    // Inject wallet as a payment option if enabled and user has balance
+    if (response.wallet?.enabled && response.wallet.balance > 0 && auth.isAuthenticated) {
+      const walletGateway = {
+        id: 'wallet',
+        name: `Wallet (${response.wallet.currency} ${Number(response.wallet.balance).toFixed(2)})`,
+        icon: '💳',
+        enabled: true,
+        description: `Pay using your wallet balance`,
+      }
+      dynamicPaymentMethods.value = [walletGateway, ...gateways]
+    }
+
     // Auto-select first enabled
-    const firstEnabled = gateways.find((g: any) => g.enabled)
+    const firstEnabled = dynamicPaymentMethods.value.find((g: any) => g.enabled)
     if (firstEnabled) {
       selectedPayment.value = firstEnabled.id
     }

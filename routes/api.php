@@ -161,6 +161,7 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
         Route::prefix('loyalty')->group(function () {
             Route::get('/', [LoyaltyController::class, 'index']);
             Route::get('transactions', [LoyaltyController::class, 'transactions']);
+            Route::post('redeem-to-wallet', [LoyaltyController::class, 'redeemToWallet']);
         });
     });
 });

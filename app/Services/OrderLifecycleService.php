@@ -119,6 +119,24 @@ final class OrderLifecycleService
 
             $total = $subtotal - $discount + $shippingAmount + $codFee;
 
+            // ── Wallet payment ──
+            $paymentStatus = 'unpaid';
+            if (($data['paymentMethod'] ?? '') === 'wallet') {
+                if (!$user) {
+                    throw new \RuntimeException('Wallet payment requires a logged-in account.');
+                }
+                if ((float) $user->wallet_balance < $total) {
+                    throw new \RuntimeException('Insufficient wallet balance. You have ' . number_format((float) $user->wallet_balance, 2) . ' but need ' . number_format($total, 2) . '.');
+                }
+                $user->debitWallet(
+                    $total,
+                    ['en' => 'Payment for order', 'ar' => 'دفع للطلب'],
+                    Order::class,
+                    null, // will be set after order creation
+                );
+                $paymentStatus = 'paid';
+            }
+
             // ── Create order ──
             $order = Order::create([
                 'order_number'      => 'ORD-' . strtoupper(Str::random(8)),
@@ -127,7 +145,7 @@ final class OrderLifecycleService
                 'guest_name'        => $data['guestName'] ?? null,
                 'guest_phone'       => $data['guestPhone'] ?? null,
                 'status'            => 'pending',
-                'payment_status'    => 'unpaid',
+                'payment_status'    => $paymentStatus,
                 'payment_method'    => $data['paymentMethod'],
                 'payment_gateway'   => $data['paymentMethod'] === 'stripe' ? 'stripe' : null,
                 'shipping_rate_id'  => null,
@@ -250,6 +268,44 @@ final class OrderLifecycleService
             'comment'     => $comment ?? "Status changed from {$oldStatus} to {$newStatus}.",
             'changed_by'  => $adminId,
         ]);
+
+        // ── Auto-award loyalty points on delivery ──
+        if ($newStatus === 'delivered' && $order->user_id) {
+            $this->awardLoyaltyPoints($order);
+        }
+    }
+
+    /**
+     * Award loyalty points to a user when their order is delivered.
+     */
+    private function awardLoyaltyPoints(Order $order): void
+    {
+        if (!setting('loyalty.enabled', false)) {
+            return;
+        }
+
+        $user = $order->user;
+        if (!$user) {
+            return;
+        }
+
+        $earnRate = (float) setting('loyalty.earn_rate', 1);
+        $points = (int) floor((float) $order->total * $earnRate);
+
+        if ($points <= 0) {
+            return;
+        }
+
+        $user->addLoyaltyPoints(
+            $points,
+            'earned',
+            [
+                'en' => "Earned from order #{$order->order_number}",
+                'ar' => "مكتسبة من الطلب #{$order->order_number}",
+            ],
+            Order::class,
+            $order->id
+        );
     }
 
     /**

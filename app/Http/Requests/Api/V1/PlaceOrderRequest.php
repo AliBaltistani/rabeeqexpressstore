@@ -32,7 +32,7 @@ class PlaceOrderRequest extends FormRequest
             'shippingAddress.state'        => ['nullable', 'string', 'max:100'],
             'shippingAddress.postalCode'   => ['nullable', 'string', 'max:20'],
             'billingAddress'               => ['nullable', 'array'],
-            'paymentMethod'                => ['required', 'string', 'in:cod,bank_transfer,stripe,paypal,tamara,tabby'],
+            'paymentMethod'                => ['required', 'string', 'in:cod,bank_transfer,stripe,paypal,tamara,tabby,wallet'],
             'shippingRateId'               => ['nullable', 'integer', 'exists:shipping_rates,id'],
             'shippingMethodId'             => ['nullable', 'integer', 'exists:shipping_methods,id'],
             'couponCode'                   => ['nullable', 'string', 'max:50'],
