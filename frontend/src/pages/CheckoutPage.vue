@@ -811,7 +811,15 @@ async function confirmPayment() {
     }
     cart.clearCart()
     router.push('/checkout/success/' + response.orderNumber)
-  } catch (e: any) { orderError.value = e.response?.data?.message || e.message || t('common.error') }
+  } catch (e: any) {
+    const resp = e.response?.data
+    if (resp?.errors) {
+      const allErrors = Object.values(resp.errors).flat().join('. ')
+      orderError.value = allErrors || resp.message || t('common.error')
+    } else {
+      orderError.value = resp?.message || e.message || t('common.error')
+    }
+  }
   finally { orderLoading.value = false }
 }
 
