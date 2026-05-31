@@ -18,6 +18,12 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
+        'birth_date',
+        'gender',
+        'profile_completed',
+        'promotional_messages',
         'email',
         'password',
         'phone',
@@ -46,6 +52,9 @@ class User extends Authenticatable
         'is_rtl' => 'boolean',
         'wallet_balance' => 'decimal:2',
         'loyalty_points' => 'integer',
+        'birth_date' => 'date',
+        'profile_completed' => 'boolean',
+        'promotional_messages' => 'boolean',
     ];
 
     // ── Relationships ──

@@ -149,10 +149,9 @@
               <div class="checkout-field">
                 <label class="checkout-label">{{ $t('checkout.mobileNumber') || 'Mobile Number' }}</label>
                 <div class="phone-input-row">
-                  <div class="country-code-select" @click="showCountryPicker('register')">
-                    <span class="country-code-arrow">›</span>
-                    <span class="country-code-val">{{ registerCountryCode }}</span>
-                  </div>
+                  <select v-model="registerCountryCode" class="country-code-dropdown">
+                    <option v-for="c in countries" :key="c.iso2" :value="c.phone_code">{{ c.phone_code }}</option>
+                  </select>
                   <input type="tel" v-model="registerForm.phone" class="checkout-input phone-input" :placeholder="'0301 2345678'" />
                 </div>
               </div>
@@ -189,11 +188,9 @@
               <div class="checkout-field">
                 <label class="checkout-label">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
                 <div class="phone-input-row">
-                  <div class="country-code-select" @click="showCountryPicker('guest')">
-                    <span class="country-code-arrow">›</span>
-                    <img v-if="selectedGuestCountry?.flag_url" :src="selectedGuestCountry.flag_url" class="country-flag-img" />
-                    <span class="country-code-val">{{ guestCountryCode }}</span>
-                  </div>
+                  <select v-model="guestCountryCode" class="country-code-dropdown">
+                    <option v-for="c in countries" :key="c.iso2" :value="c.phone_code">{{ c.phone_code }}</option>
+                  </select>
                   <input type="tel" v-model="guestForm.phone" class="checkout-input phone-input" :class="{ 'input-error': errors.gPhone }" :placeholder="'0301 2345678'" />
                 </div>
                 <span v-if="errors.gPhone" class="field-error">{{ errors.gPhone }}</span>
@@ -338,10 +335,9 @@
                   <div class="checkout-field">
                     <label class="checkout-label checkout-label--colored">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
                     <div class="phone-input-row">
-                      <div class="country-code-select">
-                        <span class="country-code-arrow">›</span>
-                        <span class="country-code-val">{{ recipientCountryCode }}</span>
-                      </div>
+                      <select v-model="recipientCountryCode" class="country-code-dropdown">
+                        <option v-for="c in countries" :key="c.iso2" :value="c.phone_code">{{ c.phone_code }}</option>
+                      </select>
                       <input type="tel" v-model="recipientForm.phone" class="checkout-input phone-input" />
                     </div>
                   </div>
@@ -414,11 +410,9 @@
           <div class="checkout-field">
             <label class="checkout-label checkout-label--colored">{{ $t('checkout.mobileNumber') || 'Mobile Number' }} <span class="req">*</span></label>
             <div class="phone-input-row">
-              <div class="country-code-select">
-                <span class="country-code-arrow">›</span>
-                <img v-if="selectedAddrCountry?.flag_url" :src="selectedAddrCountry.flag_url" class="country-flag-img" />
-                <span class="country-code-val">{{ addrCountryCode }}</span>
-              </div>
+              <select v-model="addrCountryCode" class="country-code-dropdown">
+                <option v-for="c in countries" :key="c.iso2" :value="c.phone_code">{{ c.phone_code }}</option>
+              </select>
               <input type="tel" v-model="additionalPhone" class="checkout-input phone-input" :class="{ 'input-error': errors.additionalPhone }" :placeholder="'0301 2345678'" />
             </div>
             <span v-if="errors.additionalPhone" class="field-error">{{ errors.additionalPhone }}</span>
@@ -441,13 +435,14 @@
           </div>
         </div>
         <div v-if="currentStep === 5" class="section-content">
-          <div v-if="paymentMethodsLoading" class="empty-state"><p>{{ $t('common.loading') }}...</p></div>
+          <div v-if="paymentMethodsLoading" class="payment-shimmer-grid">
+            <div class="payment-shimmer-card" v-for="i in 3" :key="i"><div class="shimmer-bar"></div></div>
+          </div>
           <div v-else class="payment-methods-grid">
-            <label v-for="pm in dynamicPaymentMethods" :key="pm.id" class="payment-card" :class="{ selected: selectedPayment === pm.id, disabled: !pm.enabled }">
-              <input type="radio" name="payment" :value="pm.id" v-model="selectedPayment" class="checkout-radio" :disabled="!pm.enabled" />
+            <label v-for="pm in activePaymentMethods" :key="pm.id" class="payment-card" :class="{ selected: selectedPayment === pm.id }">
+              <input type="radio" name="payment" :value="pm.id" v-model="selectedPayment" class="checkout-radio" />
               <img v-if="pm.icon || pm.logo" :src="pm.icon || pm.logo" class="payment-logo" :alt="pm.name" />
-              <span v-else class="payment-name-text">{{ pm.name }}</span>
-              <span v-if="!pm.enabled" class="payment-badge">{{ $t('common.comingSoon') || 'Coming Soon' }}</span>
+              <span class="payment-name-text">{{ pm.name }}</span>
             </label>
           </div>
           <span v-if="errors.payment" class="field-error">{{ errors.payment }}</span>
@@ -524,11 +519,11 @@ const checkoutOtpRefs = ref<HTMLInputElement[]>([])
 const otpResendCooldown = ref(0)
 let otpCooldownTimer: ReturnType<typeof setInterval> | null = null
 const registerForm = ref({ name: '', lastName: '', phone: '', email: '', password: '', password_confirmation: '' })
-const registerCountryCode = ref('+92')
+const registerCountryCode = ref('+966')
 const joinMailingList = ref(true)
 const loginForm = ref({ email: '', password: '' })
 const guestForm = ref({ firstName: '', lastName: '', email: '', phone: '' })
-const guestCountryCode = ref('+92')
+const guestCountryCode = ref('+966')
 
 // ── Address ──
 const addressForm = ref({ firstName: '', lastName: '', phone: '', country: '', state: '', city: '', district: '', street: '', postalCode: '', buildingNo: '', buildingDesc: '' })
@@ -537,9 +532,9 @@ const shippingLoading = ref(false)
 const shippingRatesFetched = ref(false)
 const deliverToOther = ref(false)
 const recipientForm = ref({ name: '', phone: '', email: '' })
-const recipientCountryCode = ref('+92')
+const recipientCountryCode = ref('+966')
 const smsUpdates = ref(false)
-const addrCountryCode = ref('+92')
+const addrCountryCode = ref('+966')
 const additionalPhone = ref('')
 const countries = ref<any[]>([])
 
@@ -551,6 +546,7 @@ const selectedShipping = computed(() => shippingOptions.value.find((s: any) => s
 // ── Payment ──
 const selectedPayment = ref('')
 const selectedPaymentName = computed(() => { const pm = dynamicPaymentMethods.value.find((p: any) => p.id === selectedPayment.value); return pm?.name || '' })
+const activePaymentMethods = computed(() => dynamicPaymentMethods.value.filter((pm: any) => pm.enabled))
 const dynamicPaymentMethods = ref<any[]>([])
 const paymentMethodsLoading = ref(false)
 const agreeTerms = ref(false)
@@ -585,7 +581,7 @@ const addressSummary = computed(() => { const a = addressForm.value; return [a.c
 // ── Helpers ──
 function clearErrors() { Object.keys(errors).forEach(k => delete errors[k]) }
 function isEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) }
-function showCountryPicker(_ctx: string) { /* Could open a modal */ }
+// Country picker now uses native <select> dropdowns — no modal needed
 
 // ── Drawer cart helpers ──
 async function updateCartQty(item: any, delta: number) {
@@ -1076,4 +1072,28 @@ html[dir="rtl"] .phone-input { border-radius: 8px 0 0 8px !important; }
 .drawer-slide-enter-active, .drawer-slide-leave-active { transition: transform 0.3s ease; }
 .drawer-slide-enter-from, .drawer-slide-leave-to { transform: translateX(100%); }
 html[dir="rtl"] .drawer-slide-enter-from, html[dir="rtl"] .drawer-slide-leave-to { transform: translateX(-100%); }
+
+/* Country code dropdown */
+.country-code-dropdown {
+  appearance: auto;
+  width: 90px;
+  padding: 0.625rem 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px 0 0 10px;
+  background: #f9fafb;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111;
+  cursor: pointer;
+  border-right: none;
+  flex-shrink: 0;
+}
+.country-code-dropdown:focus { outline: none; border-color: #111; }
+html[dir="rtl"] .country-code-dropdown { border-radius: 0 10px 10px 0; border-right: 1px solid #e5e7eb; border-left: none; }
+
+/* Payment shimmer */
+.payment-shimmer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
+.payment-shimmer-card { height: 80px; border-radius: 12px; background: #f3f4f6; overflow: hidden; position: relative; }
+.shimmer-bar { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 </style>

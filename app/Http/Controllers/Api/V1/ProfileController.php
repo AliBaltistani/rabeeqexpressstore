@@ -29,7 +29,12 @@ class ProfileController extends Controller
     {
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
+            'firstName' => ['nullable', 'string', 'max:100'],
+            'lastName' => ['nullable', 'string', 'max:100'],
+            'birthDate' => ['nullable', 'date'],
+            'gender' => ['nullable', 'string', 'in:male,female,other'],
             'phone' => ['nullable', 'string', 'max:20'],
+            'promotionalMessages' => ['nullable', 'boolean'],
             'avatar' => ['nullable', 'image', 'max:2048'],
             'languagePreference' => ['nullable', 'string', 'in:en,ar'],
         ]);
@@ -37,12 +42,36 @@ class ProfileController extends Controller
         $user = $request->user();
 
         if (isset($validated['name'])) $user->name = $validated['name'];
+        if (isset($validated['firstName'])) $user->first_name = $validated['firstName'];
+        if (isset($validated['lastName'])) $user->last_name = $validated['lastName'];
+        if (isset($validated['birthDate'])) $user->birth_date = $validated['birthDate'];
+        if (isset($validated['gender'])) $user->gender = $validated['gender'];
         if (array_key_exists('phone', $validated)) $user->phone = $validated['phone'];
+        if (isset($validated['promotionalMessages'])) $user->promotional_messages = $validated['promotionalMessages'];
         if (isset($validated['languagePreference'])) $user->language_preference = $validated['languagePreference'];
 
         if ($request->hasFile('avatar')) {
             $path = $request->file('avatar')->store('avatars', 'public');
             $user->avatar = $path;
+        }
+
+        // Auto-detect profile completion and award loyalty points (one-time)
+        $wasCompleted = $user->profile_completed;
+        $isNowComplete = $user->first_name && $user->last_name && $user->phone && $user->email;
+        if ($isNowComplete && !$wasCompleted) {
+            $user->profile_completed = true;
+            $completionPoints = (int) \App\Models\Setting::get('loyalty.profile_completion_points', 0);
+            if ($completionPoints > 0 && setting('loyalty.enabled', false)) {
+                $user->save();
+                $user->addLoyaltyPoints(
+                    $completionPoints,
+                    'earned',
+                    [
+                        'en' => 'Reward for completing profile',
+                        'ar' => 'مكافأة إكمال الملف الشخصي',
+                    ],
+                );
+            }
         }
 
         $user->save();

@@ -36,7 +36,7 @@ class LoyaltyWalletSettingsPage extends Page
 
     public function mount(): void
     {
-        $loyaltyKeys = ['enabled', 'earn_rate', 'redeem_rate', 'min_redeem'];
+        $loyaltyKeys = ['enabled', 'earn_rate', 'redeem_rate', 'min_redeem', 'profile_completion_points'];
         $walletKeys  = ['enabled', 'auto_refund'];
 
         foreach ($loyaltyKeys as $key) {
@@ -56,6 +56,7 @@ class LoyaltyWalletSettingsPage extends Page
         $this->data['loyalty_earn_rate']  = (float) ($this->data['loyalty_earn_rate'] ?? 1);
         $this->data['loyalty_redeem_rate'] = (float) ($this->data['loyalty_redeem_rate'] ?? 100);
         $this->data['loyalty_min_redeem'] = (int) ($this->data['loyalty_min_redeem'] ?? 100);
+        $this->data['loyalty_profile_completion_points'] = (int) ($this->data['loyalty_profile_completion_points'] ?? 0);
 
         $this->form->fill($this->data);
     }
@@ -96,6 +97,13 @@ class LoyaltyWalletSettingsPage extends Page
                                 ->minValue(1)
                                 ->default(100)
                                 ->helperText('Minimum points required before a customer can redeem.'),
+
+                            Forms\Components\TextInput::make('loyalty_profile_completion_points')
+                                ->label('Profile Completion Points')
+                                ->numeric()
+                                ->minValue(0)
+                                ->default(0)
+                                ->helperText('Points awarded to users who complete their profile (one-time). Set 0 to disable.'),
                         ]),
                     ])->collapsible(),
 
@@ -122,7 +130,7 @@ class LoyaltyWalletSettingsPage extends Page
     {
         $data = $this->form->getState();
 
-        $loyaltyKeys = ['enabled', 'earn_rate', 'redeem_rate', 'min_redeem'];
+        $loyaltyKeys = ['enabled', 'earn_rate', 'redeem_rate', 'min_redeem', 'profile_completion_points'];
         $walletKeys  = ['enabled', 'auto_refund'];
 
         foreach ($loyaltyKeys as $key) {
