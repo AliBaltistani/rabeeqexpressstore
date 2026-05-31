@@ -303,7 +303,16 @@
     "shareStoreLink": "مشاركة رابط المتجر",
     "discounts": "خصومات",
     "freeShipping": "شحن مجاني",
-    "walletPayment": "الدفع باستخدام رصيد محفظتك"
+    "walletPayment": "الدفع باستخدام رصيد محفظتك",
+    "loyaltySystem": "نظام الولاء",
+    "loyaltySystemDesc": "يمكنك الآن استبدال النقاط وتحويلها إلى رصيدك في محفظتنا - تعرف على الطرق بشكل أفضل!",
+    "youHave": "لديك",
+    "point": "نقطة",
+    "copiedToClipboard": "تم النسخ!",
+    "couponDiscount": "كوبون خصم",
+    "couponDiscountDesc": "مبروك لقد ربحت معنا خصم مقدم لك من متجرنا لإستكمالك عدد نقاط",
+    "freeShippingReward": "كوبون شحن مجاني",
+    "freeShippingDesc": "احصل على شحن مجاني في طلبك التالي باستبدال نقاط الولاء."
   },
   "breadcrumb": {
     "home": "الرئيسية"

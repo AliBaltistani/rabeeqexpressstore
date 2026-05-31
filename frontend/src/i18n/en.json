@@ -303,7 +303,16 @@
     "shareStoreLink": "Share store link",
     "discounts": "Discounts",
     "freeShipping": "Free shipping",
-    "walletPayment": "Pay using your wallet balance"
+    "walletPayment": "Pay using your wallet balance",
+    "loyaltySystem": "Loyalty System",
+    "loyaltySystemDesc": "You can now redeem your points and convert them to your store wallet - learn more about the ways to earn!",
+    "youHave": "You have",
+    "point": "Point",
+    "copiedToClipboard": "Copied to clipboard!",
+    "couponDiscount": "Coupon discount",
+    "couponDiscountDesc": "Congratulations! You have won a discount coupon offered to you from the store to complete the required number of points.",
+    "freeShippingReward": "Free shipping coupon",
+    "freeShippingDesc": "Get free shipping on your next order by redeeming your loyalty points."
   },
   "breadcrumb": {
     "home": "Home"

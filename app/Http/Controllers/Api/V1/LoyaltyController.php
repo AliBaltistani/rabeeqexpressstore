@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Traits\ApiResponse;
+use App\Models\LoyaltyReward;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,13 +36,48 @@ class LoyaltyController extends Controller
 
         $redeemRate = (float) Setting::get('loyalty.redeem_rate', 100);
         $minRedeem  = (int) Setting::get('loyalty.min_redeem', 100);
+        $earnRate   = (float) Setting::get('loyalty.earn_rate', 1);
+        $profileCompletionPoints = (int) Setting::get('loyalty.profile_completion_points', 0);
 
         return $this->success([
-            'points'              => $user->loyalty_points,
-            'redeemRate'          => $redeemRate,
-            'minRedeem'           => $minRedeem,
-            'walletValuePerPoint' => $redeemRate > 0 ? round(1 / $redeemRate, 4) : 0,
-            'recentTransactions'  => $recentTransactions,
+            'points'                   => $user->loyalty_points,
+            'redeemRate'               => $redeemRate,
+            'minRedeem'                => $minRedeem,
+            'walletValuePerPoint'      => $redeemRate > 0 ? round(1 / $redeemRate, 4) : 0,
+            'earnRate'                 => $earnRate,
+            'profileCompletionPoints'  => $profileCompletionPoints,
+            'sharePoints'              => (int) Setting::get('loyalty.share_points', 50),
+            'storeUrl'                 => Setting::get('loyalty.store_url') ?: config('app.frontend_url', config('app.url', 'https://eseven-store.com')),
+            'profileCompleted'         => (bool) $user->profile_completed,
+            'recentTransactions'       => $recentTransactions,
+        ]);
+    }
+
+    /**
+     * GET /api/v1/loyalty/rewards
+     */
+    public function rewards(Request $request): JsonResponse
+    {
+        $locale = app()->getLocale();
+
+        $rewards = LoyaltyReward::active()
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn($r) => [
+                'id'            => $r->id,
+                'slug'          => $r->slug,
+                'type'          => $r->type,
+                'name'          => $r->getTranslation('name', $locale),
+                'description'   => $r->getTranslation('description', $locale),
+                'pointsCost'    => $r->points_cost,
+                'discountValue' => $r->discount_value,
+                'discountType'  => $r->discount_type,
+                'image'         => $r->image,
+            ]);
+
+        return $this->success([
+            'discounts'    => $rewards->where('type', 'discount')->values(),
+            'freeShipping' => $rewards->where('type', 'free_shipping')->values(),
         ]);
     }
 
