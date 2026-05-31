@@ -96,11 +96,41 @@
               <strong>{{ $t('account.deactivateAccount') }}</strong>
               <p>{{ $t('account.deactivateAccountDesc') }}</p>
             </div>
-            <button class="btn-deactivate">{{ $t('account.deactivateAccount') }}</button>
+            <button class="btn-deactivate" @click="showDeactivateModal = true">{{ $t('account.deactivateAccount') }}</button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Deactivate Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="showDeactivateModal" class="modal-overlay" @click.self="closeDeactivateModal">
+          <Transition name="modal-scale" appear>
+            <div class="modal-container">
+              <div class="modal-icon-wrapper">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <h3 class="modal-title">{{ $t('account.deactivateAccount') }}</h3>
+              <p class="modal-description">{{ $t('account.deactivateConfirmMessage') || 'Are you sure you want to deactivate your account? You will be logged out and your account will be disabled. Please contact support to reactivate.' }}</p>
+              <div class="modal-actions">
+                <button class="modal-btn modal-btn--cancel" @click="closeDeactivateModal" :disabled="deactivating">
+                  {{ $t('common.cancel') || 'Cancel' }}
+                </button>
+                <button class="modal-btn modal-btn--danger" @click="confirmDeactivate" :disabled="deactivating">
+                  <svg v-if="deactivating" class="btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/></svg>
+                  {{ deactivating ? ($t('common.loading') || 'Processing...') : ($t('account.confirmDeactivate') || 'Yes, Deactivate') }}
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -108,7 +138,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
-import { fetchProfile, updateProfile } from '@/api/services'
+import { fetchProfile, updateProfile, deactivateAccountApi } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -120,6 +150,8 @@ const saving = ref(false)
 const successMsg = ref('')
 const errorMsg = ref('')
 const phoneCode = ref('+966')
+const showDeactivateModal = ref(false)
+const deactivating = ref(false)
 
 const form = ref({
   firstName: '',
@@ -177,6 +209,27 @@ async function saveProfile() {
 async function handleLogout() {
   await auth.logout()
   router.push('/')
+}
+
+function closeDeactivateModal() {
+  if (!deactivating.value) {
+    showDeactivateModal.value = false
+  }
+}
+
+async function confirmDeactivate() {
+  deactivating.value = true
+  try {
+    await deactivateAccountApi()
+    showDeactivateModal.value = false
+    await auth.logout()
+    router.push('/')
+  } catch (e: any) {
+    errorMsg.value = e?.response?.data?.message || t('common.error')
+    showDeactivateModal.value = false
+  } finally {
+    deactivating.value = false
+  }
 }
 </script>
 
@@ -280,6 +333,80 @@ html[dir="rtl"] .phone-row input { border-radius: 8px 0 0 8px; }
 .loading-state { text-align: center; padding: 4rem; }
 .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #6b7280; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Deactivate Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+}
+.modal-container {
+  background: white; border-radius: 20px;
+  padding: 2.5rem; max-width: 420px; width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+.modal-icon-wrapper {
+  width: 72px; height: 72px; margin: 0 auto 1.5rem;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #ef4444;
+}
+.modal-title {
+  font-size: 1.25rem; font-weight: 700; color: #111827;
+  margin: 0 0 0.75rem;
+}
+.modal-description {
+  font-size: 0.875rem; color: #6b7280; line-height: 1.6;
+  margin: 0 0 2rem;
+}
+.modal-actions {
+  display: flex; gap: 0.75rem;
+}
+.modal-btn {
+  flex: 1; padding: 0.75rem 1.25rem; border-radius: 10px;
+  font-weight: 600; font-size: 0.9rem; cursor: pointer;
+  border: none; transition: all 0.2s ease;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.modal-btn--cancel {
+  background: #f3f4f6; color: #374151;
+}
+.modal-btn--cancel:hover:not(:disabled) { background: #e5e7eb; }
+.modal-btn--danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+.modal-btn--danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.45);
+  transform: translateY(-1px);
+}
+.btn-spinner { animation: spin 0.8s linear infinite; }
+
+/* Modal transitions */
+.modal-fade-enter-active, .modal-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+
+.modal-scale-enter-active {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.modal-scale-leave-active {
+  transition: all 0.2s ease;
+}
+.modal-scale-enter-from {
+  opacity: 0; transform: scale(0.9);
+}
+.modal-scale-leave-to {
+  opacity: 0; transform: scale(0.95);
+}
 
 @media (max-width: 768px) {
   .profile-page-grid { grid-template-columns: 1fr; }

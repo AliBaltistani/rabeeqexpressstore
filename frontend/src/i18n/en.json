@@ -181,6 +181,7 @@
     "error": "Something went wrong",
     "retry": "Retry",
     "close": "Close",
+    "cancel": "Cancel",
     "ok": "Ok",
     "language": "Language",
     "currency": "Currency",
@@ -246,6 +247,8 @@
     "promotionalMessagesDesc": "You can control disabling or activating the promotional messages that appear when you visit the store.",
     "deactivateAccount": "Deactivate account",
     "deactivateAccountDesc": "You can delete your account from the store, which includes your previous orders, favorites.",
+    "deactivateConfirmMessage": "Are you sure you want to deactivate your account? You will be logged out and your account will be disabled. Please contact support to reactivate.",
+    "confirmDeactivate": "Yes, Deactivate",
     "pendingPayments": "Pending Payments"
   },
   "wishlist": {

@@ -199,6 +199,10 @@ export async function updatePassword(data: { current_password: string; password:
   return unwrap(await apiClient.put('/profile/password', data))
 }
 
+export async function deactivateAccountApi() {
+  return unwrap<any>(await apiClient.post('/profile/deactivate'))
+}
+
 // ═══════════════════════════════════════════
 // ADDRESSES
 // ═══════════════════════════════════════════
@@ -347,10 +351,10 @@ export async function fetchWalletTransactions() {
 
 // Loyalty Points
 export async function fetchLoyaltyPoints() {
-  return unwrap(await apiClient.get('/loyalty'))
+  return unwrap<any>(await apiClient.get('/loyalty'))
 }
 export async function fetchLoyaltyTransactions() {
-  return unwrap(await apiClient.get('/loyalty/transactions'))
+  return unwrap<any>(await apiClient.get('/loyalty/transactions'))
 }
 export async function redeemLoyaltyToWallet(points: number) {
   return unwrap<any>(await apiClient.post('/loyalty/redeem-to-wallet', { points }))

@@ -241,6 +241,15 @@ export interface User {
   phone?: string | null
   avatar?: string | null
   createdAt?: string
+  firstName?: string | null
+  lastName?: string | null
+  first_name?: string | null
+  last_name?: string | null
+  birthDate?: string | null
+  birth_date?: string | null
+  gender?: string | null
+  promotionalMessages?: boolean
+  promotional_messages?: boolean
 }
 
 // ─── Address ───

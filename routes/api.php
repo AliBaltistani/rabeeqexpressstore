@@ -123,6 +123,7 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
         Route::get('profile', [ProfileController::class, 'show']);
         Route::put('profile', [ProfileController::class, 'update']);
         Route::put('profile/password', [ProfileController::class, 'updatePassword']);
+        Route::post('profile/deactivate', [ProfileController::class, 'deactivateAccount']);
 
         // Addresses
         Route::get('addresses', [ProfileController::class, 'addresses']);

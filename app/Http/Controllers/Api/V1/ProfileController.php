@@ -222,4 +222,18 @@ class ProfileController extends Controller
 
         return $this->success(null, 'Address deleted.');
     }
+
+    /**
+     * POST /api/v1/profile/deactivate
+     */
+    public function deactivateAccount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $user->update(['is_active' => false]);
+
+        // Revoke all tokens — logs user out everywhere
+        $user->tokens()->delete();
+
+        return $this->success(null, 'Account deactivated successfully.');
+    }
 }

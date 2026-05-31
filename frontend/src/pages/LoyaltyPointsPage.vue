@@ -61,10 +61,10 @@ const isLoading = ref(true)
 async function loadData() {
   isLoading.value = true
   try {
-    const res = await fetchLoyaltyPoints()
+    const res: any = await fetchLoyaltyPoints()
     loyalty.value = res.data || res
     
-    const txRes = await fetchLoyaltyTransactions()
+    const txRes: any = await fetchLoyaltyTransactions()
     transactions.value = txRes.data || txRes || []
   } catch (error) {
     console.error('Failed to load loyalty points', error)
