@@ -209,6 +209,8 @@ onBeforeUnmount(() => {
   overflow: hidden;
   cursor: grab;
   user-select: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 .product-slider:active {
   cursor: grabbing;

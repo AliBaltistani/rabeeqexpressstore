@@ -12,7 +12,13 @@
       class="products-slider"
       ref="sliderRef"
       @mouseenter="pauseAutoplay"
-      @mouseleave="resumeAutoplay"
+      @mouseleave="onMouseLeave"
+      @mousedown.prevent="onDragStart"
+      @mousemove="onDragMove"
+      @mouseup="onDragEnd"
+      @touchstart.passive="onTouchStart"
+      @touchmove.passive="onTouchMove"
+      @touchend="onTouchEnd"
     >
       <!-- Prev Arrow -->
       <button
@@ -33,13 +39,6 @@
           transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
           direction: effectiveDirection === 'rtl' ? 'rtl' : 'ltr',
         }"
-        @mousedown="onDragStart"
-        @mousemove="onDragMove"
-        @mouseup="onDragEnd"
-        @mouseleave="onDragEnd"
-        @touchstart.passive="onTouchStart"
-        @touchmove.passive="onTouchMove"
-        @touchend="onTouchEnd"
       >
         <div
           v-for="product in products"
@@ -146,7 +145,23 @@ const sectionTitle = computed(() => {
 
 const isSlider = computed(() => (props.config.display_mode || 'slider') === 'slider')
 
-const slidesPerView = computed(() => props.config.slides_per_view || 5)
+const configSlidesPerView = computed(() => props.config.slides_per_view || 5)
+
+/** Responsive slides-per-view: adapts to actual container width */
+const responsiveSlidesPerView = ref(5)
+
+function calcResponsivePerView(): number {
+  const w = sliderRef.value?.clientWidth || window.innerWidth
+  const configured = configSlidesPerView.value
+  if (w < 480) return Math.min(configured, 2)
+  if (w < 640) return Math.min(configured, 2.5)
+  if (w < 768) return Math.min(configured, 3)
+  if (w < 1024) return Math.min(configured, 3)
+  if (w < 1280) return Math.min(configured, 4)
+  return configured
+}
+
+const slidesPerView = computed(() => responsiveSlidesPerView.value)
 
 const effectiveDirection = computed(() => {
   const dir = props.config.direction || 'auto'
@@ -199,7 +214,8 @@ const gap = 12
 
 function getItemWidth(): number {
   if (!sliderRef.value) return 220
-  return (sliderRef.value.clientWidth - gap * (slidesPerView.value - 1)) / slidesPerView.value
+  const perView = Math.floor(slidesPerView.value) || 2
+  return (sliderRef.value.clientWidth - gap * (perView - 1)) / slidesPerView.value
 }
 
 function getMaxTranslate(): number {
@@ -282,6 +298,10 @@ function onDragEnd() {
   snapToNearest()
   startAutoplay()
 }
+function onMouseLeave() {
+  onDragEnd()
+  resumeAutoplay()
+}
 
 // Touch drag
 function onTouchStart(e: TouchEvent) {
@@ -320,11 +340,13 @@ function snapToNearest() {
 }
 
 function handleResize() {
+  responsiveSlidesPerView.value = calcResponsivePerView()
   snapToNearest()
 }
 
 onMounted(() => {
   if (isSlider.value) {
+    responsiveSlidesPerView.value = calcResponsivePerView()
     startAutoplay()
     window.addEventListener('resize', handleResize)
   }
@@ -357,6 +379,8 @@ onBeforeUnmount(() => {
   overflow: hidden;
   cursor: grab;
   user-select: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 .products-slider:active {
   cursor: grabbing;
