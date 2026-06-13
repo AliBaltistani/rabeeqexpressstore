@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\LoyaltyRewardResource\Pages;
 use App\Models\LoyaltyReward;
+use App\Models\ShippingMethod;
 use BackedEnum;
 use Filament\Actions;
 use Filament\Forms;
@@ -163,6 +164,21 @@ class LoyaltyRewardResource extends Resource
                                             ->directory('loyalty-rewards')
                                             ->maxSize(2048)
                                             ->helperText('Optional image for the reward card. Max 2MB.'),
+
+                                        Forms\Components\Select::make('applicable_shipping_method_ids')
+                                            ->label('Applicable Shipping Methods')
+                                            ->multiple()
+                                            ->options(fn() => ShippingMethod::active()
+                                                ->get()
+                                                ->mapWithKeys(fn($m) => [
+                                                    $m->id => $m->getTranslation('name', 'en') . ' (' . ucfirst($m->carrier_type) . ' — ' . currency_symbol() . ' ' . number_format((float)$m->base_cost, 2) . ')',
+                                                ])
+                                                ->all()
+                                            )
+                                            ->visible(fn(Schemas\Components\Utilities\Get $get): bool => $get('type') === 'free_shipping')
+                                            ->helperText('Select which shipping methods this free shipping reward applies to. Leave empty for ALL methods.')
+                                            ->native(false)
+                                            ->searchable(),
                                     ]),
                             ])
                             ->columnSpan(2),

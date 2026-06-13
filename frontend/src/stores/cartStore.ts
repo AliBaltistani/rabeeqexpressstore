@@ -93,11 +93,11 @@ export const useCartStore = defineStore('cart', () => {
 
   async function applyCoupon(code: string) {
     try {
-      const data = await applyCouponApi(code)
-      syncFromApi(data)
-      return { success: true }
+      const result = await applyCouponApi(code)
+      syncFromApi(result.data)
+      return { success: true, freeShipping: result.freeShipping || false, message: result.message }
     } catch (error: any) {
-      return { success: false, message: error.response?.data?.message || 'Failed to apply coupon' }
+      return { success: false, freeShipping: false, message: error.response?.data?.message || 'Failed to apply coupon' }
     }
   }
 

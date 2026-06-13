@@ -153,7 +153,14 @@
     "welcome": "Welcome, {name}!",
     "codNote": "Pay cash when your order is delivered.",
     "cashbackMessage": "Congrats! You got {amount} cashback",
-    "comingSoon": "Coming Soon"
+    "comingSoon": "Coming Soon",
+    "pending": "Pending",
+    "processing": "Processing",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled",
+    "yourCoupons": "Your coupons",
+    "freeShippingApplied": "Free shipping coupon applied!"
   },
   "category": {
     "sortBy": "Sort By",
@@ -193,7 +200,12 @@
     "shopNow": "Shop Now",
     "wishlist": "Wishlist",
     "optional": "Optional",
-    "comingSoon": "Coming Soon"
+    "comingSoon": "Coming Soon",
+    "all": "All",
+    "searchPlaceholder": "Search for products...",
+    "searching": "Searching...",
+    "viewAllResults": "View all results",
+    "noResults": "No products found"
   },
   "auth": {
     "login": "Login",
@@ -312,7 +324,17 @@
     "couponDiscount": "Coupon discount",
     "couponDiscountDesc": "Congratulations! You have won a discount coupon offered to you from the store to complete the required number of points.",
     "freeShippingReward": "Free shipping coupon",
-    "freeShippingDesc": "Get free shipping on your next order by redeeming your loyalty points."
+    "freeShippingDesc": "Get free shipping on your next order by redeeming your loyalty points.",
+    "notEnoughPoints": "Not enough points",
+    "redeem": "Redeem",
+    "myCoupons": "My Coupons",
+    "expiresOn": "Expires",
+    "active": "Active",
+    "used": "Used",
+    "confirmRedeem": "Confirm Redemption",
+    "redeemConfirmMsg": "Are you sure you want to redeem this reward?",
+    "redeemSuccess": "Reward redeemed successfully!",
+    "yourCouponCode": "Your coupon code"
   },
   "breadcrumb": {
     "home": "Home"
@@ -368,5 +390,8 @@
     "invalidOtp": "Invalid verification code",
     "otpSent": "Code sent to your email",
     "otpExpired": "Code has expired, please request a new one"
+  },
+  "notifications": {
+    "markAllRead": "Mark all as read"
   }
 }

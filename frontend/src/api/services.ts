@@ -120,28 +120,30 @@ export async function fetchCart(): Promise<CartData> {
   return unwrap(await apiClient.get('/cart'))
 }
 
-export async function addCartItem(productId: number, quantity: number, variantId?: number | null, attributeValues?: number[]) {
-  return unwrap(await apiClient.post('/cart/items', { productId, quantity, variantId, attributeValues }))
+export async function addCartItem(productId: number, quantity: number, variantId?: number | null, attributeValues?: number[]): Promise<CartData> {
+  return unwrap<CartData>(await apiClient.post('/cart/items', { productId, quantity, variantId, attributeValues }))
 }
 
-export async function updateCartItem(id: number, quantity: number) {
-  return unwrap(await apiClient.put(`/cart/items/${id}`, { quantity }))
+export async function updateCartItem(id: number, quantity: number): Promise<CartData> {
+  return unwrap<CartData>(await apiClient.put(`/cart/items/${id}`, { quantity }))
 }
 
-export async function removeCartItem(id: number) {
-  return unwrap(await apiClient.delete(`/cart/items/${id}`))
+export async function removeCartItem(id: number): Promise<CartData> {
+  return unwrap<CartData>(await apiClient.delete(`/cart/items/${id}`))
 }
 
-export async function clearCartApi() {
-  return unwrap(await apiClient.delete('/cart'))
+export async function clearCartApi(): Promise<CartData> {
+  return unwrap<CartData>(await apiClient.delete('/cart'))
 }
 
 export async function applyCouponApi(code: string) {
-  return unwrap(await apiClient.post('/cart/coupon', { code }))
+  const res = await apiClient.post('/cart/coupon', { code })
+  const body = res.data
+  return { data: body.data, freeShipping: body.freeShipping || false, message: body.message }
 }
 
-export async function removeCouponApi() {
-  return unwrap(await apiClient.delete('/cart/coupon'))
+export async function removeCouponApi(): Promise<CartData> {
+  return unwrap<CartData>(await apiClient.delete('/cart/coupon'))
 }
 
 // ═══════════════════════════════════════════
@@ -361,6 +363,12 @@ export async function redeemLoyaltyToWallet(points: number) {
 }
 export async function fetchLoyaltyRewards() {
   return unwrap<any>(await apiClient.get('/loyalty/rewards'))
+}
+export async function redeemLoyaltyReward(rewardId: number) {
+  return unwrap<any>(await apiClient.post('/loyalty/redeem-reward', { rewardId }))
+}
+export async function fetchMyCoupons() {
+  return unwrap<any>(await apiClient.get('/loyalty/my-coupons'))
 }
 
 // ═══════════════════════════════════════════

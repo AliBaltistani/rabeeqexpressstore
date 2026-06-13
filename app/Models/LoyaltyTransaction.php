@@ -23,11 +23,13 @@ class LoyaltyTransaction extends Model
         'reference_type',
         'reference_id',
         'admin_id',
+        'expires_at',
     ];
 
     protected $casts = [
         'points' => 'integer',
         'balance_after' => 'integer',
+        'expires_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -43,5 +45,13 @@ class LoyaltyTransaction extends Model
     public function reference(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * Check if this earned transaction has already been expired.
+     */
+    public function expiredCounterpart()
+    {
+        return $this->hasOne(\App\Models\LoyaltyTransactionExpiration::class, 'earned_transaction_id');
     }
 }

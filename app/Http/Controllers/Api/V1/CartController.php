@@ -151,8 +151,15 @@ class CartController extends Controller
         }
 
         $user = $request->user('sanctum');
+
+        // Check user binding: if coupon is user-bound, validate ownership
         if ($user && !$coupon->isValidForUser($user)) {
             return $this->error('You have already used this coupon the maximum number of times.', 422);
+        }
+
+        // If coupon is user-bound and no user is logged in, reject
+        if (!$user && $coupon->user_id) {
+            return $this->error('This coupon is not available.', 422);
         }
 
         $items = $this->getCartItems($request);
@@ -163,15 +170,31 @@ class CartController extends Controller
         }
 
         $discount = $coupon->calculateDiscount($subtotal);
+        $isFreeShipping = $coupon->isFreeShipping();
 
         // Store coupon in session
-        session(['cart_coupon' => $coupon->code, 'cart_discount' => $discount]);
+        session([
+            'cart_coupon'        => $coupon->code,
+            'cart_discount'      => $discount,
+            'cart_free_shipping' => $isFreeShipping,
+        ]);
 
         $cartData = $this->buildCartData($items, $request);
         $cartData->couponCode = $coupon->code;
         $cartData->discountAmount = $discount;
 
-        return $this->success(new CartResource($cartData), 'Coupon applied successfully.');
+        $message = $isFreeShipping
+            ? 'Free shipping coupon applied! Shipping will be free at checkout.'
+            : 'Coupon applied successfully.';
+
+        $response = new CartResource($cartData);
+
+        return response()->json([
+            'success'      => true,
+            'data'         => $response,
+            'message'      => $message,
+            'freeShipping' => $isFreeShipping,
+        ]);
     }
 
     /**

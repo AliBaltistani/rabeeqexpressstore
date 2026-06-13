@@ -36,7 +36,7 @@ class LoyaltyWalletSettingsPage extends Page
 
     public function mount(): void
     {
-        $loyaltyKeys = ['enabled', 'earn_rate', 'redeem_rate', 'min_redeem', 'profile_completion_points', 'share_points', 'store_url'];
+        $loyaltyKeys = ['enabled', 'earn_rate', 'redeem_rate', 'min_redeem', 'profile_completion_points', 'share_points', 'store_url', 'coupon_expiry_days', 'points_expiry_days'];
         $walletKeys  = ['enabled', 'auto_refund'];
 
         foreach ($loyaltyKeys as $key) {
@@ -59,6 +59,8 @@ class LoyaltyWalletSettingsPage extends Page
         $this->data['loyalty_profile_completion_points'] = (int) ($this->data['loyalty_profile_completion_points'] ?? 0);
         $this->data['loyalty_share_points'] = (int) ($this->data['loyalty_share_points'] ?? 50);
         $this->data['loyalty_store_url'] = $this->data['loyalty_store_url'] ?? config('app.url');
+        $this->data['loyalty_coupon_expiry_days'] = (int) ($this->data['loyalty_coupon_expiry_days'] ?? 30);
+        $this->data['loyalty_points_expiry_days'] = (int) ($this->data['loyalty_points_expiry_days'] ?? 0);
 
         $this->form->fill($this->data);
     }
@@ -119,6 +121,20 @@ class LoyaltyWalletSettingsPage extends Page
                                 ->url()
                                 ->placeholder(config('app.url'))
                                 ->helperText('The URL shown to customers for sharing.'),
+
+                            Forms\Components\TextInput::make('loyalty_coupon_expiry_days')
+                                ->label('Coupon Expiry (days)')
+                                ->numeric()
+                                ->minValue(1)
+                                ->default(30)
+                                ->helperText('How many days loyalty-generated coupons remain valid. Default: 30.'),
+
+                            Forms\Components\TextInput::make('loyalty_points_expiry_days')
+                                ->label('Points Expiry (days)')
+                                ->numeric()
+                                ->minValue(0)
+                                ->default(0)
+                                ->helperText('Days until earned points expire. Set 0 to disable. Requires scheduled "loyalty:expire-points" command.'),
                         ]),
                     ])->collapsible(),
 
@@ -145,7 +161,7 @@ class LoyaltyWalletSettingsPage extends Page
     {
         $data = $this->form->getState();
 
-        $loyaltyKeys = ['enabled', 'earn_rate', 'redeem_rate', 'min_redeem', 'profile_completion_points', 'share_points', 'store_url'];
+        $loyaltyKeys = ['enabled', 'earn_rate', 'redeem_rate', 'min_redeem', 'profile_completion_points', 'share_points', 'store_url', 'coupon_expiry_days', 'points_expiry_days'];
         $walletKeys  = ['enabled', 'auto_refund'];
 
         foreach ($loyaltyKeys as $key) {

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use App\Models\UserAddress;
+use App\Models\Setting;
 
 class User extends Authenticatable
 {
@@ -149,6 +150,15 @@ class User extends Authenticatable
             $this->increment('loyalty_points', $points);
             $this->refresh();
 
+            // Calculate expiry for earned points
+            $expiresAt = null;
+            if ($type === 'earned') {
+                $expiryDays = (int) Setting::get('loyalty.points_expiry_days', 0);
+                if ($expiryDays > 0) {
+                    $expiresAt = now()->addDays($expiryDays);
+                }
+            }
+
             return $this->loyaltyTransactions()->create([
                 'type' => $type,
                 'points' => $points,
@@ -157,6 +167,7 @@ class User extends Authenticatable
                 'reference_type' => $refType,
                 'reference_id' => $refId,
                 'admin_id' => $adminId,
+                'expires_at' => $expiresAt,
             ]);
         });
     }

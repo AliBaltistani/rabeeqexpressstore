@@ -20,11 +20,32 @@
         </div>
       </div>
       <div v-if="showCoupon" class="checkout-coupon container">
+        <!-- Loyalty Coupons Quick-Apply -->
+        <div v-if="loyaltyCoupons.length" class="checkout-coupon__loyalty">
+          <span class="checkout-coupon__loyalty-label">{{ $t('checkout.yourCoupons') || 'Your coupons' }}:</span>
+          <div class="checkout-coupon__loyalty-list">
+            <button
+              v-for="lc in loyaltyCoupons"
+              :key="lc.id"
+              class="checkout-coupon__loyalty-btn"
+              :class="{ 'checkout-coupon__loyalty-btn--shipping': lc.type === 'free_shipping' }"
+              @click="quickApplyCoupon(lc.code)"
+              :disabled="couponLoading"
+            >
+              <span class="loyalty-coupon-icon">{{ lc.type === 'free_shipping' ? '🚚' : '🏷️' }}</span>
+              <span class="loyalty-coupon-info">
+                <span class="loyalty-coupon-name">{{ lc.rewardName || lc.name }}</span>
+                <code class="loyalty-coupon-code">{{ lc.code }}</code>
+              </span>
+            </button>
+          </div>
+        </div>
         <div class="checkout-coupon__row">
           <input type="text" v-model="couponCode" :placeholder="$t('checkout.enterCouponCode')" class="checkout-coupon__input" />
           <button class="checkout-coupon__apply" @click="applyCoupon" :disabled="couponLoading">{{ $t('checkout.apply') }}</button>
         </div>
         <p v-if="couponMsg" class="checkout-coupon__msg" :class="{ error: couponError }">{{ couponMsg }}</p>
+        <p v-if="freeShippingApplied" class="checkout-coupon__free-ship-msg">🚚 {{ $t('checkout.freeShippingApplied') || 'Free shipping coupon applied!' }}</p>
       </div>
       <div class="checkout-header__details-toggle container">
         <button class="checkout-details-btn" @click="showOrderDetails = !showOrderDetails">{{ $t('checkout.orderDetails') }}</button>
@@ -488,7 +509,7 @@ import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, confirmStripePayment, fetchActiveCountries, updateProfile } from '@/api/services'
+import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, confirmStripePayment, fetchActiveCountries, updateProfile, fetchMyCoupons } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
@@ -505,6 +526,8 @@ const couponCode = ref('')
 const couponLoading = ref(false)
 const couponMsg = ref('')
 const couponError = ref(false)
+const loyaltyCoupons = ref<any[]>([])
+const freeShippingApplied = ref(false)
 const authMode = ref<'login' | 'guest'>('login')
 const authLoading = ref(false)
 const authError = ref('')
@@ -882,15 +905,37 @@ async function confirmPayment() {
 // ── Coupon ──
 async function applyCoupon() {
   if (!couponCode.value.trim()) return
-  couponLoading.value = true; couponMsg.value = ''; couponError.value = false
+  couponLoading.value = true; couponMsg.value = ''; couponError.value = false; freeShippingApplied.value = false
   const result = await cart.applyCoupon(couponCode.value.trim())
   couponLoading.value = false
-  if (result.success) { couponMsg.value = t('checkout.couponApplied'); showCoupon.value = false } else { couponError.value = true; couponMsg.value = result.message || t('common.error') }
+  if (result.success) {
+    couponMsg.value = t('checkout.couponApplied')
+    // Check for free shipping flag from backend
+    if (result.freeShipping) {
+      freeShippingApplied.value = true
+    }
+    showCoupon.value = false
+  } else {
+    couponError.value = true
+    couponMsg.value = result.message || t('common.error')
+  }
+}
+
+function quickApplyCoupon(code: string) {
+  couponCode.value = code
+  applyCoupon()
 }
 
 // ── Lifecycle ──
 onMounted(async () => {
-  if (auth.isAuthenticated) { authMode.value = 'login'; currentStep.value = 2; prefillAddressFromUser() }
+  if (auth.isAuthenticated) {
+    authMode.value = 'login'; currentStep.value = 2; prefillAddressFromUser()
+    // Load user's loyalty coupons for quick-apply
+    try {
+      const couponsRes = await fetchMyCoupons()
+      loyaltyCoupons.value = (couponsRes?.active || []).slice(0, 5)
+    } catch { /* ignore */ }
+  }
   try { countries.value = await fetchActiveCountries() } catch { /* use defaults */ }
   if (currentStep.value === 2) initGoogleMaps()
 })
@@ -923,12 +968,35 @@ onUnmounted(() => {
 .checkout-header__coupon-btn { background: none; border: none; color: #c0392b; font-size: 0.8125rem; font-weight: 500; cursor: pointer; text-decoration: underline; margin-top: 0.25rem; }
 .checkout-coupon { padding: 1rem 0; }
 .checkout-coupon__row { display: flex; gap: 0.5rem; }
-.checkout-coupon__input { flex: 1; padding: 0.625rem 0.875rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.875rem; outline: none; }
+.checkout-coupon__input { flex: 1; padding: 0.625rem 0.875rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.875rem; outline: none; text-transform: uppercase; font-family: monospace; }
 .checkout-coupon__input:focus { border-color: #111; }
-.checkout-coupon__apply { padding: 0.625rem 1.5rem; background: #333; color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+.checkout-coupon__apply { padding: 0.625rem 1.5rem; background: #333; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 .checkout-coupon__apply:disabled { opacity: 0.6; }
 .checkout-coupon__msg { font-size: 0.8125rem; margin: 0.5rem 0 0; color: #059669; }
 .checkout-coupon__msg.error { color: #dc2626; }
+
+/* Loyalty coupons quick-apply */
+.checkout-coupon__loyalty { margin-bottom: 0.75rem; }
+.checkout-coupon__loyalty-label { display: block; font-size: 0.8rem; font-weight: 600; color: #6b7280; margin-bottom: 0.5rem; }
+.checkout-coupon__loyalty-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.checkout-coupon__loyalty-btn {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.75rem; background: #fef3c7; border: 1px solid #fde68a;
+  border-radius: 8px; cursor: pointer; transition: all 0.2s; text-align: left;
+}
+.checkout-coupon__loyalty-btn:hover:not(:disabled) { background: #fde68a; border-color: #f59e0b; transform: translateY(-1px); }
+.checkout-coupon__loyalty-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.checkout-coupon__loyalty-btn--shipping { background: #ede9fe; border-color: #ddd6fe; }
+.checkout-coupon__loyalty-btn--shipping:hover:not(:disabled) { background: #ddd6fe; border-color: #a78bfa; }
+.loyalty-coupon-icon { font-size: 1.25rem; flex-shrink: 0; }
+.loyalty-coupon-info { display: flex; flex-direction: column; gap: 0.1rem; }
+.loyalty-coupon-name { font-size: 0.75rem; font-weight: 600; color: #111827; white-space: nowrap; }
+.loyalty-coupon-code { font-family: monospace; font-size: 0.7rem; color: #b45309; background: none; padding: 0; letter-spacing: 0.5px; }
+.checkout-coupon__free-ship-msg {
+  font-size: 0.8125rem; margin: 0.5rem 0 0;
+  color: #7c3aed; font-weight: 600;
+  display: flex; align-items: center; gap: 0.35rem;
+}
 .checkout-header__details-toggle { display: flex; justify-content: center; padding: 1rem 0; }
 .checkout-details-btn { padding: 0.375rem 1.5rem; border: 1px solid #ddd; border-radius: 100px; background: #fff; font-size: 0.8125rem; color: #111; cursor: pointer; }
 .checkout-details-btn:hover { border-color: #999; }

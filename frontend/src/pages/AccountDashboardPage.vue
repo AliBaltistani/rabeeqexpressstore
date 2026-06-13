@@ -50,13 +50,7 @@
               <label>{{ $t('account.mobileNumber') }}</label>
               <div class="phone-row">
                 <select v-model="phoneCode" class="phone-code-select">
-                  <option value="+966">+966</option>
-                  <option value="+971">+971</option>
-                  <option value="+92">+92</option>
-                  <option value="+20">+20</option>
-                  <option value="+962">+962</option>
-                  <option value="+1">+1</option>
-                  <option value="+44">+44</option>
+                  <option v-for="code in countryCodes" :key="code" :value="code">{{ code }}</option>
                 </select>
                 <input type="tel" v-model="form.phone" placeholder="3488092100" />
               </div>
@@ -149,6 +143,7 @@ const isLoading = ref(true)
 const saving = ref(false)
 const successMsg = ref('')
 const errorMsg = ref('')
+const countryCodes = ['+966', '+971', '+92', '+20', '+962', '+1', '+44']
 const phoneCode = ref('+966')
 const showDeactivateModal = ref(false)
 const deactivating = ref(false)
@@ -163,6 +158,25 @@ const form = ref({
   promotionalMessages: true,
 })
 
+/**
+ * Parse a stored phone string like "+92344..." into { code: '+92', number: '344...' }.
+ * Tries longest-match first so "+966" is preferred over "+96" etc.
+ */
+function parsePhone(raw: string): { code: string; number: string } {
+  if (!raw) return { code: '+966', number: '' }
+  // Sort codes longest-first so "+966" is matched before "+96"
+  const sorted = [...countryCodes].sort((a, b) => b.length - a.length)
+  for (const code of sorted) {
+    if (raw.startsWith(code)) {
+      return { code, number: raw.slice(code.length) }
+    }
+  }
+  // If no known code matched but starts with '+', try to extract a code of 1-4 digits
+  const m = raw.match(/^(\+\d{1,4})(.*)$/)
+  if (m) return { code: m[1], number: m[2] }
+  return { code: '+966', number: raw }
+}
+
 onMounted(async () => {
   try {
     const user = await fetchProfile()
@@ -171,7 +185,12 @@ onMounted(async () => {
     form.value.birthDate = user.birthDate || user.birth_date || ''
     form.value.gender = user.gender || ''
     form.value.email = user.email || ''
-    form.value.phone = user.phone || ''
+
+    // Parse country code from stored phone number
+    const parsed = parsePhone(user.phone || '')
+    phoneCode.value = parsed.code
+    form.value.phone = parsed.number
+
     form.value.promotionalMessages = user.promotionalMessages ?? user.promotional_messages ?? true
   } catch (e) {
     console.error('Failed to load profile', e)

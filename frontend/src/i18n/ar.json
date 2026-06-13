@@ -153,7 +153,14 @@
     "welcome": "مرحباً، {name}!",
     "codNote": "ادفع نقداً عند استلام الطلب.",
     "cashbackMessage": "تهانينا! حصلت على {amount} استرداد نقدي",
-    "comingSoon": "قريباً"
+    "comingSoon": "قريباً",
+    "pending": "قيد الانتظار",
+    "processing": "قيد المعالجة",
+    "shipped": "تم الشحن",
+    "delivered": "تم التوصيل",
+    "cancelled": "ملغي",
+    "yourCoupons": "كوبوناتك",
+    "freeShippingApplied": "تم تطبيق كوبون الشحن المجاني!"
   },
   "category": {
     "sortBy": "ترتيب حسب",
@@ -193,7 +200,12 @@
     "shopNow": "تسوق الآن",
     "wishlist": "المفضلة",
     "optional": "اختياري",
-    "comingSoon": "قريباً"
+    "comingSoon": "قريباً",
+    "all": "الكل",
+    "searchPlaceholder": "ابحث عن منتجات...",
+    "searching": "جاري البحث...",
+    "viewAllResults": "عرض جميع النتائج",
+    "noResults": "لم يتم العثور على منتجات"
   },
   "auth": {
     "login": "تسجيل الدخول",
@@ -312,7 +324,17 @@
     "couponDiscount": "كوبون خصم",
     "couponDiscountDesc": "مبروك لقد ربحت معنا خصم مقدم لك من متجرنا لإستكمالك عدد نقاط",
     "freeShippingReward": "كوبون شحن مجاني",
-    "freeShippingDesc": "احصل على شحن مجاني في طلبك التالي باستبدال نقاط الولاء."
+    "freeShippingDesc": "احصل على شحن مجاني في طلبك التالي باستبدال نقاط الولاء.",
+    "notEnoughPoints": "النقاط غير كافية",
+    "redeem": "استبدال",
+    "myCoupons": "كوبوناتي",
+    "expiresOn": "ينتهي في",
+    "active": "نشط",
+    "used": "مستخدم",
+    "confirmRedeem": "تأكيد الاستبدال",
+    "redeemConfirmMsg": "هل أنت متأكد أنك تريد استبدال هذه المكافأة؟",
+    "redeemSuccess": "تم استبدال المكافأة بنجاح!",
+    "yourCouponCode": "رمز الكوبون الخاص بك"
   },
   "breadcrumb": {
     "home": "الرئيسية"
@@ -368,5 +390,8 @@
     "invalidOtp": "رمز التحقق غير صحيح",
     "otpSent": "تم إرسال الرمز إلى بريدك الإلكتروني",
     "otpExpired": "انتهت صلاحية الرمز، يرجى طلب رمز جديد"
+  },
+  "notifications": {
+    "markAllRead": "تعيين الكل كمقروء"
   }
 }

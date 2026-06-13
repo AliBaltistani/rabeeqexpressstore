@@ -88,26 +88,55 @@ final class OrderLifecycleService
             $discount   = 0;
             $couponId   = null;
             $couponCode = null;
+            $coupon     = null;
+            $freeShippingApplied = false;
 
             if (!empty($data['couponCode'])) {
                 $coupon = Coupon::where('code', strtoupper($data['couponCode']))->first();
-                if ($coupon && $coupon->isValid()) {
-                    $discount   = $coupon->calculateDiscount($subtotal);
-                    $couponId   = $coupon->id;
-                    $couponCode = $coupon->code;
-                    $coupon->increment('usage_count');
+                if ($coupon) {
+                    // Validate coupon: check user binding + general validity
+                    $isValid = $user
+                        ? $coupon->isValidForUser($user)
+                        : $coupon->isValid();
+
+                    if ($isValid) {
+                        $discount   = $coupon->calculateDiscount($subtotal);
+                        $couponId   = $coupon->id;
+                        $couponCode = $coupon->code;
+                        $coupon->increment('usage_count');
+
+                        // Record usage for registered users
+                        if ($user) {
+                            $coupon->usages()->create([
+                                'user_id' => $user->id,
+                            ]);
+                        }
+                    } else {
+                        $coupon = null; // Reset — invalid coupon
+                    }
                 }
             }
 
             // ── Shipping cost ──
             $shippingAmount = 0;
             $shippingMethodName = null;
+            $shippingMethodId = null;
 
             if (!empty($data['shippingMethodId'])) {
                 $method = ShippingMethod::find($data['shippingMethodId']);
                 if ($method) {
                     $shippingAmount = $method->getEffectiveCost($subtotal);
                     $shippingMethodName = $method->getTranslation('name', 'en') . ' (' . ucfirst($method->carrier_type) . ')';
+                    $shippingMethodId = $method->id;
+                }
+            }
+
+            // ── Free shipping coupon check ──
+            if ($coupon && $coupon->isFreeShipping()) {
+                // Check if coupon applies to the selected shipping method
+                if (!$shippingMethodId || $coupon->appliesToShippingMethod($shippingMethodId)) {
+                    $shippingAmount = 0;
+                    $freeShippingApplied = true;
                 }
             }
 
@@ -150,18 +179,19 @@ final class OrderLifecycleService
                 'payment_gateway'   => $data['paymentMethod'] === 'stripe' ? 'stripe' : null,
                 'shipping_rate_id'  => null,
                 'shipping_method'   => $shippingMethodName,
-                'shipping_status'   => 'pending',
-                'subtotal'          => $subtotal,
-                'discount_amount'   => $discount,
-                'shipping_amount'   => $shippingAmount,
-                'tax_amount'        => 0,
-                'total'             => $total,
-                'currency_code'     => $currencyCode,
-                'currency_rate'     => 1,
-                'coupon_id'         => $couponId,
-                'coupon_code'       => $couponCode,
-                'notes'             => $data['notes'] ?? null,
-                'ip_address'        => $request->ip(),
+                'shipping_status'       => 'pending',
+                'subtotal'              => $subtotal,
+                'discount_amount'       => $discount,
+                'shipping_amount'       => $shippingAmount,
+                'free_shipping_applied' => $freeShippingApplied,
+                'tax_amount'            => 0,
+                'total'                 => $total,
+                'currency_code'         => $currencyCode,
+                'currency_rate'         => 1,
+                'coupon_id'             => $couponId,
+                'coupon_code'           => $couponCode,
+                'notes'                 => $data['notes'] ?? null,
+                'ip_address'            => $request->ip(),
             ]);
 
             // ── Create order items ──

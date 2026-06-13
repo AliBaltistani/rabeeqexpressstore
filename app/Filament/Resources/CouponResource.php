@@ -292,6 +292,29 @@ class CouponResource extends Resource
                     ->dateTime(admin_date_format())
                     ->placeholder('Never')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('source')
+                    ->label('Source')
+                    ->badge()
+                    ->formatStateUsing(fn(string $state): string => match($state) {
+                        'admin' => 'Admin',
+                        'loyalty' => 'Loyalty',
+                        'referral' => 'Referral',
+                        'system' => 'System',
+                        default => ucfirst($state),
+                    })
+                    ->color(fn(string $state): string => match($state) {
+                        'admin' => 'gray',
+                        'loyalty' => 'warning',
+                        'referral' => 'info',
+                        'system' => 'primary',
+                        default => 'gray',
+                    }),
+
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('Bound To')
+                    ->placeholder('Global')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
@@ -316,6 +339,15 @@ class CouponResource extends Resource
                         'percentage' => 'Percentage',
                         'fixed' => 'Fixed Amount',
                         'free_shipping' => 'Free Shipping',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('source')
+                    ->label('Source')
+                    ->options([
+                        'admin' => 'Admin Created',
+                        'loyalty' => 'Loyalty Reward',
+                        'referral' => 'Referral',
+                        'system' => 'System',
                     ]),
             ])
             ->actions([

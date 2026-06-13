@@ -35,12 +35,15 @@ class Order extends Model
         'subtotal',
         'discount_amount',
         'shipping_amount',
+        'free_shipping_applied',
         'tax_amount',
         'total',
         'currency_code',
         'currency_rate',
         'coupon_id',
         'coupon_code',
+        'loyalty_points_earned',
+        'loyalty_points_redeemed',
         'notes',
         'ip_address',
     ];
@@ -52,6 +55,9 @@ class Order extends Model
         'tax_amount' => 'decimal:2',
         'total' => 'decimal:2',
         'currency_rate' => 'decimal:6',
+        'free_shipping_applied' => 'boolean',
+        'loyalty_points_earned' => 'integer',
+        'loyalty_points_redeemed' => 'integer',
     ];
 
     public function user(): BelongsTo
