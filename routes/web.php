@@ -70,33 +70,46 @@ Route::get('setup/emergency-clear', function (\Illuminate\Http\Request $request)
 });
 
 Route::prefix('setup')->group(function () {
+    // Dashboard (HTML UI)
+    Route::get('/', [SetupController::class, 'dashboard']);
+
+    // Deploy & Setup
     Route::get('run', [SetupController::class, 'run']);
+    Route::get('storage-link', [SetupController::class, 'storageLink']);
+    Route::get('fix-permissions', [SetupController::class, 'fixPermissions']);
+    Route::get('filament-upgrade', [SetupController::class, 'filamentUpgrade']);
+
+    // Database — Migrations
     Route::get('migrate', [SetupController::class, 'migrate']);
+    Route::get('migrate-status', [SetupController::class, 'migrateStatus']);
+    Route::get('migrate-rollback', [SetupController::class, 'migrateRollback']);
+    Route::get('migrate-fresh', [SetupController::class, 'migrateFresh']);
+
+    // Database — Seeders
     Route::get('seed', [SetupController::class, 'seed']);
     Route::get('production-seed', [SetupController::class, 'productionSeed']);
+    Route::get('seed-class', [SetupController::class, 'seedClass']);
+
+    // Cache & Optimization
+    Route::get('optimize', [SetupController::class, 'optimize']);
     Route::get('cache', [SetupController::class, 'cache']);
     Route::get('clear', [SetupController::class, 'clear']);
-    Route::get('storage-link', [SetupController::class, 'storageLink']);
+
+    // Queue Management
+    Route::get('queue-work', [SetupController::class, 'queueWork']);
+    Route::get('queue-retry', [SetupController::class, 'queueRetry']);
+    Route::get('queue-flush', [SetupController::class, 'queueFlush']);
+    Route::get('queue-status', [SetupController::class, 'queueStatus']);
+
+    // Maintenance Mode
+    Route::get('down', [SetupController::class, 'down']);
+    Route::get('up', [SetupController::class, 'up']);
+
+    // Diagnostics
     Route::get('status', [SetupController::class, 'status']);
-});
-
-
-/*
-|--------------------------------------------------------------------------
-| Cache Clear Route
-|--------------------------------------------------------------------------
-*/
-Route::get('/clear-cache', function () {
-    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
-    \Illuminate\Support\Facades\Artisan::call('view:clear');
-    \Illuminate\Support\Facades\Artisan::call('cache:clear');
-    \Illuminate\Support\Facades\Artisan::call('config:clear');
-    \Illuminate\Support\Facades\Artisan::call('route:clear');
-    
-    return response()->json([
-        'message' => 'All application caches and compiled views have been cleared successfully!',
-        'tip' => 'If you still do not see the Vue changes on the live server, try doing a Hard Refresh in your browser (Ctrl + F5 or Cmd + Shift + R) to clear browser cache.'
-    ]);
+    Route::get('env-check', [SetupController::class, 'envCheck']);
+    Route::get('logs', [SetupController::class, 'logs']);
+    Route::get('clear-logs', [SetupController::class, 'clearLogs']);
 });
 
 /*
