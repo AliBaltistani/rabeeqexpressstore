@@ -1,0 +1,1 @@
+import{Bt as e,Tt as t,jt as n}from"./_plugin-vue_export-helper-C9yTz5CU.js";import{t as r}from"./CategoryPage-Uk3gE6Ef.js";var i=n({__name:`ShopPage`,setup(n){return(n,i)=>(e(),t(r,{"is-shop":!0}))}});export{i as default};

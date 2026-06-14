@@ -1,1 +1,0 @@
-import{bt as e,kt as t,mt as n}from"./services-Dnt6WKO9.js";import{t as r}from"./CategoryPage-CCk1UZhy.js";var i=e({__name:`ShopPage`,setup(e){return(e,i)=>(t(),n(r,{"is-shop":!0}))}});export{i as default};
