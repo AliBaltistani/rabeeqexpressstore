@@ -1,8 +1,14 @@
 <template>
-  <router-view />
-  <QuickViewModal />
-  <CartToastGlobal />
-  <ShareMenu />
+  <!-- Maintenance Mode -->
+  <MaintenancePage v-if="settings.isInitialized && settings.storeSettings.maintenance.enabled" />
+
+  <!-- Normal App -->
+  <template v-else>
+    <router-view />
+    <QuickViewModal />
+    <CartToastGlobal />
+    <ShareMenu />
+  </template>
 </template>
 
 <script setup lang="ts">
@@ -14,6 +20,7 @@ import { useLanguage } from '@/composables/useLanguage'
 import QuickViewModal from '@/components/product/QuickViewModal.vue'
 import CartToastGlobal from '@/components/common/CartToastGlobal.vue'
 import ShareMenu from '@/components/common/ShareMenu.vue'
+import MaintenancePage from '@/pages/MaintenancePage.vue'
 
 const settings = useSettingsStore()
 const auth = useAuthStore()
@@ -27,6 +34,9 @@ onMounted(async () => {
   // Set language direction
   initLanguage()
 
+  // Skip loading user session and cart if in maintenance mode
+  if (settings.storeSettings.maintenance.enabled) return
+
   // Restore auth session if token exists
   await auth.restoreSession()
 
@@ -38,3 +48,4 @@ onMounted(async () => {
   }
 })
 </script>
+

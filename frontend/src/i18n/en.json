@@ -394,5 +394,10 @@
   },
   "notifications": {
     "markAllRead": "Mark all as read"
+  },
+  "maintenance": {
+    "title": "Under Maintenance",
+    "defaultMessage": "We are currently performing scheduled maintenance. Please check back shortly.",
+    "contactUs": "Need help? Contact us"
   }
 }

@@ -70,6 +70,10 @@ export const useSettingsStore = defineStore('settings', () => {
     googleMapsApiKey: '' as string,
     footerPages: [] as { slug: string; title: string }[],
     headerPages: [] as { slug: string; title: string }[],
+    maintenance: {
+      enabled: false,
+      message: '',
+    },
   })
 
   // Navigation categories (populated from /categories API)
@@ -187,6 +191,10 @@ export const useSettingsStore = defineStore('settings', () => {
           googleMapsApiKey: (data as any).googleMapsApiKey ?? '',
           footerPages: data.footerPages ?? [],
           headerPages: data.headerPages ?? [],
+          maintenance: {
+            enabled: data.maintenance?.enabled ?? false,
+            message: data.maintenance?.message ?? '',
+          },
         }
 
         // Dynamically set favicon
