@@ -87,6 +87,16 @@ class InitController extends Controller
                 'googleplay' => setting('general.googleplay_url', ''),
             ],
             'footerPages' => CmsPage::where('status', 'active')
+                ->where('show_in_footer', true)
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn($p) => [
+                    'slug' => $p->slug,
+                    'title' => $p->getTranslation('title', $locale, false) ?: $p->getTranslation('title', 'en'),
+                ])
+                ->values(),
+            'headerPages' => CmsPage::where('status', 'active')
+                ->where('show_in_header', true)
                 ->orderBy('sort_order')
                 ->get()
                 ->map(fn($p) => [

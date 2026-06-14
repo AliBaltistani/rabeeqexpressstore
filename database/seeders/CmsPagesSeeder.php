@@ -21,6 +21,8 @@ class CmsPagesSeeder extends Seeder
                 'template' => 'default',
                 'status' => 'active',
                 'sort_order' => 1,
+                'show_in_header' => true,
+                'show_in_footer' => true,
             ],
             [
                 'title' => ['en' => 'Privacy Policy', 'ar' => 'سياسة الخصوصية'],
@@ -33,6 +35,8 @@ class CmsPagesSeeder extends Seeder
                 'template' => 'legal',
                 'status' => 'active',
                 'sort_order' => 2,
+                'show_in_header' => true,
+                'show_in_footer' => true,
             ],
             [
                 'title' => ['en' => 'Exchange and Return Policy', 'ar' => 'سياسة الاستبدال والاسترجاع'],
@@ -45,6 +49,8 @@ class CmsPagesSeeder extends Seeder
                 'template' => 'legal',
                 'status' => 'active',
                 'sort_order' => 3,
+                'show_in_header' => true,
+                'show_in_footer' => true,
             ],
             [
                 'title' => ['en' => 'Terms and Conditions', 'ar' => 'الشروط والأحكام'],
@@ -57,6 +63,8 @@ class CmsPagesSeeder extends Seeder
                 'template' => 'legal',
                 'status' => 'active',
                 'sort_order' => 4,
+                'show_in_header' => false,
+                'show_in_footer' => true,
             ],
             [
                 'title' => ['en' => 'Tamara Payment Service', 'ar' => 'خدمة الدفع تمارا'],
@@ -69,6 +77,8 @@ class CmsPagesSeeder extends Seeder
                 'template' => 'default',
                 'status' => 'active',
                 'sort_order' => 5,
+                'show_in_header' => false,
+                'show_in_footer' => true,
             ],
             [
                 'title' => ['en' => 'Affiliate Marketing Program', 'ar' => 'برنامج التسويق بالعمولة'],
@@ -81,6 +91,8 @@ class CmsPagesSeeder extends Seeder
                 'template' => 'default',
                 'status' => 'active',
                 'sort_order' => 6,
+                'show_in_header' => false,
+                'show_in_footer' => true,
             ],
         ];
 

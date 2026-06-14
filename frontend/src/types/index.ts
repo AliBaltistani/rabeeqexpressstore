@@ -37,6 +37,7 @@ export interface InitData {
   announcementLink?: string | null
   appLinks?: { appstore?: string; googleplay?: string }
   footerPages?: { slug: string; title: string }[]
+  headerPages?: { slug: string; title: string }[]
 }
 
 export interface ApiCurrency {
@@ -344,4 +345,5 @@ export interface CmsPage {
   title: string
   slug: string
   content: string
+  featuredImage?: string | null
 }

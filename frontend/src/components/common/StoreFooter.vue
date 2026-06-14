@@ -7,7 +7,8 @@
           <!-- Column 1: Logo & Description -->
           <div class="footer-col footer-col--brand">
             <router-link to="/" class="footer-logo" aria-label="logo">
-              <img :src="logoSrc" height="64" style="height: 64px;" :alt="settings.storeSettings.storeName" class="footer-logo-img" />
+              <img v-if="settings.storeSettings.logo" :src="settings.storeSettings.logo" height="64" style="height: 64px;" :alt="settings.storeSettings.storeName" class="footer-logo-img" />
+              <span v-else class="footer-logo-text">{{ settings.storeSettings.storeName }}</span>
             </router-link>
             <p class="footer-description">
               {{ settings.storeSettings.storeDescription || $t('footer.description') }}
@@ -91,12 +92,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useSettingsStore } from '@/stores/settingsStore'
-import logoImage from '@/assets/images/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png'
 
 const settings = useSettingsStore()
-const logoSrc = computed(() => settings.storeSettings.logo || logoImage)
 </script>
 
 <style scoped>

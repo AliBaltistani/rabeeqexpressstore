@@ -29,6 +29,7 @@
 
       <!-- Page Content -->
       <div v-else-if="page" class="cms-content">
+        <img v-if="page.featuredImage" :src="page.featuredImage" :alt="page.title" class="cms-featured-image" />
         <h1>{{ page.title }}</h1>
         <div class="cms-body" v-html="page.content"></div>
       </div>
@@ -146,6 +147,13 @@ onMounted(() => {
   max-width: 800px;
   margin: 0 auto;
   padding: 1rem 0;
+}
+.cms-featured-image {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 2rem;
 }
 .cms-content h1 {
   font-size: 2rem;

@@ -9,9 +9,10 @@
           </button>
 
           <!-- Logo -->
-          <router-link to="/" class="navbar-brand" aria-label="E-SEVEN STORE Home">
-            <img :src="logoSrc" alt="E-SEVEN STORE Logo" />
-            <h1 class="sr-only">ESEVEN STORE</h1>
+          <router-link to="/" class="navbar-brand" :aria-label="settings.storeSettings.storeName + ' Home'">
+            <img v-if="settings.storeSettings.logo" :src="settings.storeSettings.logo" :alt="settings.storeSettings.storeName" />
+            <span v-else class="navbar-brand-text">{{ settings.storeSettings.storeName }}</span>
+            <h1 class="sr-only">{{ settings.storeSettings.storeName }}</h1>
           </router-link>
 
           <!-- Desktop Menu -->
@@ -168,7 +169,7 @@ const showMobileMenu = ref(false)
 const showLoginModal = ref(false)
 const showUserDropdown = ref(false)
 const userDropdownRef = ref<HTMLElement | null>(null)
-const logoSrc = settings.storeSettings.logo || logoImage
+
 const activeDropdown = ref<string | null>(null)
 // activeTrail tracks hovered items at each depth level: [level0_slug, level1_slug, ...]
 const activeTrail = ref<string[]>([])

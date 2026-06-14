@@ -6,7 +6,7 @@
         <!-- Page Links (desktop only) -->
         <ul class="top-navbar__links">
           <router-link
-            v-for="page in settings.storeSettings.footerPages.slice(0, 3)"
+            v-for="page in settings.storeSettings.headerPages"
             :key="page.slug"
             :to="'/' + page.slug"
             class="topnav-link-item"

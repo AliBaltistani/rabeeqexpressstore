@@ -29,6 +29,8 @@ class CmsPage extends Model
         'meta_title',
         'meta_description',
         'sort_order',
+        'show_in_header',
+        'show_in_footer',
     ];
 
     public function getSlugOptions(): SlugOptions

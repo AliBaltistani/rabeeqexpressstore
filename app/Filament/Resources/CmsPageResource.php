@@ -184,6 +184,17 @@ class CmsPageResource extends Resource
                                             ->default(0)
                                             ->minValue(0),
                                     ]),
+
+                                Schemas\Components\Section::make('Visibility')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('show_in_header')
+                                            ->label('Show in Header (Top Navbar)')
+                                            ->default(false),
+
+                                        Forms\Components\Toggle::make('show_in_footer')
+                                            ->label('Show in Footer')
+                                            ->default(false),
+                                    ]),
                             ])
                             ->columnSpan(1),
                     ]),

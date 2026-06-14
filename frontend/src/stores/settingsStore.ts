@@ -38,27 +38,27 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Store settings (populated from /init API)
   const storeSettings = ref({
-    storeName: 'E-SEVEN STORE',
+    storeName: '',
     storeTagline: '',
     storeDescription: '',
-    whatsappNumber: '+966566229730',
-    email: 'eseven.store@gmail.com',
+    whatsappNumber: '',
+    email: '',
     phone: '',
     logo: null as string | null,
     favicon: null as string | null,
     announcementText: '',
     announcementLink: '',
     social: {
-      instagram: 'https://instagram.com/eseven.store',
-      snapchat: 'https://www.snapchat.com/add/eseven-store',
-      tiktok: 'https://www.tiktok.com/@essven.store',
-      youtube: 'https://www.youtube.com/@eseven-store/featured',
+      instagram: '',
+      snapchat: '',
+      tiktok: '',
+      youtube: '',
       facebook: '',
       twitter: '',
     },
     apps: {
-      appstore: 'https://apps.apple.com/sa/app/eseven-store/id6453605018',
-      googleplay: 'https://play.google.com/store/apps/details?id=com.salla.esevenstore&pli=1',
+      appstore: '',
+      googleplay: '',
     },
     paymentMethods: [] as { id: string; name: string; fee?: number; logo?: string }[],
     features: {
@@ -69,6 +69,7 @@ export const useSettingsStore = defineStore('settings', () => {
     },
     googleMapsApiKey: '' as string,
     footerPages: [] as { slug: string; title: string }[],
+    headerPages: [] as { slug: string; title: string }[],
   })
 
   // Navigation categories (populated from /categories API)
@@ -157,34 +158,44 @@ export const useSettingsStore = defineStore('settings', () => {
           languages.value = langMap
         }
 
-        // Store settings
+        // Store settings — use admin values directly, no hardcoded fallbacks
         storeSettings.value = {
-          storeName: data.storeName || 'E-SEVEN STORE',
-          storeTagline: data.storeTagline || '',
-          storeDescription: data.storeDescription || storeSettings.value.storeDescription,
-          whatsappNumber: data.whatsappNumber || storeSettings.value.whatsappNumber,
-          email: data.storeEmail || storeSettings.value.email,
-          phone: data.storePhone || '',
-          logo: data.logo || null,
-          favicon: data.favicon || null,
-          announcementText: data.announcementText || storeSettings.value.announcementText,
-          announcementLink: data.announcementLink || '',
+          storeName: data.storeName ?? '',
+          storeTagline: data.storeTagline ?? '',
+          storeDescription: data.storeDescription ?? '',
+          whatsappNumber: data.whatsappNumber ?? '',
+          email: data.storeEmail ?? '',
+          phone: data.storePhone ?? '',
+          logo: data.logo ?? null,
+          favicon: data.favicon ?? null,
+          announcementText: data.announcementText ?? '',
+          announcementLink: data.announcementLink ?? '',
           social: {
-            instagram: data.socialLinks?.instagram || storeSettings.value.social.instagram,
-            snapchat: data.socialLinks?.snapchat || storeSettings.value.social.snapchat,
-            tiktok: data.socialLinks?.tiktok || storeSettings.value.social.tiktok,
-            youtube: data.socialLinks?.youtube || storeSettings.value.social.youtube,
-            facebook: data.socialLinks?.facebook || '',
-            twitter: data.socialLinks?.twitter || '',
+            instagram: data.socialLinks?.instagram ?? '',
+            snapchat: data.socialLinks?.snapchat ?? '',
+            tiktok: data.socialLinks?.tiktok ?? '',
+            youtube: data.socialLinks?.youtube ?? '',
+            facebook: data.socialLinks?.facebook ?? '',
+            twitter: data.socialLinks?.twitter ?? '',
           },
           apps: {
-            appstore: data.appLinks?.appstore || storeSettings.value.apps.appstore,
-            googleplay: data.appLinks?.googleplay || storeSettings.value.apps.googleplay,
+            appstore: data.appLinks?.appstore ?? '',
+            googleplay: data.appLinks?.googleplay ?? '',
           },
-          paymentMethods: data.paymentMethods || [],
-          features: data.features || storeSettings.value.features,
-          googleMapsApiKey: (data as any).googleMapsApiKey || '',
-          footerPages: data.footerPages || [],
+          paymentMethods: data.paymentMethods ?? [],
+          features: data.features ?? storeSettings.value.features,
+          googleMapsApiKey: (data as any).googleMapsApiKey ?? '',
+          footerPages: data.footerPages ?? [],
+          headerPages: data.headerPages ?? [],
+        }
+
+        // Dynamically set favicon
+        if (storeSettings.value.favicon) {
+          const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement
+            || document.createElement('link')
+          link.rel = 'icon'
+          link.href = storeSettings.value.favicon
+          document.head.appendChild(link)
         }
 
         // Set default currency/language if no user preference saved
