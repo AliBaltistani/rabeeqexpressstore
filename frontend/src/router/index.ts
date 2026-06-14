@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -185,8 +186,17 @@ const router = createRouter({
 
 // Dynamic page titles + auth guards
 router.beforeEach((to, _from, next) => {
+  // Set dynamic page title using store name from settings
   const title = to.meta.title as string
-  if (title) document.title = title
+  if (title) {
+    try {
+      const settings = useSettingsStore()
+      const storeName = settings.storeSettings.storeName || 'E-SEVEN STORE'
+      document.title = title.replace(/E-SEVEN STORE/gi, storeName)
+    } catch {
+      document.title = title
+    }
+  }
 
   // Auth guard
   if (to.meta.requiresAuth) {

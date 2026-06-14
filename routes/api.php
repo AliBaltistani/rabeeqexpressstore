@@ -88,6 +88,7 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
     Route::get('blog/categories', [BlogController::class, 'categories']);
 
     // CMS Pages
+    Route::get('pages', [PageController::class, 'index']);
     Route::get('pages/{slug}', [PageController::class, 'show']);
 
     // Cart (works for guests via session and authenticated via user_id)

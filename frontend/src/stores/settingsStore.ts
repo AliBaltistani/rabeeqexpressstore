@@ -40,7 +40,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const storeSettings = ref({
     storeName: 'E-SEVEN STORE',
     storeTagline: '',
-    storeDescription: "E7seven Store is the largest shoe store in Saudi Arabia 👟",
+    storeDescription: '',
     whatsappNumber: '+966566229730',
     email: 'eseven.store@gmail.com',
     phone: '',
@@ -68,6 +68,7 @@ export const useSettingsStore = defineStore('settings', () => {
       reviewsRequireApproval: true,
     },
     googleMapsApiKey: '' as string,
+    footerPages: [] as { slug: string; title: string }[],
   })
 
   // Navigation categories (populated from /categories API)
@@ -160,7 +161,7 @@ export const useSettingsStore = defineStore('settings', () => {
         storeSettings.value = {
           storeName: data.storeName || 'E-SEVEN STORE',
           storeTagline: data.storeTagline || '',
-          storeDescription: data.storeTagline || storeSettings.value.storeDescription,
+          storeDescription: data.storeDescription || storeSettings.value.storeDescription,
           whatsappNumber: data.whatsappNumber || storeSettings.value.whatsappNumber,
           email: data.storeEmail || storeSettings.value.email,
           phone: data.storePhone || '',
@@ -176,10 +177,14 @@ export const useSettingsStore = defineStore('settings', () => {
             facebook: data.socialLinks?.facebook || '',
             twitter: data.socialLinks?.twitter || '',
           },
-          apps: storeSettings.value.apps,
+          apps: {
+            appstore: data.appLinks?.appstore || storeSettings.value.apps.appstore,
+            googleplay: data.appLinks?.googleplay || storeSettings.value.apps.googleplay,
+          },
           paymentMethods: data.paymentMethods || [],
           features: data.features || storeSettings.value.features,
           googleMapsApiKey: (data as any).googleMapsApiKey || '',
+          footerPages: data.footerPages || [],
         }
 
         // Set default currency/language if no user preference saved

@@ -17,6 +17,7 @@ export interface PaginationMeta {
 export interface InitData {
   storeName: string
   storeTagline: string | null
+  storeDescription: string | null
   logo: string | null
   favicon: string | null
   storeEmail: string | null
@@ -34,6 +35,8 @@ export interface InitData {
   maintenance: MaintenanceInfo
   announcementText?: string | null
   announcementLink?: string | null
+  appLinks?: { appstore?: string; googleplay?: string }
+  footerPages?: { slug: string; title: string }[]
 }
 
 export interface ApiCurrency {

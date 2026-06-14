@@ -13,6 +13,25 @@ class PageController extends Controller
     use ApiResponse;
 
     /**
+     * GET /api/v1/pages
+     * List all active CMS pages (for navigation/footer).
+     */
+    public function index(): JsonResponse
+    {
+        $locale = app()->getLocale();
+
+        $pages = CmsPage::where('status', 'active')
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn($p) => [
+                'slug' => $p->slug,
+                'title' => $p->getTranslation('title', $locale, false) ?: $p->getTranslation('title', 'en'),
+            ]);
+
+        return $this->success($pages);
+    }
+
+    /**
      * GET /api/v1/pages/{slug}
      */
     public function show(string $slug): JsonResponse

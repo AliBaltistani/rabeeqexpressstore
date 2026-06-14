@@ -5,9 +5,12 @@
       <div class="top-navbar__left">
         <!-- Page Links (desktop only) -->
         <ul class="top-navbar__links">
-          <router-link to="/about-us" class="topnav-link-item">{{ $t('nav.aboutUs') }}</router-link>
-          <router-link to="/privacy-policy" class="topnav-link-item">{{ $t('nav.privacyPolicy') }}</router-link>
-          <router-link to="/exchange-return-policy" class="topnav-link-item">{{ $t('nav.exchangeReturnPolicy') }}</router-link>
+          <router-link
+            v-for="page in settings.storeSettings.footerPages.slice(0, 3)"
+            :key="page.slug"
+            :to="'/' + page.slug"
+            class="topnav-link-item"
+          >{{ page.title }}</router-link>
         </ul>
 
         <!-- Language & Currency Switchers -->

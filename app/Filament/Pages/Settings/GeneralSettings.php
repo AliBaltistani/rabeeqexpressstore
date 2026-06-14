@@ -41,8 +41,10 @@ class GeneralSettings extends Page
     {
         $fields = [
             'general.store_name_en', 'general.store_name_ar', 'general.store_tagline_en', 'general.store_tagline_ar',
+            'general.store_description_en', 'general.store_description_ar',
             'general.store_logo', 'general.store_favicon', 'general.store_email', 'general.store_phone',
             'general.store_whatsapp', 'general.store_address_en', 'general.store_address_ar',
+            'general.appstore_url', 'general.googleplay_url',
             'general.timezone', 'general.date_format',
             'general.products_per_page', 'general.enable_guest_checkout', 'general.enable_wishlist',
             'general.enable_reviews', 'general.reviews_require_approval', 'general.show_out_of_stock',
@@ -120,6 +122,27 @@ class GeneralSettings extends Page
                                     ->label(__('admin.settings.store_address_ar'))
                                     ->rows(2)
                                     ->extraInputAttributes(['dir' => 'rtl']),
+                            ]),
+
+                        Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Textarea::make('store_description_en')
+                                    ->label('Store Description (English)')
+                                    ->rows(3),
+                                Forms\Components\Textarea::make('store_description_ar')
+                                    ->label('Store Description (Arabic)')
+                                    ->rows(3)
+                                    ->extraInputAttributes(['dir' => 'rtl']),
+                            ]),
+
+                        Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('appstore_url')
+                                    ->label('App Store URL')
+                                    ->url(),
+                                Forms\Components\TextInput::make('googleplay_url')
+                                    ->label('Google Play URL')
+                                    ->url(),
                             ]),
                     ]),
 

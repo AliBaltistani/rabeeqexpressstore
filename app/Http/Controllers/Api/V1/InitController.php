@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Traits\ApiResponse;
 use App\Models\Banner;
+use App\Models\CmsPage;
 use App\Models\Currency;
 use App\Models\Language;
 use App\Models\Setting;
@@ -78,7 +79,21 @@ class InitController extends Controller
                 'instagram' => setting('seo.instagram_url'),
                 'youtube' => setting('seo.youtube_url'),
                 'tiktok' => setting('seo.tiktok_url'),
+                'snapchat' => setting('seo.snapchat_url'),
             ],
+            'storeDescription' => setting('general.store_description_' . $locale, setting('general.store_description_en', '')),
+            'appLinks' => [
+                'appstore' => setting('general.appstore_url', ''),
+                'googleplay' => setting('general.googleplay_url', ''),
+            ],
+            'footerPages' => CmsPage::where('status', 'active')
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn($p) => [
+                    'slug' => $p->slug,
+                    'title' => $p->getTranslation('title', $locale, false) ?: $p->getTranslation('title', 'en'),
+                ])
+                ->values(),
             'maintenance' => [
                 'enabled' => (bool) setting('general.maintenance_mode', false),
                 'message' => setting('general.maintenance_message_' . $locale),
