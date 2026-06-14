@@ -262,7 +262,8 @@
     "deactivateConfirmMessage": "Are you sure you want to deactivate your account? You will be logged out and your account will be disabled. Please contact support to reactivate.",
     "confirmDeactivate": "Yes, Deactivate",
     "pendingPayments": "Pending Payments",
-    "myWallet": "My Wallet"
+    "myWallet": "My Wallet",
+    "noOrdersInStatus": "No orders with this status."
   },
   "wishlist": {
     "empty": "Your wishlist is empty",
@@ -335,7 +336,13 @@
     "confirmRedeem": "Confirm Redemption",
     "redeemConfirmMsg": "Are you sure you want to redeem this reward?",
     "redeemSuccess": "Reward redeemed successfully!",
-    "yourCouponCode": "Your coupon code"
+    "yourCouponCode": "Your coupon code",
+    "title": "Wallet & Loyalty",
+    "pts": "pts",
+    "redeemPointsToWallet": "Redeem Points to Wallet",
+    "convertedSuccess": "Converted {points} points to {currency} {amount}",
+    "failedToRedeem": "Failed to redeem",
+    "redeemingCoupon": "Redeeming..."
   },
   "breadcrumb": {
     "home": "Home"
@@ -393,7 +400,8 @@
     "otpExpired": "Code has expired, please request a new one"
   },
   "notifications": {
-    "markAllRead": "Mark all as read"
+    "markAllRead": "Mark all as read",
+    "noNotifications": "No notifications yet."
   },
   "maintenance": {
     "title": "Under Maintenance",

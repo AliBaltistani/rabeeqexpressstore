@@ -17,33 +17,38 @@
       <nav class="account-tabs">
         <router-link to="/account/notifications" class="tab-link" exact-active-class="active">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-          <span class="hidden-mobile">Notifications</span>
+          <span class="hidden-mobile">{{ $t('account.notifications') }}</span>
         </router-link>
-        <router-link to="/account/orders" class="tab-link" :class="{ 'active': route.path.includes('/account/orders') }">
+        <router-link to="/account/orders" class="tab-link" :class="{ 'active': route.path === '/account/orders' && !route.query.status }">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-          <span class="hidden-mobile">Orders</span>
+          <span class="hidden-mobile">{{ $t('account.orders') }}</span>
         </router-link>
-        <!-- Pending Payments points to orders filtered or just orders for now -->
-        <router-link :to="{ path: '/account/orders', query: { status: 'pending' } }" class="tab-link" exact-active-class="">
+        <!-- Pending Payments -->
+        <a
+          href="#"
+          class="tab-link"
+          :class="{ 'active': route.path === '/account/orders' && route.query.status === 'pending' }"
+          @click.prevent="router.push({ path: '/account/orders', query: { status: 'pending' } })"
+        >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span class="hidden-mobile">Pending Payments</span>
-        </router-link>
+          <span class="hidden-mobile">{{ $t('account.pendingPayments') }}</span>
+        </a>
         <router-link to="/account/wishlist" class="tab-link" exact-active-class="active">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <span class="hidden-mobile">Wishlist</span>
+          <span class="hidden-mobile">{{ $t('account.wishlist') }}</span>
         </router-link>
         <router-link to="/account/wallet" class="tab-link" exact-active-class="active">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/><path d="M17 12h5v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4h5"/></svg>
-          <span class="hidden-mobile">My Wallet</span>
+          <span class="hidden-mobile">{{ $t('account.myWallet') }}</span>
         </router-link>
         <router-link to="/account/loyalty-points" class="tab-link" exact-active-class="active">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg>
-          <span class="hidden-mobile">Loyalty points</span>
+          <span class="hidden-mobile">{{ $t('account.loyaltyPoints') }}</span>
         </router-link>
         <!-- Account dashboard linked here -->
         <router-link to="/account" class="tab-link" exact-active-class="active">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/></svg>
-          <span class="hidden-mobile">My Account</span>
+          <span class="hidden-mobile">{{ $t('account.myAccount') }}</span>
         </router-link>
       </nav>
     </div>
@@ -57,11 +62,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 
 const auth = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 
 const userInitials = computed(() => {
   const name = auth.user?.name || 'U'

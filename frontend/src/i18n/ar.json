@@ -262,7 +262,8 @@
     "deactivateConfirmMessage": "هل أنت متأكد أنك تريد إلغاء تنشيط حسابك؟ سيتم تسجيل خروجك وتعطيل حسابك. يرجى التواصل مع الدعم لإعادة تنشيط الحساب.",
     "confirmDeactivate": "نعم، إلغاء التنشيط",
     "pendingPayments": "المدفوعات المعلقة",
-    "myWallet": "محفظتي"
+    "myWallet": "محفظتي",
+    "noOrdersInStatus": "لا توجد طلبات بهذه الحالة."
   },
   "wishlist": {
     "empty": "قائمة رغباتك فارغة",
@@ -335,7 +336,13 @@
     "confirmRedeem": "تأكيد الاستبدال",
     "redeemConfirmMsg": "هل أنت متأكد أنك تريد استبدال هذه المكافأة؟",
     "redeemSuccess": "تم استبدال المكافأة بنجاح!",
-    "yourCouponCode": "رمز الكوبون الخاص بك"
+    "yourCouponCode": "رمز الكوبون الخاص بك",
+    "title": "المحفظة والولاء",
+    "pts": "نقطة",
+    "redeemPointsToWallet": "استبدال النقاط إلى المحفظة",
+    "convertedSuccess": "تم تحويل {points} نقطة إلى {currency} {amount}",
+    "failedToRedeem": "فشل في الاستبدال",
+    "redeemingCoupon": "جاري الاستبدال..."
   },
   "breadcrumb": {
     "home": "الرئيسية"
@@ -393,7 +400,8 @@
     "otpExpired": "انتهت صلاحية الرمز، يرجى طلب رمز جديد"
   },
   "notifications": {
-    "markAllRead": "تعيين الكل كمقروء"
+    "markAllRead": "تعيين الكل كمقروء",
+    "noNotifications": "لا توجد إشعارات حتى الآن."
   },
   "maintenance": {
     "title": "تحت الصيانة",

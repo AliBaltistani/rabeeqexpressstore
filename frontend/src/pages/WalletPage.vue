@@ -1,7 +1,7 @@
 <template>
   <div class="account-content-inner">
     <div class="header-row">
-      <h2>{{ $t('account.wallet') || 'Wallet & Loyalty' }}</h2>
+      <h2>{{ $t('wallet.title') }}</h2>
     </div>
 
     <div v-if="isLoading" class="loading-state">
@@ -21,7 +21,7 @@
             </svg>
           </div>
           <div class="card-details">
-            <span class="card-label">Wallet Balance</span>
+            <span class="card-label">{{ $t('wallet.walletBalance') }}</span>
             <span class="card-value">{{ walletData?.currency || '' }} {{ Number(walletData?.balance || 0).toFixed(2) }}</span>
           </div>
         </div>
@@ -34,17 +34,17 @@
             </svg>
           </div>
           <div class="card-details">
-            <span class="card-label">Loyalty Points</span>
-            <span class="card-value">{{ loyaltyData?.points || 0 }} <small>pts</small></span>
+            <span class="card-label">{{ $t('wallet.loyaltyPoints') }}</span>
+            <span class="card-value">{{ loyaltyData?.points || 0 }} <small>{{ $t('wallet.pts') }}</small></span>
           </div>
         </div>
       </div>
 
       <!-- Redeem Section -->
       <div v-if="loyaltyData && loyaltyData.points >= (loyaltyData.minRedeem || 100)" class="redeem-section">
-        <h3>Redeem Points to Wallet</h3>
+        <h3>{{ $t('wallet.redeemPointsToWallet') }}</h3>
         <p class="redeem-info">
-          Conversion rate: <strong>{{ loyaltyData.redeemRate || 100 }} points = 1 {{ walletData?.currency || 'SAR' }}</strong>
+          {{ $t('wallet.conversionRate', { rate: loyaltyData.redeemRate || 100, currency: walletData?.currency || 'SAR' }) }}
         </p>
         <div class="redeem-form">
           <div class="input-group">
@@ -53,7 +53,7 @@
               type="number"
               :min="loyaltyData.minRedeem || 100"
               :max="loyaltyData.points"
-              :placeholder="`Min ${loyaltyData.minRedeem || 100} points`"
+              :placeholder="$t('wallet.minPoints', { min: loyaltyData.minRedeem || 100 })"
               class="redeem-input"
             />
             <span class="redeem-preview" v-if="redeemPoints > 0">
@@ -65,8 +65,8 @@
             @click="handleRedeem"
             :disabled="isRedeeming || redeemPoints < (loyaltyData.minRedeem || 100) || redeemPoints > loyaltyData.points"
           >
-            <template v-if="isRedeeming">Converting...</template>
-            <template v-else>Convert to Wallet</template>
+            <template v-if="isRedeeming">{{ $t('wallet.converting') }}</template>
+            <template v-else>{{ $t('wallet.convertToWallet') }}</template>
           </button>
         </div>
         <p v-if="redeemError" class="error-msg">{{ redeemError }}</p>
@@ -79,28 +79,28 @@
           :class="['tab-btn', activeTab === 'wallet' && 'active']"
           @click="activeTab = 'wallet'"
         >
-          Wallet Transactions
+          {{ $t('wallet.walletTransactions') }}
         </button>
         <button
           :class="['tab-btn', activeTab === 'loyalty' && 'active']"
           @click="activeTab = 'loyalty'"
         >
-          Loyalty History
+          {{ $t('wallet.loyaltyHistory') }}
         </button>
       </div>
 
       <!-- Wallet Transactions -->
       <div v-if="activeTab === 'wallet'" class="transactions-section">
         <div v-if="!walletTransactions.length" class="empty-state">
-          No wallet transactions yet.
+          {{ $t('wallet.noWalletTransactions') }}
         </div>
         <table v-else class="transactions-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th>Amount</th>
-              <th>Balance</th>
+              <th>{{ $t('wallet.date') }}</th>
+              <th>{{ $t('wallet.description') }}</th>
+              <th>{{ $t('wallet.amount') }}</th>
+              <th>{{ $t('wallet.balance') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -119,15 +119,15 @@
       <!-- Loyalty Transactions -->
       <div v-if="activeTab === 'loyalty'" class="transactions-section">
         <div v-if="!loyaltyTransactions.length" class="empty-state">
-          No loyalty transactions yet. Place an order to earn points!
+          {{ $t('wallet.noLoyaltyTransactions') }}
         </div>
         <table v-else class="transactions-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Description</th>
-              <th>Points</th>
-              <th>Type</th>
+              <th>{{ $t('wallet.date') }}</th>
+              <th>{{ $t('wallet.description') }}</th>
+              <th>{{ $t('wallet.points') }}</th>
+              <th>{{ $t('wallet.type') }}</th>
             </tr>
           </thead>
           <tbody>
