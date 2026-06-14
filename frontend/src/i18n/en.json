@@ -160,7 +160,8 @@
     "delivered": "Delivered",
     "cancelled": "Cancelled",
     "yourCoupons": "Your coupons",
-    "freeShippingApplied": "Free shipping coupon applied!"
+    "freeShippingApplied": "Free shipping coupon applied!",
+    "selectLocationOnMap": "Please select a location on the map or enter the address manually."
   },
   "category": {
     "sortBy": "Sort By",

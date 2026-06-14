@@ -160,7 +160,8 @@
     "delivered": "تم التوصيل",
     "cancelled": "ملغي",
     "yourCoupons": "كوبوناتك",
-    "freeShippingApplied": "تم تطبيق كوبون الشحن المجاني!"
+    "freeShippingApplied": "تم تطبيق كوبون الشحن المجاني!",
+    "selectLocationOnMap": "يرجى تحديد موقع على الخريطة أو إدخال العنوان يدوياً."
   },
   "category": {
     "sortBy": "ترتيب حسب",

@@ -741,6 +741,12 @@ async function submitAddress() {
     if (!addressForm.value.city.trim()) errors.addrCity = t('checkout.required')
     if (!addressForm.value.street.trim()) errors.addrStreet = t('checkout.required')
     if (Object.keys(errors).length) return
+  } else {
+    // Map mode — ensure geocoding populated the address
+    if (!addressForm.value.country.trim() || !addressForm.value.city.trim()) {
+      addressError.value = t('checkout.selectLocationOnMap') || 'Please select a location on the map or enter the address manually.'
+      return
+    }
   }
   shippingLoading.value = true; shippingRatesFetched.value = false
   try {
@@ -748,7 +754,11 @@ async function submitAddress() {
     shippingRatesFetched.value = true
     if (rates?.length) { shippingOptions.value = rates; selectedShippingId.value = rates[0].id } else { shippingOptions.value = [] }
     currentStep.value = 3
-  } catch { shippingRatesFetched.value = true; addressError.value = t('checkout.shippingRatesError') || 'Could not fetch shipping rates' }
+  } catch (err: any) {
+    shippingRatesFetched.value = true
+    console.error('[Checkout] Shipping rates error:', err?.response?.data || err)
+    addressError.value = err?.response?.data?.message || t('checkout.shippingRatesError') || 'Could not fetch shipping rates'
+  }
   finally { shippingLoading.value = false }
 }
 
