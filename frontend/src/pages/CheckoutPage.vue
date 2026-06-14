@@ -755,33 +755,68 @@ async function submitAddress() {
 // ── Google Maps ──
 async function initGoogleMaps() {
   const apiKey = settings.storeSettings.googleMapsApiKey
-  if (!apiKey || !(window as any).google?.maps) {
-    if (apiKey) {
-      await new Promise<void>((resolve, reject) => {
-        const s = document.createElement('script')
-        s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
-        s.onload = () => resolve(); s.onerror = () => reject()
-        document.head.appendChild(s)
-      }).catch(() => { addressMode.value = 'manual'; return })
-    } else { addressMode.value = 'manual'; return }
+  if (!apiKey) { addressMode.value = 'manual'; return }
+
+  // Load script if not already loaded
+  if (!(window as any).google?.maps) {
+    // Prevent duplicate script injection
+    if (document.querySelector('script[src*="maps.googleapis.com"]')) {
+      // Script already injected but not ready — wait a bit
+      await new Promise(r => setTimeout(r, 500))
+      if (!(window as any).google?.maps) { addressMode.value = 'manual'; return }
+    } else {
+      try {
+        // Set up auth failure handler BEFORE loading the script
+        let authFailed = false
+        ;(window as any).gm_authFailure = () => { authFailed = true }
+
+        await new Promise<void>((resolve, reject) => {
+          const s = document.createElement('script')
+          s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=Function.prototype`
+          s.async = true
+          s.defer = true
+          s.onload = () => resolve()
+          s.onerror = () => reject()
+          document.head.appendChild(s)
+        })
+
+        // Give gm_authFailure a moment to fire
+        await new Promise(r => setTimeout(r, 300))
+        if (authFailed) {
+          console.warn('[Checkout] Google Maps API key is invalid or restricted. Falling back to manual address.')
+          addressMode.value = 'manual'
+          return
+        }
+      } catch {
+        addressMode.value = 'manual'
+        return
+      }
+    }
   }
+
   await nextTick()
   if (!mapContainer.value) return
-  const center = { lat: 33.6844, lng: 73.0479 }
-  googleMap = new (window as any).google.maps.Map(mapContainer.value, { center, zoom: 12, disableDefaultUI: true, zoomControl: true })
-  googleMarker = new (window as any).google.maps.Marker({ position: center, map: googleMap, draggable: true })
-  googleMarker.addListener('dragend', () => { const pos = googleMarker.getPosition(); reverseGeocode(pos.lat(), pos.lng()) })
-  if (mapSearchInput.value) {
-    autocomplete = new (window as any).google.maps.places.Autocomplete(mapSearchInput.value, { types: ['geocode'] })
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace()
-      if (place.geometry) {
-        const loc = place.geometry.location
-        googleMap.setCenter(loc); googleMarker.setPosition(loc)
-        parseAddressComponents(place.address_components || [])
-        addressForm.value.street = place.formatted_address || ''
-      }
-    })
+
+  try {
+    const center = { lat: 24.7136, lng: 46.6753 } // Riyadh, Saudi Arabia default
+    googleMap = new (window as any).google.maps.Map(mapContainer.value, { center, zoom: 12, disableDefaultUI: true, zoomControl: true })
+    googleMarker = new (window as any).google.maps.Marker({ position: center, map: googleMap, draggable: true })
+    googleMarker.addListener('dragend', () => { const pos = googleMarker.getPosition(); reverseGeocode(pos.lat(), pos.lng()) })
+    if (mapSearchInput.value) {
+      autocomplete = new (window as any).google.maps.places.Autocomplete(mapSearchInput.value, { types: ['geocode'] })
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace()
+        if (place.geometry) {
+          const loc = place.geometry.location
+          googleMap.setCenter(loc); googleMarker.setPosition(loc)
+          parseAddressComponents(place.address_components || [])
+          addressForm.value.street = place.formatted_address || ''
+        }
+      })
+    }
+  } catch (err) {
+    console.warn('[Checkout] Failed to initialize Google Maps:', err)
+    addressMode.value = 'manual'
   }
 }
 
