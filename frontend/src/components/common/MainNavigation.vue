@@ -70,16 +70,58 @@
             <button class="action-btn" @click="$emit('open-search')" aria-label="Search">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </button>
-            <router-link v-if="auth.isAuthenticated" to="/account" class="action-btn" aria-label="My Account">
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            </router-link>
-            <button v-else class="action-btn" @click="showLoginModal = true" aria-label="Login">
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            </button>
-            <router-link to="/account/wishlist" class="action-btn" aria-label="Wishlist">
+
+            <!-- User icon with dropdown -->
+            <div class="user-dropdown-wrapper" ref="userDropdownRef">
+              <button class="action-btn" @click="handleUserIconClick" aria-label="My Account">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </button>
+              <!-- User Account Dropdown -->
+              <Transition name="dropdown-fade">
+                <div v-if="showUserDropdown" class="user-dropdown">
+                  <router-link to="/account/notifications" class="user-dropdown__item" @click="showUserDropdown = false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    <span>{{ $t('account.notifications') }}</span>
+                  </router-link>
+                  <router-link to="/account/orders" class="user-dropdown__item" @click="showUserDropdown = false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    <span>{{ $t('account.orders') }}</span>
+                  </router-link>
+                  <router-link :to="{ path: '/account/orders', query: { status: 'pending' } }" class="user-dropdown__item" @click="showUserDropdown = false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>{{ $t('account.pendingPayments') }}</span>
+                  </router-link>
+                  <!-- <router-link to="/account/wishlist" class="user-dropdown__item" @click="showUserDropdown = false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span>{{ $t('account.wishlist') }}</span>
+                  </router-link> -->
+                  <router-link to="/account/wallet" class="user-dropdown__item" @click="showUserDropdown = false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 10H2"/><path d="M6 14h.01"/></svg>
+                    <span>{{ $t('account.myWallet') }}</span>
+                  </router-link>
+                  <router-link to="/account/loyalty-points" class="user-dropdown__item" @click="showUserDropdown = false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg>
+                    <span>{{ $t('account.loyaltyPoints') }}</span>
+                  </router-link>
+                  <router-link to="/account" class="user-dropdown__item" @click="showUserDropdown = false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/></svg>
+                    <span>{{ $t('account.myAccount') }}</span>
+                  </router-link>
+                  <div class="user-dropdown__divider"></div>
+                  <button class="user-dropdown__item user-dropdown__logout" @click="handleLogout">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span>{{ $t('account.logout') }}</span>
+                  </button>
+                </div>
+              </Transition>
+            </div>
+
+            <!-- Wishlist (hidden on mobile) -->
+            <!-- <router-link to="/account/wishlist" class="action-btn wishlist-action" aria-label="Wishlist">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
               <span v-if="wishlistCount > 0" class="cart-badge">{{ wishlistCount }}</span>
-            </router-link>
+            </router-link> -->
+
             <router-link to="/cart" class="action-btn" aria-label="Cart">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
               <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
@@ -124,6 +166,8 @@ const wishlistCount = computed(() => wishlist.count)
 const isSticky = ref(false)
 const showMobileMenu = ref(false)
 const showLoginModal = ref(false)
+const showUserDropdown = ref(false)
+const userDropdownRef = ref<HTMLElement | null>(null)
 const logoSrc = settings.storeSettings.logo || logoImage
 const activeDropdown = ref<string | null>(null)
 // activeTrail tracks hovered items at each depth level: [level0_slug, level1_slug, ...]
@@ -151,11 +195,37 @@ function handleAuthenticated() {
   router.push('/account')
 }
 
+function handleUserIconClick() {
+  if (auth.isAuthenticated) {
+    showUserDropdown.value = !showUserDropdown.value
+  } else {
+    showLoginModal.value = true
+  }
+}
+
+async function handleLogout() {
+  showUserDropdown.value = false
+  await auth.logout()
+  router.push('/')
+}
+
+function handleClickOutside(e: MouseEvent) {
+  if (userDropdownRef.value && !userDropdownRef.value.contains(e.target as Node)) {
+    showUserDropdown.value = false
+  }
+}
+
 function handleScroll() {
   isSticky.value = window.scrollY > 120
 }
-onMounted(() => window.addEventListener('scroll', handleScroll, { passive: true }))
-onUnmounted(() => window.removeEventListener('scroll', handleScroll))
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll, { passive: true })
+  document.addEventListener('click', handleClickOutside, true)
+})
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+  document.removeEventListener('click', handleClickOutside, true)
+})
 
 /**
  * Recursive CategoryPanel component for unlimited-depth flyout menus.
@@ -455,6 +525,88 @@ html[dir="rtl"] .main-nav .chevron-right { transform: rotate(180deg); }
   align-items: center;
   justify-content: center;
   line-height: 1;
+}
+
+/* ═══ Hide wishlist on mobile ═══ */
+@media (max-width: 1023px) {
+  .main-nav .wishlist-action { display: none; }
+}
+
+/* ═══ User Dropdown ═══ */
+.user-dropdown-wrapper {
+  position: relative;
+}
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 240px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 40px -5px rgba(0,0,0,0.15), 0 4px 12px -4px rgba(0,0,0,0.08);
+  z-index: 200;
+  padding: 0.5rem 0;
+  overflow: hidden;
+}
+html[dir="rtl"] .user-dropdown { right: auto; left: 0; }
+
+.user-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #374151;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  background: none;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.user-dropdown__item:hover {
+  background: #f3f4f6;
+  color: var(--color-primary);
+}
+.user-dropdown__item svg {
+  flex-shrink: 0;
+  color: #6b7280;
+  transition: color 0.15s ease;
+}
+.user-dropdown__item:hover svg {
+  color: var(--color-primary);
+}
+.user-dropdown__divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 0.375rem 0;
+}
+.user-dropdown__logout {
+  color: #ef4444;
+}
+.user-dropdown__logout:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+.user-dropdown__logout svg {
+  color: #ef4444;
+}
+.user-dropdown__logout:hover svg {
+  color: #dc2626;
+}
+
+/* Dropdown transition */
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .main-nav .sr-only {

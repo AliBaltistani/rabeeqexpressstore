@@ -261,7 +261,8 @@
     "deactivateAccountDesc": "You can delete your account from the store, which includes your previous orders, favorites.",
     "deactivateConfirmMessage": "Are you sure you want to deactivate your account? You will be logged out and your account will be disabled. Please contact support to reactivate.",
     "confirmDeactivate": "Yes, Deactivate",
-    "pendingPayments": "Pending Payments"
+    "pendingPayments": "Pending Payments",
+    "myWallet": "My Wallet"
   },
   "wishlist": {
     "empty": "Your wishlist is empty",
