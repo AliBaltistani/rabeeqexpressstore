@@ -125,6 +125,9 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
         Route::put('profile', [ProfileController::class, 'update']);
         Route::put('profile/password', [ProfileController::class, 'updatePassword']);
         Route::post('profile/deactivate', [ProfileController::class, 'deactivateAccount']);
+        // Phone verification
+        Route::post('profile/send-phone-otp', [ProfileController::class, 'sendPhoneOtp']);
+        Route::post('profile/verify-phone', [ProfileController::class, 'verifyPhone']);
 
         // Addresses
         Route::get('addresses', [ProfileController::class, 'addresses']);

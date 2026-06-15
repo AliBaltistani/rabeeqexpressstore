@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Channels\SmsChannel;
 use App\Models\Order;
 use App\Models\Setting;
 use Illuminate\Bus\Queueable;
@@ -17,11 +18,20 @@ class OrderStatusNotification extends Notification
     ) {}
 
     /**
-     * Always send via mail — the admin already opted in by checking "Notify Customer".
+     * Determine channels: always email, + SMS if enabled and user has phone.
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        $channels = ['mail'];
+
+        if (
+            setting('sms.notify_order_status', false) &&
+            ($notifiable->phone ?? null)
+        ) {
+            $channels[] = SmsChannel::class;
+        }
+
+        return $channels;
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -89,13 +99,29 @@ class OrderStatusNotification extends Notification
         return $mail;
     }
 
+    /**
+     * Format a compact SMS message for the order status update.
+     */
+    public function toSms(object $notifiable): string
+    {
+        $storeName   = Setting::get('general.store_name_en', config('app.name'));
+        $statusLabel = ucfirst($this->newStatus);
+        $msg = "{$storeName}: Order #{$this->order->order_number} is now {$statusLabel}.";
+
+        if ($this->comment) {
+            $msg .= " Note: {$this->comment}";
+        }
+
+        return $msg;
+    }
+
     public function toArray(object $notifiable): array
     {
         return [
-            'order_id' => $this->order->id,
+            'order_id'     => $this->order->id,
             'order_number' => $this->order->order_number,
-            'status' => $this->newStatus,
-            'comment' => $this->comment,
+            'status'       => $this->newStatus,
+            'comment'      => $this->comment,
         ];
     }
 }

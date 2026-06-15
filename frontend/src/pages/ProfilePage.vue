@@ -22,7 +22,7 @@
             </div>
             <div class="form-group">
               <label>{{ $t('auth.phone') }}</label>
-              <input type="tel" v-model="profileForm.phone" />
+              <input type="tel" v-model="profileForm.phone" @input="phoneDirty = true" />
             </div>
             <div class="form-actions">
               <button type="submit" class="btn-primary" :disabled="isUpdatingProfile">
@@ -32,6 +32,58 @@
             <div v-if="profileSuccess" class="alert-success">{{ $t('profile.updateSuccess') || 'Profile updated successfully.' }}</div>
             <div v-if="profileError" class="alert-error">{{ profileError }}</div>
           </form>
+        </div>
+
+        <!-- Phone Verification Card (shown only when phone OTP is enabled) -->
+        <div v-if="phoneOtpEnabled && profileForm.phone" class="profile-card">
+          <div class="card-header phone-verify-header">
+            <h3>{{ 'Phone Verification' }}</h3>
+            <span v-if="isPhoneVerified && !phoneDirty" class="badge-verified">✓ Verified</span>
+            <span v-else class="badge-unverified">Unverified</span>
+          </div>
+          <div class="profile-form">
+            <p class="help-text">
+              {{ isPhoneVerified && !phoneDirty
+                ? 'Your phone number is verified.'
+                : phoneDirty
+                  ? 'You changed your phone number. Save your profile first, then verify the new number.'
+                  : 'Verify your phone number to enable SMS features.' }}
+            </p>
+
+            <!-- OTP send step -->
+            <div v-if="!showPhoneOtp && !isPhoneVerified" class="form-actions">
+              <button type="button" class="btn-primary" :disabled="phoneDirty || sendingPhoneOtp" @click="sendPhoneOtp">
+                {{ sendingPhoneOtp ? $t('common.loading') : 'Send Verification Code' }}
+              </button>
+            </div>
+            <div v-if="phoneOtpError" class="alert-error">{{ phoneOtpError }}</div>
+
+            <!-- OTP verify step -->
+            <template v-if="showPhoneOtp">
+              <div class="form-group">
+                <label>Verification Code</label>
+                <input
+                  type="text"
+                  v-model="phoneOtpCode"
+                  maxlength="4"
+                  class="otp-input"
+                  placeholder="0000"
+                  inputmode="numeric"
+                  autofocus
+                />
+              </div>
+              <div class="form-actions phone-verify-actions">
+                <button type="button" class="btn-primary" :disabled="verifyingPhone || phoneOtpCode.length < 4" @click="verifyPhone">
+                  {{ verifyingPhone ? $t('common.loading') : 'Verify' }}
+                </button>
+                <button type="button" class="btn-secondary" :disabled="phoneOtpCooldown > 0" @click="sendPhoneOtp">
+                  {{ phoneOtpCooldown > 0 ? `Resend in ${phoneOtpCooldown}s` : 'Resend Code' }}
+                </button>
+              </div>
+              <div v-if="phoneOtpError" class="alert-error">{{ phoneOtpError }}</div>
+              <div v-if="phoneVerifySuccess" class="alert-success">Phone number verified successfully! ✓</div>
+            </template>
+          </div>
         </div>
 
         <!-- Password Update Form -->
@@ -66,14 +118,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import apiClient from '@/api/client'
 
 const auth = useAuthStore()
+const settingsStore = useSettingsStore()
 const router = useRouter()
 
+// ─── OTP mode ───
+const phoneOtpEnabled = computed(() => settingsStore.storeSettings.features.phoneOtpEnabled)
+
+// ─── Profile Form ───
 const profileForm = ref({
   name: auth.user?.name || '',
   phone: auth.user?.phone || ''
@@ -81,7 +139,63 @@ const profileForm = ref({
 const isUpdatingProfile = ref(false)
 const profileSuccess = ref(false)
 const profileError = ref('')
+const phoneDirty = ref(false)
 
+// ─── Phone Verification State ───
+const isPhoneVerified = computed(() => !!auth.user?.phoneVerifiedAt)
+const showPhoneOtp = ref(false)
+const phoneOtpCode = ref('')
+const sendingPhoneOtp = ref(false)
+const verifyingPhone = ref(false)
+const phoneOtpError = ref('')
+const phoneVerifySuccess = ref(false)
+const phoneOtpCooldown = ref(0)
+let cooldownTimer: ReturnType<typeof setInterval> | null = null
+
+function startCooldown(seconds: number) {
+  phoneOtpCooldown.value = seconds
+  cooldownTimer = setInterval(() => {
+    phoneOtpCooldown.value--
+    if (phoneOtpCooldown.value <= 0 && cooldownTimer) {
+      clearInterval(cooldownTimer)
+      cooldownTimer = null
+    }
+  }, 1000)
+}
+onUnmounted(() => { if (cooldownTimer) clearInterval(cooldownTimer) })
+
+async function sendPhoneOtp() {
+  phoneOtpError.value = ''
+  sendingPhoneOtp.value = true
+  const result = await auth.sendProfilePhoneOtp(profileForm.value.phone || undefined)
+  sendingPhoneOtp.value = false
+
+  if ((result as any).success) {
+    showPhoneOtp.value = true
+    phoneOtpCode.value = ''
+    startCooldown((result as any).cooldown ?? 60)
+  } else {
+    phoneOtpError.value = (result as any).message || 'Failed to send code'
+  }
+}
+
+async function verifyPhone() {
+  phoneOtpError.value = ''
+  verifyingPhone.value = true
+  const result = await auth.verifyProfilePhone(profileForm.value.phone, phoneOtpCode.value)
+  verifyingPhone.value = false
+
+  if ((result as any).success) {
+    phoneVerifySuccess.value = true
+    showPhoneOtp.value = false
+    phoneDirty.value = false
+    setTimeout(() => { phoneVerifySuccess.value = false }, 3000)
+  } else {
+    phoneOtpError.value = (result as any).message || 'Invalid or expired code'
+  }
+}
+
+// ─── Password Form ───
 const passwordForm = ref({
   currentPassword: '',
   password: '',
@@ -101,6 +215,8 @@ async function updateProfile() {
       auth.user = response.data.data
     }
     profileSuccess.value = true
+    phoneDirty.value = false  // reset dirty after save
+    showPhoneOtp.value = false
     setTimeout(() => { profileSuccess.value = false }, 3000)
   } catch (error: any) {
     profileError.value = error.response?.data?.message || 'Failed to update profile'
@@ -113,7 +229,7 @@ async function updatePassword() {
   isUpdatingPassword.value = true
   passwordSuccess.value = false
   passwordError.value = ''
-  
+
   if (passwordForm.value.password !== passwordForm.value.password_confirmation) {
     passwordError.value = 'Passwords do not match.'
     isUpdatingPassword.value = false
@@ -256,4 +372,60 @@ onMounted(() => {
   font-size: 0.875rem;
   margin-top: 1rem;
 }
+.phone-verify-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.badge-verified {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #065f46;
+  background: #d1fae5;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+.badge-unverified {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+.otp-input {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.5rem;
+  text-align: center;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  outline: none;
+  width: 100%;
+  max-width: 180px;
+}
+.otp-input:focus {
+  border-color: var(--color-primary, #858585);
+  box-shadow: 0 0 0 1px var(--color-primary, #858585);
+}
+.phone-verify-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.btn-secondary {
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  color: var(--color-primary, #858585);
+  border: 1px solid var(--color-primary, #858585);
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-secondary:hover { opacity: 0.8; }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

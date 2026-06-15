@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Http\Traits\ApiResponse;
+use App\Models\OtpCode;
 use App\Models\UserAddress;
+use App\Services\TwilioService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,6 +15,8 @@ use Illuminate\Support\Facades\Hash;
 class ProfileController extends Controller
 {
     use ApiResponse;
+
+    public function __construct(protected TwilioService $twilio) {}
 
     /**
      * GET /api/v1/profile
@@ -235,5 +239,70 @@ class ProfileController extends Controller
         $user->tokens()->delete();
 
         return $this->success(null, 'Account deactivated successfully.');
+    }
+
+    // ─── Phone Verification ───────────────────────────────────────────────────
+
+    /**
+     * POST /api/v1/profile/send-phone-otp
+     * Sends an OTP to the authenticated user's phone number.
+     */
+    public function sendPhoneOtp(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $request->validate(['phone' => ['sometimes', 'string', 'max:20']]);
+
+        // Allow sending to a new phone number (provided in request) or user's existing phone
+        $phone = $request->filled('phone') ? trim($request->phone) : $user->phone;
+
+        if (!$phone) {
+            return $this->error('No phone number found. Please update your profile first.', 422);
+        }
+
+        if (OtpCode::isOnCooldownByPhone($phone)) {
+            return $this->error('Please wait before requesting another code.', 429);
+        }
+
+        $otp = OtpCode::generateForPhone($phone);
+
+        try {
+            $this->twilio->sendOtp($phone, $otp->code, OtpCode::EXPIRY_MINUTES);
+        } catch (\Throwable) {
+            return $this->error('Failed to send SMS. Please check the phone number and try again.', 500);
+        }
+
+        return $this->success([
+            'channel'   => 'sms',
+            'expiresIn' => OtpCode::EXPIRY_MINUTES * 60,
+            'cooldown'  => OtpCode::COOLDOWN_SECONDS,
+        ], 'Verification code sent to your phone.');
+    }
+
+    /**
+     * POST /api/v1/profile/verify-phone
+     * Verifies the OTP and marks the user's phone as verified.
+     */
+    public function verifyPhone(Request $request): JsonResponse
+    {
+        $request->validate([
+            'phone' => ['required', 'string', 'max:20'],
+            'code'  => ['required', 'string', 'size:4'],
+        ]);
+
+        $phone = trim($request->phone);
+        $otp   = OtpCode::verifyByPhone($phone, $request->code);
+
+        if (!$otp) {
+            return $this->error('Invalid or expired verification code.', 422);
+        }
+
+        $user = $request->user();
+        $user->update([
+            'phone'             => $phone,
+            'phone_verified_at' => now(),
+        ]);
+
+        return $this->success(new UserResource($user->fresh()), 'Phone number verified successfully.');
     }
 }

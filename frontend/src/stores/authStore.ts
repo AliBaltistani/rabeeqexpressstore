@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { loginApi, registerApi, logoutApi, fetchMe, sendOtpApi, verifyOtpApi, resendOtpApi } from '@/api/services'
+import {
+  loginApi, registerApi, logoutApi, fetchMe,
+  sendOtpApi, verifyOtpApi, resendOtpApi,
+  sendProfilePhoneOtpApi, verifyProfilePhoneApi,
+} from '@/api/services'
 import type { User } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -40,9 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout() {
     try {
-      if (token.value) {
-        await logoutApi()
-      }
+      if (token.value) await logoutApi()
     } catch {
       // Ignore errors on logout
     } finally {
@@ -57,7 +59,6 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       user.value = await fetchMe()
     } catch {
-      // Token might be expired
       user.value = null
       token.value = null
       localStorage.removeItem('auth_token')
@@ -68,11 +69,11 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = userData
   }
 
-  // ─── OTP (Passwordless Login) ───
+  // ─── Email OTP (Passwordless Login) ─────────────────────────────────────
   async function sendOtp(email: string) {
     isLoading.value = true
     try {
-      const result = await sendOtpApi(email)
+      const result = await sendOtpApi({ email })
       return { success: true, ...result }
     } catch (e: any) {
       return { success: false, message: e.response?.data?.message || 'Failed to send OTP' }
@@ -84,7 +85,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function verifyOtp(email: string, code: string) {
     isLoading.value = true
     try {
-      const result = await verifyOtpApi(email, code)
+      const result = await verifyOtpApi({ email, code })
       user.value = result.user
       token.value = result.token
       localStorage.setItem('auth_token', result.token)
@@ -98,25 +99,83 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function resendOtp(email: string) {
     try {
-      const result = await resendOtpApi(email)
+      const result = await resendOtpApi({ email })
       return { success: true, ...result }
     } catch (e: any) {
       return { success: false, message: e.response?.data?.message || 'Failed to resend OTP' }
     }
   }
 
-  /**
-   * Restore session on app init — if token exists, fetch user data.
-   */
-  async function restoreSession() {
-    if (token.value) {
-      await fetchUser()
+  // ─── Phone OTP (SMS Passwordless Login) ─────────────────────────────────
+  async function sendPhoneOtp(phone: string) {
+    isLoading.value = true
+    try {
+      const result = await sendOtpApi({ phone })
+      return { success: true, ...result }
+    } catch (e: any) {
+      return { success: false, message: e.response?.data?.message || 'Failed to send OTP' }
+    } finally {
+      isLoading.value = false
     }
+  }
+
+  async function verifyPhoneOtp(phone: string, code: string) {
+    isLoading.value = true
+    try {
+      const result = await verifyOtpApi({ phone, code })
+      user.value = result.user
+      token.value = result.token
+      localStorage.setItem('auth_token', result.token)
+      return { success: true, isNewUser: result.isNewUser }
+    } catch (e: any) {
+      return { success: false, message: e.response?.data?.message || 'Invalid or expired code' }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function resendPhoneOtp(phone: string) {
+    try {
+      const result = await resendOtpApi({ phone })
+      return { success: true, ...result }
+    } catch (e: any) {
+      return { success: false, message: e.response?.data?.message || 'Failed to resend OTP' }
+    }
+  }
+
+  // ─── Profile Phone Verification (authenticated) ──────────────────────────
+  async function sendProfilePhoneOtp(phone?: string) {
+    try {
+      const result = await sendProfilePhoneOtpApi(phone)
+      return { success: true, ...result }
+    } catch (e: any) {
+      return { success: false, message: e.response?.data?.message || 'Failed to send OTP' }
+    }
+  }
+
+  async function verifyProfilePhone(phone: string, code: string) {
+    try {
+      const updatedUser = await verifyProfilePhoneApi(phone, code)
+      user.value = updatedUser
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, message: e.response?.data?.message || 'Invalid or expired code' }
+    }
+  }
+
+  /** Restore session on app init — if token exists, fetch user data. */
+  async function restoreSession() {
+    if (token.value) await fetchUser()
   }
 
   return {
     user, token, isAuthenticated, isLoading,
     login, register, logout, fetchUser, setUser, restoreSession,
+    // Email OTP
     sendOtp, verifyOtp, resendOtp,
+    // Phone OTP (login)
+    sendPhoneOtp, verifyPhoneOtp, resendPhoneOtp,
+    // Profile phone verification
+    sendProfilePhoneOtp, verifyProfilePhone,
   }
 })

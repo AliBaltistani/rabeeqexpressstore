@@ -63,10 +63,14 @@ class InitController extends Controller
             'defaultLanguage' => $defaultLanguage['code'] ?? 'en',
             'paymentMethods' => $this->getPaymentMethods(),
             'features' => [
-                'guestCheckout' => (bool) setting('general.enable_guest_checkout', true),
-                'wishlist' => (bool) setting('general.enable_wishlist', true),
-                'reviews' => (bool) setting('general.enable_reviews', true),
-                'reviewsRequireApproval' => (bool) setting('general.reviews_require_approval', true),
+                'guestCheckout'         => (bool) setting('general.enable_guest_checkout', true),
+                'wishlist'              => (bool) setting('general.enable_wishlist', true),
+                'reviews'               => (bool) setting('general.enable_reviews', true),
+                'reviewsRequireApproval'=> (bool) setting('general.reviews_require_approval', true),
+                // OTP / Auth method
+                'otpMode'               => setting('auth.otp_mode', 'email'),
+                'emailOtpEnabled'       => (bool) setting('auth.email_otp_enabled', true),
+                'phoneOtpEnabled'       => (bool) setting('auth.phone_otp_enabled', false),
             ],
             'seo' => [
                 'siteTitle' => setting('seo.site_title_' . $locale, setting('seo.site_title_en')),

@@ -67,6 +67,9 @@ export interface StoreFeatures {
   wishlist: boolean
   reviews: boolean
   reviewsRequireApproval: boolean
+  otpMode: 'email' | 'phone' | 'both'
+  emailOtpEnabled: boolean
+  phoneOtpEnabled: boolean
 }
 
 export interface SeoSettings {
@@ -241,8 +244,9 @@ export interface CartItem {
 export interface User {
   id: number
   name: string
-  email: string
+  email: string | null
   phone?: string | null
+  phoneVerifiedAt?: string | null
   avatar?: string | null
   createdAt?: string
   firstName?: string | null
@@ -254,6 +258,8 @@ export interface User {
   gender?: string | null
   promotionalMessages?: boolean
   promotional_messages?: boolean
+  walletBalance?: number
+  loyaltyPoints?: number
 }
 
 // ─── Address ───

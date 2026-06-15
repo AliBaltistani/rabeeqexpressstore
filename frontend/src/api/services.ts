@@ -174,16 +174,22 @@ export async function fetchMe(): Promise<User> {
 }
 
 // ─── OTP (Passwordless Login) ───
-export async function sendOtpApi(email: string) {
-  return unwrap<{ expiresIn: number; cooldown: number }>(await apiClient.post('/auth/send-otp', { email }))
+export async function sendOtpApi(params: { email?: string; phone?: string }) {
+  return unwrap<{ channel: string; expiresIn: number; cooldown: number }>(
+    await apiClient.post('/auth/send-otp', params)
+  )
 }
 
-export async function verifyOtpApi(email: string, code: string) {
-  return unwrap<{ user: User; token: string; tokenType: string; isNewUser: boolean }>(await apiClient.post('/auth/verify-otp', { email, code }))
+export async function verifyOtpApi(params: { email?: string; phone?: string; code: string }) {
+  return unwrap<{ user: User; token: string; tokenType: string; isNewUser: boolean }>(
+    await apiClient.post('/auth/verify-otp', params)
+  )
 }
 
-export async function resendOtpApi(email: string) {
-  return unwrap<{ expiresIn: number; cooldown: number }>(await apiClient.post('/auth/resend-otp', { email }))
+export async function resendOtpApi(params: { email?: string; phone?: string }) {
+  return unwrap<{ channel: string; expiresIn: number; cooldown: number }>(
+    await apiClient.post('/auth/resend-otp', params)
+  )
 }
 
 // ═══════════════════════════════════════════
@@ -203,6 +209,16 @@ export async function updatePassword(data: { current_password: string; password:
 
 export async function deactivateAccountApi() {
   return unwrap<any>(await apiClient.post('/profile/deactivate'))
+}
+
+export async function sendProfilePhoneOtpApi(phone?: string) {
+  return unwrap<{ channel: string; expiresIn: number; cooldown: number }>(
+    await apiClient.post('/profile/send-phone-otp', phone ? { phone } : {})
+  )
+}
+
+export async function verifyProfilePhoneApi(phone: string, code: string) {
+  return unwrap<User>(await apiClient.post('/profile/verify-phone', { phone, code }))
 }
 
 // ═══════════════════════════════════════════

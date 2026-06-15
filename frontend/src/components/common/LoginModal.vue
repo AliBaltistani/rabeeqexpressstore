@@ -8,30 +8,63 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
 
-          <!-- Step 1: Email Input -->
+          <!-- Step 1: Email/Phone Input -->
           <div v-if="step === 'email'" class="login-modal__step">
             <div class="login-modal__icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="5" width="18" height="14" rx="2"/>
-                <polyline points="3 7 12 13 21 7"/>
+              <!-- Icon changes by active tab -->
+              <svg v-if="activeTab === 'email'" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/>
+              </svg>
+              <svg v-else width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6 6l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
               </svg>
             </div>
             <h2 class="login-modal__title">{{ $t('loginModal.title') }}</h2>
             <p class="login-modal__subtitle">{{ $t('loginModal.subtitle') }}</p>
 
+            <!-- OTP channel tabs (only when mode = 'both') -->
+            <div v-if="otpMode === 'both'" class="login-modal__tabs">
+              <button
+                :class="['login-modal__tab', { active: activeTab === 'email' }]"
+                type="button"
+                @click="switchTab('email')"
+              >{{ $t('auth.email') }}</button>
+              <button
+                :class="['login-modal__tab', { active: activeTab === 'phone' }]"
+                type="button"
+                @click="switchTab('phone')"
+              >{{ $t('auth.phone') }}</button>
+            </div>
+
             <form @submit.prevent="handleSendOtp" class="login-modal__form">
               <div class="login-modal__field">
-                <label class="login-modal__label">{{ $t('loginModal.emailLabel') }}</label>
-                <input
-                  ref="emailInputRef"
-                  type="email"
-                  v-model="email"
-                  class="login-modal__input"
-                  :class="{ 'input-error': emailError }"
-                  :placeholder="$t('loginModal.emailPlaceholder')"
-                  autocomplete="email"
-                  @keydown.enter.prevent="handleSendOtp"
-                />
+                <!-- Email input -->
+                <template v-if="activeTab === 'email'">
+                  <label class="login-modal__label">{{ $t('loginModal.emailLabel') }}</label>
+                  <input
+                    ref="emailInputRef"
+                    type="email"
+                    v-model="email"
+                    class="login-modal__input"
+                    :class="{ 'input-error': emailError }"
+                    :placeholder="$t('loginModal.emailPlaceholder')"
+                    autocomplete="email"
+                    @keydown.enter.prevent="handleSendOtp"
+                  />
+                </template>
+                <!-- Phone input -->
+                <template v-else>
+                  <label class="login-modal__label">{{ $t('auth.phone') }}</label>
+                  <input
+                    ref="emailInputRef"
+                    type="tel"
+                    v-model="phone"
+                    class="login-modal__input"
+                    :class="{ 'input-error': emailError }"
+                    placeholder="+966501234567"
+                    @keydown.enter.prevent="handleSendOtp"
+                  />
+                </template>
                 <span v-if="emailError" class="login-modal__error">{{ emailError }}</span>
               </div>
               <button type="submit" class="login-modal__btn login-modal__btn--primary" :disabled="sending">
@@ -75,7 +108,11 @@
               </svg>
             </div>
             <h2 class="login-modal__title">{{ $t('loginModal.otpTitle') }}</h2>
-            <p class="login-modal__subtitle">{{ $t('loginModal.otpSubtitle', { email }) }}</p>
+            <p class="login-modal__subtitle">
+              {{ activeTab === 'phone'
+                ? $t('loginModal.otpSubtitlePhone', { phone })
+                : $t('loginModal.otpSubtitle', { email }) }}
+            </p>
 
             <!-- OTP Input Boxes -->
             <div class="login-modal__otp-row">
@@ -131,8 +168,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{ visible: boolean }>()
@@ -142,11 +180,21 @@ const emit = defineEmits<{
 }>()
 
 const auth = useAuthStore()
+const settingsStore = useSettingsStore()
 const { t } = useI18n()
+
+const otpMode = computed(() => settingsStore.storeSettings.features.otpMode)
+const activeTab = ref<'email' | 'phone'>(otpMode.value === 'phone' ? 'phone' : 'email')
+
+function switchTab(tab: 'email' | 'phone') {
+  activeTab.value = tab
+  emailError.value = ''
+}
 
 // State
 const step = ref<'email' | 'otp'>('email')
 const email = ref('')
+const phone = ref('')
 const emailError = ref('')
 const sending = ref(false)
 
@@ -174,6 +222,7 @@ function close() {
 function resetState() {
   step.value = 'email'
   email.value = ''
+  phone.value = ''
   emailError.value = ''
   otpDigits.value = ['', '', '', '']
   otpError.value = ''
@@ -219,11 +268,18 @@ onUnmounted(() => {
 // ── Step 1: Send OTP ──
 async function handleSendOtp() {
   emailError.value = ''
-  if (!email.value.trim()) { emailError.value = t('checkout.required'); return }
-  if (!isEmail(email.value)) { emailError.value = t('checkout.invalidEmail'); return }
+  let result: any
 
-  sending.value = true
-  const result = await auth.sendOtp(email.value)
+  if (activeTab.value === 'phone') {
+    if (!phone.value.trim()) { emailError.value = t('checkout.required'); return }
+    sending.value = true
+    result = await auth.sendPhoneOtp(phone.value)
+  } else {
+    if (!email.value.trim()) { emailError.value = t('checkout.required'); return }
+    if (!isEmail(email.value)) { emailError.value = t('checkout.invalidEmail'); return }
+    sending.value = true
+    result = await auth.sendOtp(email.value)
+  }
   sending.value = false
 
   if (result.success) {
@@ -282,7 +338,12 @@ async function handleVerifyOtp() {
   if (code.length < 4) { otpError.value = t('loginModal.invalidOtp'); return }
 
   verifying.value = true
-  const result = await auth.verifyOtp(email.value, code)
+  let result: any
+  if (activeTab.value === 'phone') {
+    result = await auth.verifyPhoneOtp(phone.value, code)
+  } else {
+    result = await auth.verifyOtp(email.value, code)
+  }
   verifying.value = false
 
   if (result.success) {
@@ -298,7 +359,12 @@ async function handleVerifyOtp() {
 // ── Resend ──
 async function handleResendOtp() {
   resending.value = true
-  const result = await auth.resendOtp(email.value)
+  let result: any
+  if (activeTab.value === 'phone') {
+    result = await auth.resendPhoneOtp(phone.value)
+  } else {
+    result = await auth.resendOtp(email.value)
+  }
   resending.value = false
 
   if (result.success) {
@@ -460,6 +526,32 @@ html[dir="rtl"] .login-modal__close { right: auto; left: 1rem; }
 }
 .login-modal__btn--primary:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
 .login-modal__btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* OTP Channel Tabs */
+.login-modal__tabs {
+  display: flex;
+  border: 1.5px solid var(--product-border-color, #e5e5e5);
+  border-radius: var(--radius-lg, 12px);
+  overflow: hidden;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+.login-modal__tab {
+  flex: 1;
+  padding: 0.6rem;
+  background: var(--bg-secondary, #f9fafb);
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--footer-text-color, #666);
+  transition: all 0.15s;
+}
+.login-modal__tab.active {
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+}
 
 .login-modal__spinner {
   width: 18px;

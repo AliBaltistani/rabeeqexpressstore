@@ -38,6 +38,7 @@ class User extends Authenticatable
         'loyalty_points',
         'social_provider',
         'social_id',
+        'phone_verified_at',
     ];
 
     protected $hidden = [
@@ -46,15 +47,16 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-        'is_active' => 'boolean',
-        'is_banned' => 'boolean',
-        'is_rtl' => 'boolean',
-        'wallet_balance' => 'decimal:2',
-        'loyalty_points' => 'integer',
-        'birth_date' => 'date',
-        'profile_completed' => 'boolean',
+        'email_verified_at'  => 'datetime',
+        'phone_verified_at'  => 'datetime',
+        'password'           => 'hashed',
+        'is_active'          => 'boolean',
+        'is_banned'          => 'boolean',
+        'is_rtl'             => 'boolean',
+        'wallet_balance'     => 'decimal:2',
+        'loyalty_points'     => 'integer',
+        'birth_date'         => 'date',
+        'profile_completed'  => 'boolean',
         'promotional_messages' => 'boolean',
     ];
 

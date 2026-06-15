@@ -122,18 +122,42 @@
         </div>
 
         <div v-if="currentStep === 1" class="section-content">
-          <!-- OTP Email-first flow (default login) -->
+          <!-- OTP Login flow (email / phone / both) -->
           <template v-if="authMode === 'login'">
+
+            <!-- ─── Channel Tabs (only shown in 'both' mode) ─── -->
+            <div v-if="otpMode === 'both' && otpStep === 'email'" class="checkout-otp-tabs">
+              <button
+                :class="['checkout-otp-tab', { active: otpChannel === 'email' }]"
+                type="button"
+                @click="switchOtpChannel('email')"
+              >{{ $t('auth.email') }}</button>
+              <button
+                :class="['checkout-otp-tab', { active: otpChannel === 'phone' }]"
+                type="button"
+                @click="switchOtpChannel('phone')"
+              >{{ $t('auth.phone') }}</button>
+            </div>
+
+            <!-- ─── Input Step: Email or Phone ─── -->
             <template v-if="otpStep === 'email'">
-              <div class="checkout-field">
+              <!-- Email input -->
+              <div v-if="otpChannel === 'email'" class="checkout-field">
                 <label class="checkout-label">{{ $t('checkout.emailAddress') }}</label>
                 <input type="email" v-model="otpEmail" class="checkout-input" :class="{ 'input-error': errors.otpEmail }" :placeholder="$t('loginModal.emailPlaceholder')" @keydown.enter.prevent="handleEmailEnter" />
                 <span v-if="errors.otpEmail" class="field-error">{{ errors.otpEmail }}</span>
               </div>
+              <!-- Phone input -->
+              <div v-else class="checkout-field">
+                <label class="checkout-label">{{ $t('auth.phone') }}</label>
+                <input type="tel" v-model="otpPhone" class="checkout-input" :class="{ 'input-error': errors.otpPhone }" placeholder="+966501234567" @keydown.enter.prevent="handleEmailEnter" />
+                <span v-if="errors.otpPhone" class="field-error">{{ errors.otpPhone }}</span>
+              </div>
               <p v-if="authError" class="auth-error-msg">{{ authError }}</p>
               <button class="checkout-btn checkout-btn--dark" :disabled="authLoading" @click="handleEmailEnter">{{ authLoading ? $t('common.loading') : $t('checkout.enter') }}</button>
             </template>
-            <!-- OTP Code verification -->
+
+            <!-- ─── OTP Code Verification ─── -->
             <template v-else-if="otpStep === 'code'">
               <div class="otp-verify-block">
                 <button class="otp-back-btn" @click="otpStep = 'email'">
@@ -141,7 +165,7 @@
                 </button>
                 <div class="otp-verify-info">
                   <p class="otp-verify-text">{{ $t('checkout.verificationRequired') }}</p>
-                  <p class="otp-verify-email">{{ otpEmail }}</p>
+                  <p class="otp-verify-email">{{ otpChannel === 'phone' ? otpPhone : otpEmail }}</p>
                 </div>
               </div>
               <div class="checkout-otp-row">
@@ -155,7 +179,8 @@
                 <button v-else class="section-side-link" @click="handleSendOtp" :disabled="authLoading">{{ $t('loginModal.resendCode') }}</button>
               </p>
             </template>
-            <!-- Register form (shown after email check reveals new user) -->
+
+            <!-- ─── Register form (new email users) ─── -->
             <template v-else-if="otpStep === 'register'">
               <div class="checkout-field">
                 <label class="checkout-label">{{ $t('auth.name') }}</label>
@@ -536,6 +561,9 @@ const addressMode = ref<'map' | 'manual'>('map')
 
 // ── Auth Forms ──
 const otpEmail = ref('')
+const otpPhone = ref('')
+const otpChannel = ref<'email' | 'phone'>('email') // active OTP channel
+const otpMode = computed(() => settings.storeSettings.features.otpMode)
 const otpStep = ref<'email' | 'code' | 'register'>('email')
 const otpCodeDigits = ref(['', '', '', ''])
 const checkoutOtpRefs = ref<HTMLInputElement[]>([])
@@ -616,14 +644,31 @@ async function removeCartItem(item: any) {
   await cart.removeItem(item.id)
 }
 
-// ── Step 1: Email-first flow ──
+// ── Step 1: OTP helpers — channel-aware ──
+function switchOtpChannel(ch: 'email' | 'phone') {
+  otpChannel.value = ch
+  authError.value = ''
+  clearErrors()
+}
+
 async function handleEmailEnter() {
   clearErrors(); authError.value = ''
-  if (!otpEmail.value.trim()) { errors.otpEmail = t('checkout.required'); return }
-  if (!isEmail(otpEmail.value)) { errors.otpEmail = t('checkout.invalidEmail'); return }
-  authLoading.value = true
-  registerForm.value.email = otpEmail.value
-  const result = await auth.sendOtp(otpEmail.value)
+  let result: any
+
+  if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
+    // Phone OTP flow
+    if (!otpPhone.value.trim()) { errors.otpPhone = t('checkout.required'); return }
+    authLoading.value = true
+    result = await auth.sendPhoneOtp(otpPhone.value)
+  } else {
+    // Email OTP flow
+    if (!otpEmail.value.trim()) { errors.otpEmail = t('checkout.required'); return }
+    if (!isEmail(otpEmail.value)) { errors.otpEmail = t('checkout.invalidEmail'); return }
+    authLoading.value = true
+    registerForm.value.email = otpEmail.value
+    result = await auth.sendOtp(otpEmail.value)
+  }
+
   authLoading.value = false
   if (result.success) {
     otpStep.value = 'code'
@@ -631,6 +676,7 @@ async function handleEmailEnter() {
     startOtpCooldown((result as any).cooldown || 60)
     nextTick(() => checkoutOtpRefs.value[0]?.focus())
   } else {
+    const errKey = otpChannel.value === 'phone' ? 'otpPhone' : 'otpEmail'
     authError.value = (result as any).message || t('common.error')
   }
 }
@@ -638,7 +684,12 @@ async function handleEmailEnter() {
 async function handleSendOtp() {
   clearErrors(); authError.value = ''
   authLoading.value = true
-  const result = await auth.sendOtp(otpEmail.value)
+  let result: any
+  if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
+    result = await auth.sendPhoneOtp(otpPhone.value)
+  } else {
+    result = await auth.sendOtp(otpEmail.value)
+  }
   authLoading.value = false
   if (result.success) {
     otpCodeDigits.value = ['', '', '', '']
@@ -652,7 +703,12 @@ async function handleVerifyOtp() {
   const code = otpCodeDigits.value.join('')
   if (code.length < 4) { errors.otpCode = t('loginModal.invalidOtp'); return }
   authLoading.value = true
-  const result = await auth.verifyOtp(otpEmail.value, code)
+  let result: any
+  if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
+    result = await auth.verifyPhoneOtp(otpPhone.value, code)
+  } else {
+    result = await auth.verifyOtp(otpEmail.value, code)
+  }
   authLoading.value = false
   if (result.success) {
     if ((result as any).isNewUser) { otpStep.value = 'register'; return }
@@ -973,6 +1029,9 @@ function quickApplyCoupon(code: string) {
 
 // ── Lifecycle ──
 onMounted(async () => {
+  // Initialize OTP channel from admin setting
+  if (otpMode.value === 'phone') otpChannel.value = 'phone'
+
   if (auth.isAuthenticated) {
     authMode.value = 'login'; currentStep.value = 2; prefillAddressFromUser()
     // Load user's loyalty coupons for quick-apply
@@ -1100,6 +1159,12 @@ html[dir="rtl"] .phone-input { border-radius: 8px 0 0 8px !important; }
 .checkout-otp-box:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
 .checkout-otp-box.input-error { border-color: #dc2626; }
 .otp-resend-text { text-align: center; font-size: 0.8125rem; color: #888; margin-top: 0.75rem; }
+
+/* OTP Channel Tabs (email / phone) */
+.checkout-otp-tabs { display: flex; border: 1.5px solid #ddd; border-radius: 8px; overflow: hidden; margin-bottom: 1rem; }
+.checkout-otp-tab { flex: 1; padding: 0.625rem; background: #f5f5f5; border: none; font-size: 0.875rem; font-weight: 500; cursor: pointer; color: #555; transition: all 0.15s; }
+.checkout-otp-tab.active { background: #888; color: #fff; font-weight: 700; }
+.checkout-otp-tab:hover:not(.active) { background: #ebebeb; }
 
 /* Buttons */
 .checkout-btn { display: block; width: 100%; padding: 0.875rem 1rem; border: none; border-radius: 8px; font-size: 0.9375rem; font-weight: 700; cursor: pointer; margin-top: 1rem; text-align: center; }

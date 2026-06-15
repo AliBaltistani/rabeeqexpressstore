@@ -39,6 +39,7 @@ class DatabaseSeeder extends Seeder
             ShippingCarrierSeeder::class,
             CmsPagesSeeder::class,
             CountrySeeder::class, // Optional, run if you want to pre-populate countries
+            TwilioSettingSeeder::class, // SMS/Auth settings defaults
         ]);
     }
 }
