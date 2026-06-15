@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
     {
         // Seed in correct order: roles first, then admins, then other configuration data
         $this->call([
-            // RolePermissionSeeder::class,
+            RolePermissionSeeder::class,
             AdminUserSeeder::class,
             CurrencySeeder::class,
             LanguageSeeder::class,

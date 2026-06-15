@@ -104,13 +104,6 @@ final class OrderLifecycleService
                         $couponId   = $coupon->id;
                         $couponCode = $coupon->code;
                         $coupon->increment('usage_count');
-
-                        // Record usage for registered users
-                        if ($user) {
-                            $coupon->usages()->create([
-                                'user_id' => $user->id,
-                            ]);
-                        }
                     } else {
                         $coupon = null; // Reset — invalid coupon
                     }

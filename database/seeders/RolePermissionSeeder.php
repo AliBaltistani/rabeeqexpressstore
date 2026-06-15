@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -13,11 +14,14 @@ class RolePermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create roles for admin guard
-        $superAdmin = Role::create(['name' => 'Super Admin', 'guard_name' => 'admin']);
-        $manager = Role::create(['name' => 'Manager', 'guard_name' => 'admin']);
-        $editor = Role::create(['name' => 'Editor', 'guard_name' => 'admin']);
-        $support = Role::create(['name' => 'Support', 'guard_name' => 'admin']);
+        // Reset cached roles and permissions
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
+        // Create roles for admin guard (skip if already exists)
+        $superAdmin = Role::firstOrCreate(['name' => 'Super Admin', 'guard_name' => 'admin']);
+        $manager = Role::firstOrCreate(['name' => 'Manager', 'guard_name' => 'admin']);
+        $editor = Role::firstOrCreate(['name' => 'Editor', 'guard_name' => 'admin']);
+        $support = Role::firstOrCreate(['name' => 'Support', 'guard_name' => 'admin']);
 
         // Create permissions (core module permissions)
         $permissions = [
@@ -90,11 +94,11 @@ class RolePermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission, 'guard_name' => 'admin']);
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'admin']);
         }
 
         // Assign all permissions to Super Admin
-        $superAdmin->givePermissionTo(Permission::all());
+        $superAdmin->syncPermissions(Permission::where('guard_name', 'admin')->get());
 
         // Assign specific permissions to Manager
         $managerPermissions = [
@@ -105,7 +109,7 @@ class RolePermissionSeeder extends Seeder
             'customers.view',
             'coupons.view', 'coupons.create', 'coupons.edit',
         ];
-        $manager->givePermissionTo($managerPermissions);
+        $manager->syncPermissions($managerPermissions);
 
         // Assign specific permissions to Editor
         $editorPermissions = [
@@ -115,7 +119,7 @@ class RolePermissionSeeder extends Seeder
             'products.view',
             'reviews.view', 'reviews.approve', 'reviews.reject',
         ];
-        $editor->givePermissionTo($editorPermissions);
+        $editor->syncPermissions($editorPermissions);
 
         // Assign specific permissions to Support
         $supportPermissions = [
@@ -124,6 +128,6 @@ class RolePermissionSeeder extends Seeder
             'customers.view',
             'reviews.view',
         ];
-        $support->givePermissionTo($supportPermissions);
+        $support->syncPermissions($supportPermissions);
     }
 }
