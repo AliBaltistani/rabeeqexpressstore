@@ -1,4 +1,4 @@
-# Eseven Store - Filament V5 Admin Panel Installation Summary
+# Rabeq Express Store - Filament V5 Admin Panel Installation Summary
 
 ## ✅ Completed Tasks
 

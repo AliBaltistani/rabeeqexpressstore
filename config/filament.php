@@ -6,7 +6,7 @@ return [
             'id' => 'admin',
             'path' => 'admin',
             'auth_guard' => 'web',
-            'brand' => 'Eseven Store Admin',
+            'brand' => 'Rabeq Express Store Admin',
             'login_route_name' => 'filament.admin.auth.login',
             'registration_enabled' => false,
             'theme' => 'light',

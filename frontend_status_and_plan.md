@@ -1,6 +1,6 @@
 # Phase 12: Frontend Implementation Tracking & Plan
 
-This document tracks the progress of the Vue.js Frontend dynamic migration (Phase 12) according to the `Eseven_Store_Complete_Project_Blueprint.md` and outlines the step-by-step plan for the remaining work.
+This document tracks the progress of the Vue.js Frontend dynamic migration (Phase 12) according to the `Rabeq_Express_Store_Complete_Project_Blueprint.md` and outlines the step-by-step plan for the remaining work.
 
 > [!IMPORTANT]
 > **Strict Requirement:** We must strictly follow the *current design pattern*. We will *not* introduce extra styling or design changes. Our focus is exclusively on connecting dynamic data via APIs and ensuring no hardcoded data remains.

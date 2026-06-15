@@ -5,6 +5,19 @@ namespace Database\Seeders;
 use App\Models\LoyaltyReward;
 use Illuminate\Database\Seeder;
 
+/**
+ * OPTIONAL/CONFIGURABLE SEEDER
+ * 
+ * Creates loyalty reward tiers (discount coupons, free shipping, gift cards, etc.)
+ * 
+ * For production: Review and customize reward values and points costs before running.
+ * 
+ * Usage:
+ * php artisan db:seed --class=Database\\Seeders\\LoyaltyRewardSeeder
+ * 
+ * Or add to DatabaseSeeder::run() if you want it to run with php artisan db:seed
+ */
+
 class LoyaltyRewardSeeder extends Seeder
 {
     public function run(): void

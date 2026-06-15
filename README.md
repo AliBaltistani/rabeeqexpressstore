@@ -1,6 +1,6 @@
-# 🛍️ Eseven Store
+# 🛍️ Rabeq Express Store
 
-Eseven Store is a modern, high-performance, and multi-lingual e-commerce platform. It features a robust decoupled architecture using a **Laravel 13 API backend** paired with a **Vue.js 3 frontend**, all managed by a powerful **Filament V5 admin panel**.
+Rabeq Express Store is a modern, high-performance, and multi-lingual e-commerce platform. It features a robust decoupled architecture using a **Laravel 13 API backend** paired with a **Vue.js 3 frontend**, all managed by a powerful **Filament V5 admin panel**.
 
 ---
 
@@ -28,7 +28,7 @@ Eseven Store is a modern, high-performance, and multi-lingual e-commerce platfor
 This is a **monorepo-style** structure where Laravel servers the API/Admin and Vue manages the public storefront.
 
 ```text
-eseven-store/
+eseven-store/ → rabeq-express-store/
 ├── app/                  # Backend Logic (Models, API Controllers, Filament Resources)
 ├── bootstrap/            # Laravel Bootstrapping
 ├── config/               # Global Laravel Configuration
@@ -87,11 +87,11 @@ eseven-store/
 ## 🛡️ Key Documentation
 
 For deeper dives into the implementation details, refer to the following comprehensive guides located in the root:
-*   `Eseven_Store_Complete_Project_Blueprint.md` - Complete schema, endpoints, and structural requirements.
+*   `Rabeq_Express_Store_Complete_Project_Blueprint.md` - Complete schema, endpoints, and structural requirements.
 *   `frontend_status_and_plan.md` - Tracking the current completion of Vue frontend features.
 *   `ADMIN_PANEL_COMPLETE.md` - Specialized instructions regarding the Filament Admin configuration.
 
 ---
 
 ## 🤖 AI Agent Guidelines
-If you are an AI assistant working on this repository, please review `.agents/skills/eseven_store/SKILL.md` to understand strict architectural rules, API fetching protocols, and styling constraints before making any modifications.
+If you are an AI assistant working on this repository, please review `.agents/skills/rabeq_express_store/SKILL.md` to understand strict architectural rules, API fetching protocols, and styling constraints before making any modifications.

@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM Eseven Store — Production Build & Deploy Script
+REM Rabeq Express Store — Production Build & Deploy Script
 REM ============================================================
 REM This script:
 REM   1. Installs production PHP dependencies
@@ -12,7 +12,7 @@ REM ============================================================
 
 echo.
 echo ========================================
-echo  Eseven Store — Production Build
+echo  Rabeq Express Store — Production Build
 echo ========================================
 echo.
 
@@ -65,7 +65,7 @@ echo  1. Commit all changes: git add -A ^&^& git commit -m "Production build"
 echo  2. Push to GitHub: git push origin main
 echo  3. Hostinger auto-deploys from GitHub
 echo  4. Create .env on server (copy .env.production content)
-echo  5. Visit: https://eseven-store.buyonlineskd.com/setup/run?token=eseven-deploy-2026
+echo  5. Visit: https://rabeq-express-store.buyonlineskd.com/setup/run?token=rabeq-deploy-2026
 echo ========================================
 echo.
 

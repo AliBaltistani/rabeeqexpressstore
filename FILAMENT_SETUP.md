@@ -1,7 +1,7 @@
-# Eseven Store Admin Panel - Filament V5 Setup Documentation
+# Rabeq Express Store Admin Panel - Filament V5 Setup Documentation
 
 ## Overview
-The Filament V5 admin panel for Eseven Store is now fully configured with:
+The Filament V5 admin panel for Rabeq Express Store is now fully configured with:
 - **Dark Navy/Charcoal Sidebar** (matching Porto Shop reference)
 - **Clean White Content Area**
 - **RTL Layout Support** with dynamic language switching
@@ -16,7 +16,7 @@ The Filament V5 admin panel for Eseven Store is now fully configured with:
 - **Admin Panel Path**: `/admin`
 - **Login Route**: `/admin/login`
 - **Panel ID**: `admin`
-- **Brand Name**: "Eseven Store Admin"
+- **Brand Name**: "Rabeq Express Store Admin"
 - **User Registration**: Disabled (admin-only access)
 - **Dark Mode**: Enabled
 - **Primary Color**: Amber (#f59e0b)
@@ -90,7 +90,7 @@ Custom theme CSS with:
 Published Filament configuration:
 - **File**: [config/filament.php](config/filament.php)
 - **Features**:
-  - Admin panel branding ("Eseven Store Admin")
+  - Admin panel branding ("Rabeq Express Store Admin")
   - Dark mode enabled by default
   - Sidebar collapsible on desktop
   - Sticky topbar
@@ -203,9 +203,9 @@ Filament's default avatar provider is enabled for user profile pictures. Users c
 Ensure your `.env` file has:
 
 ```env
-APP_NAME=Eseven-Store
+APP_NAME=Rabeq Express Store
 APP_URL=http://localhost
-DB_DATABASE=eseven_store
+DB_DATABASE=rabeq_express_store
 DB_USERNAME=root
 DB_PASSWORD=
 ```

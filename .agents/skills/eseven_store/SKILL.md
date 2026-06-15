@@ -1,11 +1,11 @@
 ---
-name: Eseven Store Codebase Context
-description: Deep context, architecture guidelines, and strict rules for AI agents interacting with the Eseven Store Laravel + Vue project.
+name: Rabeq Express Store Codebase Context
+description: Deep context, architecture guidelines, and strict rules for AI agents interacting with the Rabeq Express Store Laravel + Vue project.
 ---
 
-# Eseven Store — Master AI Developer Context
+# Rabeq Express Store — Master AI Developer Context
 
-Welcome to Eseven Store. You are working on a highly structured, decoupled **Laravel 13** + **Filament V5** backend and a **Vue 3** + **Pinia** frontend. 
+Welcome to Rabeq Express Store. You are working on a highly structured, decoupled **Laravel 13** + **Filament V5** backend and a **Vue 3** + **Pinia** frontend. 
 
 When you receive a prompt related to this project, you **MUST** adhere to the following rules, structures, and workflows. Do not deviate.
 
@@ -66,7 +66,7 @@ When asked to build a new feature (e.g., "Add a Blog System"), you must follow t
 
 ## 4. Current State References
 Before altering logic, consult the existing reference texts in the root folder:
-- **`Eseven_Store_Complete_Project_Blueprint.md`**: Defines schema, original specs, and scope.
+- **`Rabeq_Express_Store_Complete_Project_Blueprint.md`**: Defines schema, original specs, and scope.
 - **`frontend_status_and_plan.md`**: Outlines components left to be built on the frontend.
 - **`ADMIN_PANEL_COMPLETE.md`**: Documentation for the Filament admin dashboard implementation.
 

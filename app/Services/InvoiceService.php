@@ -51,8 +51,8 @@ class InvoiceService
         return [
             'order' => $order,
             'store_name'    => $isArabic
-                ? Setting::get('general.store_name_ar', Setting::get('general.store_name_en', 'Eseven Store'))
-                : Setting::get('general.store_name_en', 'Eseven Store'),
+                ? Setting::get('general.store_name_ar', Setting::get('general.store_name_en', 'Rabeq Express Store'))
+                : Setting::get('general.store_name_en', 'Rabeq Express Store'),
             'store_logo'    => Setting::get('general.store_logo'),
             'store_email'   => Setting::get('general.store_email'),
             'store_phone'   => Setting::get('general.store_phone'),

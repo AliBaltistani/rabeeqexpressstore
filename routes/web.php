@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('setup/emergency-clear', function (\Illuminate\Http\Request $request) {
     // Hardcoded token check — works even when config is cached
-    if ($request->query('token') !== 'eseven-deploy-2026') {
+    if ($request->query('token') !== 'rabeq-deploy-2026') {
         return response()->json(['error' => 'Unauthorized'], 403);
     }
 
@@ -65,7 +65,7 @@ Route::get('setup/emergency-clear', function (\Illuminate\Http\Request $request)
     return response()->json([
         'message' => 'Emergency cache clear completed! Refresh your site now.',
         'results' => $results,
-        'next_step' => 'Visit /setup/run?token=eseven-deploy-2026 to run full setup',
+        'next_step' => 'Visit /setup/run?token=rabeq-deploy-2026 to run full setup',
     ]);
 });
 
@@ -119,7 +119,7 @@ Route::get('/{any}', function () {
 
     // Fallback if Vue SPA is not yet deployed
     return response()->json([
-        'message' => 'Eseven Store API is running. Vue SPA not deployed yet.',
+        'message' => 'Rabeq Express Store API is running. Vue SPA not deployed yet.',
         'admin' => url('/admin'),
         'api' => url('/api/v1/init'),
         'setup' => url('/setup/status?token=YOUR_TOKEN'),

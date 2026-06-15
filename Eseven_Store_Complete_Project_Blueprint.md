@@ -1,4 +1,4 @@
-# 🛍️ Eseven Store — Complete Project Blueprint
+# 🛍️ Rabeq Express Store — Complete Project Blueprint
 ### Laravel 13 + Filament V5 + Livewire 4 (Admin) · Vue.js (Frontend)
 > **Strategy:** Build backend + Admin Panel first → then expose API → then plug in Vue.js frontend.
 
@@ -52,7 +52,7 @@ Phase 13 → Testing, Optimization & Deployment
 ## PROMPT 1.1 — Initialize Laravel Project
 
 ```
-Create a new Laravel 13 project named "eseven-store".
+Create a new Laravel 13 project named "rabeq-express-store".
 Install the following packages via Composer:
 - filament/filament (V5)
 - livewire/livewire (V4)
@@ -70,7 +70,7 @@ Install the following packages via Composer:
 - stichoza/google-translate-php (optional auto-translation helper)
 
 Configure .env:
-- Set APP_NAME=EsevenStore
+- Set APP_NAME=RabeqExpressStore
 - Set APP_LOCALE=en, APP_FALLBACK_LOCALE=en
 - Configure MySQL database connection
 - Configure Redis for CACHE_DRIVER and QUEUE_CONNECTION
@@ -87,7 +87,7 @@ Run: php artisan storage:link
 Install Filament V5 admin panel:
 - Run: php artisan filament:install --panels
 - Create a panel named "admin" with path prefix "/admin"
-- The admin panel brand name should be "Eseven Store Admin"
+- The admin panel brand name should be "Rabeq Express Store Admin"
 - Set the admin panel to use dark sidebar navigation style 
   (dark navy/charcoal sidebar, white content area — matching the Porto Shop reference)
 - Configure the panel to support RTL layout toggling based on selected admin language
@@ -402,7 +402,7 @@ Configure Filament V5 to use the Admin model (not User model) for authentication
 
 2. Configure Filament AdminPanelProvider:
    - auth()->guard('admin')
-   - Login page: custom branded login page with Eseven Store logo
+   - Login page: custom branded login page with Rabeq Express Store logo
    - Login fields: email + password
    - "Remember me" checkbox enabled
    - Password reset flow enabled (emails admin reset link)
@@ -413,15 +413,15 @@ Configure Filament V5 to use the Admin model (not User model) for authentication
    - Background: dark navy (#1a2234) matching Porto Shop reference
    - Logo centered at top
    - White card with shadow for the login form
-   - "Eseven Store — Admin Panel" heading
+   - "Rabeq Express Store — Admin Panel" heading
    - Input fields with rounded corners
    - Primary button color: #3b82f6 (blue)
    - "Forgot password?" link below password field
-   - Footer text: "© 2026 Eseven Store. All rights reserved."
+   - Footer text: "© 2026 Rabeq Express Store. All rights reserved."
 
 4. Admin Password Reset:
    - Use Filament's built-in password reset
-   - Email template: branded with Eseven Store logo
+   - Email template: branded with Rabeq Express Store logo
    - Reset link expires in 60 minutes
 
 5. Admin Profile Page:
@@ -475,7 +475,7 @@ Create a DatabaseSeeder that:
 1. Creates all permissions
 2. Creates all roles and assigns correct permissions
 3. Creates first Super Admin account:
-   Name: Super Admin, Email: admin@eseven-store.com, Password: (from .env ADMIN_DEFAULT_PASSWORD)
+   Name: Super Admin, Email: admin@rabeq-express-store.com, Password: (from .env ADMIN_DEFAULT_PASSWORD)
 ```
 
 ---
@@ -688,7 +688,7 @@ Step 1 — Define Attributes:
 - "Add Attribute" button → opens row:
   - Select Attribute (e.g., Size, Color) or create new
   - Values: chip/tag input to add multiple values (e.g., 38, 39, 40, 41 for size)
-  - Example attributes for Eseven Store: Size (EU), Color, Width
+- Example attributes for Rabeq Express Store: Size (EU), Color, Width
 
 Step 2 — Variants Table (auto-generated from attribute combinations):
 Show a table with columns:
@@ -774,11 +774,11 @@ RIGHT SIDEBAR:
   - Placed: date and time
 
 TOP RIGHT ACTIONS:
-  - [🖨 Invoice] button: generates PDF invoice using DomPDF (branded with Eseven logo)
+  - [🖨 Invoice] button: generates PDF invoice using DomPDF (branded with Rabeq Express logo)
   - [← Back] button
 
 Invoice PDF should include:
-  - Eseven Store logo + address
+  - Rabeq Express Store logo + address
   - Order number, date, customer info
   - Itemized products table
   - Totals breakdown
@@ -1620,7 +1620,7 @@ Implement these critical features on the Vue.js frontend:
    - On switch: update settingsStore.currentCurrency, save to localStorage
    - All price displays: run through useCurrency().format(amount) composable
    - Cart totals and checkout use selected currency
-   - Currency selector matches eseven-store.com modal reference (with radio buttons + OK)
+   - Currency selector matches rabeq-express-store.com modal reference (with radio buttons + OK)
 
 3. PRODUCT LISTING & FILTERING:
    - Left sidebar filters: Category tree, Brand checkboxes, Rating stars, Price range slider
@@ -1628,7 +1628,7 @@ Implement these critical features on the Vue.js frontend:
    - Grid view: 3 columns desktop, 2 columns tablet, 1 column mobile
    - Product card: image (with hover second image), name, brand, price + compare-price strikethrough, rating stars, "Add to Cart" button, wishlist heart icon, "Unisex shoes" / "Men's shoes" badge (from category)
    - Flash sale price shown with countdown timer on card
-   - "Load More" pagination button (matching eseven-store.com "تحميل المزيد" button)
+   - "Load More" pagination button (matching rabeq-express-store.com "تحميل المزيد" button)
 
 4. PRODUCT DETAIL PAGE:
    - Image gallery: main image + thumbnail strip (left side), zoom on hover
@@ -1660,7 +1660,7 @@ Implement these critical features on the Vue.js frontend:
    - On place order: create PaymentIntent via API → confirm with Stripe.js → API captures
 
 7. ANNOUNCEMENT BANNER:
-   - Red scrolling ticker (marquee-style) across top — matches eseven-store.com
+   - Red scrolling ticker (marquee-style) across top — matches rabeq-express-store.com
    - Text from Settings → General → Announcement Text EN/AR
    - Closeable (dismiss persists in localStorage for 24h)
 
@@ -1755,18 +1755,18 @@ LARAVEL PRODUCTION SETUP:
    - Every week: Generate sitemap
 
 NGINX CONFIGURATION:
-- Backend (admin + API): api.eseven-store.com
+- Backend (admin + API): api.rabeq-express-store.com
   - Laravel app server
   - /admin/* → Filament admin panel
   - /api/* → API routes
-- Frontend: eseven-store.com
+- Frontend: rabeq-express-store.com
   - Serve Vue.js dist/ folder
   - All routes → index.html (SPA fallback)
   - Cache static assets (JS, CSS, images): 1 year
 
 VUE.JS BUILD:
 - npm run build → generates dist/
-- Environment: VITE_API_BASE_URL=https://api.eseven-store.com/api/v1
+- Environment: VITE_API_BASE_URL=https://api.rabeq-express-store.com/api/v1
                VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
 
 MEDIA STORAGE:
@@ -1802,9 +1802,9 @@ Week 11:    Phase 13 (Testing + Deployment)
 
 ---
 
-# 🔑 ESEVEN STORE SPECIFIC NOTES
+# 🔑 RABEQ EXPRESS STORE SPECIFIC NOTES
 
-These details are specific to replicating eseven-store.com:
+These details are specific to replicating rabeq-express-store.com:
 
 ```
 TARGET MARKET: Saudi Arabia + GCC region
@@ -1812,7 +1812,7 @@ TARGET MARKET: Saudi Arabia + GCC region
 - Additional: AED, BHD, KWD, QAR
 - Default language: English (with Arabic support)
 - Phone: +966566229730 (WhatsApp button)
-- Email: eseven.store@gmail.com
+- Email: rabeq.express@gmail.com
 - Commercial Register: 2031106284
 
 PRODUCT CATEGORIES (from site):
@@ -1841,7 +1841,7 @@ HOMEPAGE SECTIONS (Vue.js):
 7. Customer Reviews carousel (the "أراء العملاء" section)
 8. Footer: Important Links | Contact Us | Download App buttons
 
-PRODUCT BADGE SYSTEM (from eseven site):
+PRODUCT BADGE SYSTEM (from rabeq site):
 - "Unisex shoes" red badge on applicable products
 - "سعر التخفيض" (Sale Price) red badge with strikethrough original price
 - Flash sale indicator with countdown
@@ -1856,5 +1856,5 @@ SETTINGS: General, Languages, Currencies, Payment Gateways, Shipping, Email, SEO
 
 ---
 
-*Blueprint Version 1.0 | Eseven Store Clone | Laravel 13 + Filament V5 + Vue.js 3*
-*Generated based on: eseven-store.com analysis + Porto Shop admin panel reference + provided screenshots*
+*Blueprint Version 1.0 | Rabeq Express Store Clone | Laravel 13 + Filament V5 + Vue.js 3*
+*Generated based on: rabeq-express-store.com analysis + Porto Shop admin panel reference + provided screenshots*

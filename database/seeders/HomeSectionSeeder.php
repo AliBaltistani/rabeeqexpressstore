@@ -5,6 +5,17 @@ namespace Database\Seeders;
 use App\Models\HomeSection;
 use Illuminate\Database\Seeder;
 
+/**
+ * OPTIONAL/MANUAL SEEDER
+ * 
+ * Creates homepage section templates (hero slider, promo banners, featured products, etc.)
+ * 
+ * Usage:
+ * php artisan db:seed --class=Database\\Seeders\\HomeSectionSeeder
+ * 
+ * Or add to DatabaseSeeder::run() if you want it to run with php artisan db:seed
+ */
+
 class HomeSectionSeeder extends Seeder
 {
     public function run(): void
@@ -65,11 +76,11 @@ class HomeSectionSeeder extends Seeder
             ],
         ];
 
-        foreach ($sections as $section) {
-            HomeSection::updateOrCreate(
-                ['type' => $section['type'], 'sort_order' => $section['sort_order']],
-                $section
-            );
-        }
+        // foreach ($sections as $section) {
+        //     HomeSection::updateOrCreate(
+        //         ['type' => $section['type'], 'sort_order' => $section['sort_order']],
+        //         $section
+        //     );
+        // }
     }
 }

@@ -27,7 +27,7 @@ class OrderStatusNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $statusLabel = ucfirst($this->newStatus);
-        $storeName = Setting::get('general.store_name_en', 'Eseven Store') ?? 'Eseven Store';
+        $storeName = Setting::get('general.store_name_en', 'Rabeq Express Store') ?? 'Rabeq Express Store';
         $defaultCurrency = $this->order->currency_code ?? currency_symbol();
 
         // Determine customer name

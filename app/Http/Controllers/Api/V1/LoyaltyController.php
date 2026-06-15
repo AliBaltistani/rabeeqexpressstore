@@ -52,7 +52,7 @@ class LoyaltyController extends Controller
             'earnRate'                 => $earnRate,
             'profileCompletionPoints'  => $profileCompletionPoints,
             'sharePoints'              => (int) Setting::get('loyalty.share_points', 50),
-            'storeUrl'                 => Setting::get('loyalty.store_url') ?: config('app.frontend_url', config('app.url', 'https://eseven-store.com')),
+            'storeUrl'                 => Setting::get('loyalty.store_url') ?: config('app.frontend_url', config('app.url', 'https://rabeq-express-store.com')),
             'profileCompleted'         => (bool) $user->profile_completed,
             'pointsExpiryDays'         => $pointsExpiryDays,
             'recentTransactions'       => $recentTransactions,

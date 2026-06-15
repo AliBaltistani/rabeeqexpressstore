@@ -7,7 +7,7 @@
     <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-amber-600 to-amber-700 items-center justify-center p-12">
         <div class="max-w-md text-center text-white">
             <div class="mb-8">
-                <h1 class="text-5xl font-bold mb-4">Eseven Store</h1>
+                <h1 class="text-5xl font-bold mb-4">Rabeq Express Store</h1>
                 <p class="text-lg text-amber-100">Professional Admin Panel</p>
             </div>
             
@@ -21,7 +21,7 @@
             </div>
             
             <div class="mt-8 text-sm text-amber-100">
-                <p>© 2026 Eseven Store. All rights reserved.</p>
+                <p>© 2026 Rabeq Express Store. All rights reserved.</p>
             </div>
         </div>
     </div>
@@ -31,7 +31,7 @@
         <div class="w-full max-w-md">
             <!-- Mobile Branding -->
             <div class="lg:hidden text-center mb-8">
-                <h1 class="text-4xl font-bold text-gray-900 mb-2">Eseven Store</h1>
+                <h1 class="text-4xl font-bold text-gray-900 mb-2">Rabeq Express Store</h1>
                 <p class="text-gray-600">Admin Login</p>
             </div>
 
@@ -62,7 +62,7 @@
                 <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p class="text-sm text-blue-800 font-semibold mb-2">Demo Credentials:</p>
                     <div class="space-y-1 text-xs text-blue-700">
-                        <p><strong>Email:</strong> admin@eseven-store.com</p>
+                        <p><strong>Email:</strong> admin@rabeq-express-store.com</p>
                         <p><strong>Password:</strong> password</p>
                     </div>
                 </div>

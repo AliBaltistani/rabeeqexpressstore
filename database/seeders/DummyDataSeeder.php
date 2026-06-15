@@ -13,6 +13,24 @@ use App\Models\ProductImage;
 use App\Models\User;
 use Illuminate\Support\Str;
 
+/**
+ * DEVELOPMENT ONLY SEEDER
+ * 
+ * This seeder creates fake/dummy products, categories, brands, and test users.
+ * 
+ * ⚠️ NEVER run this on production!
+ * 
+ * Usage (local development only):
+ * php artisan db:seed --class=Database\\Seeders\\DummyDataSeeder
+ * 
+ * To run with migrations and dummy data:
+ * php artisan migrate:fresh --seed (this will NOT include DummyDataSeeder)
+ * 
+ * To include dummy data in local development:
+ * 1. Run migrations and essential seeders first
+ * 2. Then manually call: php artisan db:seed --class=DummyDataSeeder
+ */
+
 class DummyDataSeeder extends Seeder
 {
     /**

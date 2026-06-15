@@ -44,7 +44,7 @@ Route::get('/{any}', function () {
 
     // Fallback if Vue SPA is not yet deployed
     return response()->json([
-        'message' => 'Eseven Store API is running. Vue SPA not deployed yet.',
+        'message' => 'Rabeq Express Store API is running. Vue SPA not deployed yet.',
         'admin' => url('/admin'),
         'api' => url('/api/v1/init'),
         'setup' => url('/setup/status?token=YOUR_TOKEN'),

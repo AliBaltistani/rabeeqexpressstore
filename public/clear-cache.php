@@ -2,12 +2,12 @@
 /**
  * Emergency Cache Clear — Bypasses Laravel entirely.
  *
- * Usage: https://your-domain.com/clear-cache.php?token=eseven-deploy-2026
+ * Usage: https://your-domain.com/clear-cache.php?token=rabeq-deploy-2026
  * DELETE THIS FILE after your site is fully working!
  */
 
 $token = $_GET['token'] ?? '';
-if ($token !== 'eseven-deploy-2026') {
+if ($token !== 'rabeq-deploy-2026') {
     http_response_code(403);
     header('Content-Type: application/json');
     echo json_encode(['error' => 'Unauthorized']);
@@ -104,7 +104,7 @@ echo json_encode([
     'message' => '🎉 All caches cleared! Your new configuration is now active.',
     'results' => $results,
     'next_steps' => [
-        '1. Visit /setup/cache?token=eseven-deploy-2026 to rebuild caches',
+        '1. Visit /setup/cache?token=rabeq-deploy-2026 to rebuild caches',
         '2. Visit /admin to check if Filament login appears',
         '3. Visit /api/v1/init?lang=en&currency=SAR to verify API',
         '4. DELETE this clear-cache.php file when done!',

@@ -14,10 +14,10 @@ class CmsPagesSeeder extends Seeder
                 'title' => ['en' => 'About Us', 'ar' => 'من نحن'],
                 'slug' => 'about-us',
                 'content' => [
-                    'en' => '<h2>About ESEVEN STORE</h2><p>Welcome to ESEVEN STORE — the largest shoe store in Saudi Arabia. We offer premium men\'s and women\'s footwear and clothing that suits your unique style.</p><p>Our mission is to bring you the latest trends and the best brands at competitive prices, with an exceptional shopping experience.</p>',
+                    'en' => '<h2>About RABEQ EXPRESS STORE</h2><p>Welcome to RABEQ EXPRESS STORE — the largest shoe store in Saudi Arabia. We offer premium men\'s and women\'s footwear and clothing that suits your unique style.</p><p>Our mission is to bring you the latest trends and the best brands at competitive prices, with an exceptional shopping experience.</p>',
                     'ar' => '<h2>عن اي سفن ستور</h2><p>مرحباً بكم في اي سفن ستور — أكبر متجر أحذية في المملكة العربية السعودية. نقدم أحذية وملابس رجالية ونسائية مميزة تناسب ذوقك الفريد.</p><p>مهمتنا هي تقديم أحدث الصيحات وأفضل العلامات التجارية بأسعار تنافسية، مع تجربة تسوق استثنائية.</p>',
                 ],
-                'excerpt' => ['en' => 'Learn more about ESEVEN STORE.', 'ar' => 'تعرف على المزيد عن اي سفن ستور.'],
+                'excerpt' => ['en' => 'Learn more about RABEQ EXPRESS STORE.', 'ar' => 'تعرف على المزيد عن متجر رابق اكسبرس.'],
                 'template' => 'default',
                 'status' => 'active',
                 'sort_order' => 1,
@@ -84,7 +84,7 @@ class CmsPagesSeeder extends Seeder
                 'title' => ['en' => 'Affiliate Marketing Program', 'ar' => 'برنامج التسويق بالعمولة'],
                 'slug' => 'affiliate',
                 'content' => [
-                    'en' => '<h2>Affiliate Marketing Program</h2><p>Join our affiliate program and earn commissions by promoting ESEVEN STORE products. Share your unique link and earn from every successful purchase.</p><h3>How to Join</h3><p>Contact our team to register as an affiliate partner and receive your unique referral link.</p>',
+                    'en' => '<h2>Affiliate Marketing Program</h2><p>Join our affiliate program and earn commissions by promoting RABEQ EXPRESS STORE products. Share your unique link and earn from every successful purchase.</p><h3>How to Join</h3><p>Contact our team to register as an affiliate partner and receive your unique referral link.</p>',
                     'ar' => '<h2>برنامج التسويق بالعمولة</h2><p>انضم إلى برنامج التسويق بالعمولة واكسب عمولات عند الترويج لمنتجات اي سفن ستور. شارك رابطك الفريد واكسب من كل عملية شراء ناجحة.</p><h3>كيفية الانضمام</h3><p>تواصل مع فريقنا للتسجيل كشريك تسويق بالعمولة واحصل على رابط الإحالة الفريد الخاص بك.</p>',
                 ],
                 'excerpt' => ['en' => 'Join our affiliate program.', 'ar' => 'انضم إلى برنامج التسويق بالعمولة.'],

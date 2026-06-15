@@ -1,6 +1,6 @@
 # Frontend Modifications — Implementation Plan
 
-This plan covers 10 major frontend modification requests for the Eseven Store Vue 3 + Pinia storefront. Changes are grouped into two phases: **Phase 1** (frontend-only, no new backend APIs needed) and **Phase 2** (requires new backend endpoints / 3rd-party integrations).
+This plan covers 10 major frontend modification requests for the Rabeq Express Store Vue 3 + Pinia storefront. Changes are grouped into two phases: **Phase 1** (frontend-only, no new backend APIs needed) and **Phase 2** (requires new backend endpoints / 3rd-party integrations).
 
 > [!IMPORTANT]
 > **Items 9 (Passwordless Login Modal) and 10 (Notifications, Wallet, Loyalty Points)** require significant backend work — new Laravel API endpoints, database migrations, Filament admin resources, and third-party integrations (e.g., OTP service, Google OAuth). These are out of scope for this implementation pass and will be documented as stubs/placeholders on the frontend. A separate backend implementation plan should be created for those.

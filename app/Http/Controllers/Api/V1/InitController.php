@@ -49,7 +49,7 @@ class InitController extends Controller
         $defaultLanguage = $languages->firstWhere('isDefault', true);
 
         return $this->success([
-            'storeName' => setting('general.store_name_' . $locale, setting('general.store_name_en', 'Eseven Store')),
+            'storeName' => setting('general.store_name_' . $locale, setting('general.store_name_en', 'Rabeq Express Store')),
             'storeTagline' => setting('general.store_tagline_' . $locale),
             'logo' => $this->resolveImageUrl(setting('general.store_logo')),
             'favicon' => $this->resolveImageUrl(setting('general.store_favicon')),

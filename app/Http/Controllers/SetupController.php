@@ -29,7 +29,7 @@ class SetupController extends Controller
         $token = $request->query('token');
         // Use env() directly since this runs before config caching takes effect,
         // and env() may return null when config IS cached, so use a hardcoded fallback.
-        $expectedToken = env('SETUP_TOKEN') ?? 'eseven-deploy-2026';
+        $expectedToken = env('SETUP_TOKEN') ?? 'rabeq-deploy-2026';
 
         return $token === $expectedToken;
     }

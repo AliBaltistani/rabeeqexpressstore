@@ -176,7 +176,7 @@
         {{-- Header --}}
         <div class="header clearfix">
             <div class="header-left">
-                <div class="brand-name">ESEVEN STORE</div>
+                <div class="brand-name">RABEQ EXPRESS STORE</div>
                 <div class="brand-tagline">Premium E-Commerce</div>
             </div>
             <div class="header-right">
@@ -296,9 +296,9 @@
 
         {{-- Footer --}}
         <div class="footer">
-            <p><strong>Eseven Store</strong></p>
+            <p><strong>Rabeq Express Store</strong></p>
             <p>Thank you for your business!</p>
-            <p style="margin-top: 10px;">© {{ date('Y') }} Eseven Store. All rights reserved.</p>
+            <p style="margin-top: 10px;">© {{ date('Y') }} Rabeq Express Store. All rights reserved.</p>
         </div>
     </div>
 </body>

@@ -103,13 +103,13 @@ class AdminPanelProvider extends PanelProvider
                     $name = Setting::get('general.store_name_ar');
                     if ($name) return $name;
                 }
-                return Setting::get('general.store_name_en', 'Eseven Store') ?? 'Eseven Store';
+                return Setting::get('general.store_name_en', 'Rabeq Express Store') ?? 'Rabeq Express Store';
             }
         } catch (\Throwable) {
             // Silently fail during migrations
         }
 
-        return 'Eseven Store';
+        return 'Rabeq Express Store';
     }
 
     /**

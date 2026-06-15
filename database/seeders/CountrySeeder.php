@@ -7,6 +7,17 @@ use Illuminate\Database\Seeder;
 
 use App\Models\Country;
 
+/**
+ * OPTIONAL SEEDER
+ * 
+ * Creates list of supported countries (UAE, Saudi Arabia, Kuwait, Qatar, Bahrain, Oman).
+ * 
+ * Usage:
+ * php artisan db:seed --class=Database\\Seeders\\CountrySeeder
+ * 
+ * Or add to DatabaseSeeder::run() if you want it to run with php artisan db:seed
+ */
+
 class CountrySeeder extends Seeder
 {
     public function run(): void
