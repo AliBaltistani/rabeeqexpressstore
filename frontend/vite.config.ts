@@ -17,6 +17,10 @@ export default defineConfig({
       '@types': fileURLToPath(new URL('./src/types', import.meta.url)),
     },
   },
+  build: {
+    outDir: '../public',
+    emptyOutDir: false,
+  },
   server: {
     port: 5173,
     proxy: {
