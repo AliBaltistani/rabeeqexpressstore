@@ -254,6 +254,7 @@ class ProductResource extends Resource
                                                 Forms\Components\FileUpload::make('image_path')
                                                     ->label('Image')
                                                     ->image()
+                                                    ->disk('public')
                                                     ->directory('products')
                                                     ->maxSize(2048)
                                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
@@ -399,6 +400,7 @@ class ProductResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('images.image_path')
                     ->label('Image')
+                    ->disk('public')
                     ->circular()
                     ->stacked()
                     ->limit(1)

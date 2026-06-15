@@ -32,10 +32,18 @@ class CartResource extends JsonResource
 
             $lineTotal = $price * $item->quantity;
 
-            // Build grouped attributes
+            // Build grouped attributes — filtered to only selected values
             $attributes = [];
             if ($product && $product->relationLoaded('attributeValues')) {
-                $grouped = $product->attributeValues->groupBy('attribute_id');
+                $selectedIds = $item->selected_attribute_values ?? [];
+                $attrValues = $product->attributeValues;
+
+                // If user selected specific attribute values, filter to only those
+                if (!empty($selectedIds)) {
+                    $attrValues = $attrValues->filter(fn($v) => in_array($v->id, $selectedIds));
+                }
+
+                $grouped = $attrValues->groupBy('attribute_id');
                 foreach ($grouped as $attrId => $values) {
                     $attr = $values->first()->attribute;
                     if (!$attr) continue;
