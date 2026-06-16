@@ -72,7 +72,7 @@ final class SmsaShipmentService
                 'carrCurr'      => '',
                 'codAmt'        => $order->payment_method === 'cod' ? (float) $order->total : 0,
                 'weight'        => 1,
-                'itemDesc'      => 'E-Seven Store Order ' . $order->order_number,
+                'itemDesc'      => 'Raqeeb Express Store  Order ' . $order->order_number,
             ];
 
             $result = $client->addShipment($params);

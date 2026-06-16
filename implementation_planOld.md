@@ -1,6 +1,6 @@
 # Complete Remaining Dynamic Frontend Pages (Steps 2-4)
 
-Complete all remaining placeholder pages to make the E-Seven Store frontend fully dynamic.
+Complete all remaining placeholder pages to make the Raqeeb Express Store  frontend fully dynamic.
 
 ## Current State
 

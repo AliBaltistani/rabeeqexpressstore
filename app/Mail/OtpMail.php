@@ -20,7 +20,7 @@ class OtpMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your Verification Code — ' . config('app.name', 'E-SEVEN STORE'),
+            subject: 'Your Verification Code — ' . config('app.name', 'Raqeeb Express Store '),
         );
     }
 
@@ -33,7 +33,7 @@ class OtpMail extends Mailable
 
     private function buildHtml(): string
     {
-        $appName = config('app.name', 'E-SEVEN STORE');
+        $appName = config('app.name', 'Raqeeb Express Store ');
 
         return <<<HTML
         <!DOCTYPE html>
