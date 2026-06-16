@@ -65,7 +65,7 @@ echo  1. Commit all changes: git add -A ^&^& git commit -m "Production build"
 echo  2. Push to GitHub: git push origin main
 echo  3. Hostinger auto-deploys from GitHub
 echo  4. Create .env on server (copy .env.production content)
-echo  5. Visit: https://rabeq-express-store.buyonlineskd.com/setup/run?token=rabeq-deploy-2026
+echo  5. Visit: https://rabeeqexpressstore.com/setup/run?token=rabeq-deploy-2026
 echo ========================================
 echo.
 
