@@ -19,7 +19,12 @@ class TwilioService
                 throw new \RuntimeException('Twilio credentials are not configured.');
             }
 
-            $this->client = new Client($sid, $token);
+            // By default, Twilio uses its own CurlClient. On local WAMP environments, 
+            // we override it to disable strict SSL verification.
+            $options = app()->environment('local') ? [CURLOPT_SSL_VERIFYPEER => false] : [];
+            $httpClient = new \Twilio\Http\CurlClient($options);
+
+            $this->client = new Client($sid, $token, null, null, $httpClient);
         }
 
         return $this->client;
