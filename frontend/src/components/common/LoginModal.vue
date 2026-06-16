@@ -60,15 +60,12 @@
                 <!-- Phone input -->
                 <template v-else>
                   <label class="login-modal__label">{{ $t('auth.phone') }}</label>
-                  <input
-                    ref="emailInputRef"
-                    type="tel"
+                  <PhoneInput
                     v-model="phone"
-                    class="login-modal__input"
-                    :class="{ 'input-error': emailError }"
-                    placeholder="+966501234567"
-                    autocomplete="tel"
-                    @keydown.enter.prevent="handleSendOtp"
+                    v-model:countryCode="countryCode"
+                    placeholder="501234567"
+                    :error="!!emailError"
+                    @enter="handleSendOtp"
                   />
                 </template>
                 <span v-if="emailError" class="login-modal__error">{{ emailError }}</span>
@@ -178,6 +175,7 @@ import { ref, watch, nextTick, onUnmounted, computed } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useI18n } from 'vue-i18n'
+import PhoneInput from '@/components/common/PhoneInput.vue'
 
 const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits<{
@@ -209,6 +207,7 @@ function switchTab(tab: 'email' | 'phone') {
 const step = ref<'email' | 'otp'>('email')
 const email = ref('')
 const phone = ref('')
+const countryCode = ref('+966')
 const emailError = ref('')
 const sending = ref(false)
 
@@ -290,7 +289,7 @@ async function handleSendOtp() {
   if (activeTab.value === 'phone') {
     if (!phone.value.trim()) { emailError.value = t('checkout.required'); return }
     sending.value = true
-    result = await auth.sendPhoneOtp(phone.value)
+    result = await auth.sendPhoneOtp(countryCode.value + phone.value.replace(/^0+/, ''))
   } else {
     if (!email.value.trim()) { emailError.value = t('checkout.required'); return }
     if (!isEmail(email.value)) { emailError.value = t('checkout.invalidEmail'); return }

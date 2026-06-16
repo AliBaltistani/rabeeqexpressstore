@@ -27,7 +27,12 @@
         <!-- Phone field — shown for phone or both(phone tab) modes -->
         <div v-if="activeTab === 'phone'" class="auth-field">
           <label>{{ $t('auth.phone') }}</label>
-          <input type="tel" v-model="form.phone" required class="auth-input" placeholder="+966501234567" />
+          <PhoneInput
+            v-model="form.phone"
+            v-model:countryCode="countryCode"
+            placeholder="501234567"
+            autocomplete="tel-national"
+          />
         </div>
         <!-- Password only for email+password flow -->
         <div v-if="activeTab === 'email'" class="auth-field">
@@ -96,6 +101,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useI18n } from 'vue-i18n'
+import PhoneInput from '@/components/common/PhoneInput.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -113,6 +119,7 @@ watch(otpMode, (mode) => {
 }, { immediate: true })
 
 const form = ref({ email: '', phone: '', password: '' })
+const countryCode = ref('+966')
 const isLoading = ref(false)
 const errorMsg = ref('')
 const showOtpInput = ref(false)
@@ -173,7 +180,8 @@ async function handleSendOtp() {
   try {
     let result
     if (activeTab.value === 'phone') {
-      result = await authStore.sendPhoneOtp(form.value.phone)
+      const fullPhone = countryCode.value + form.value.phone.replace(/^0+/, '')
+      result = await authStore.sendPhoneOtp(fullPhone)
     } else {
       result = await authStore.sendOtp(form.value.email)
     }

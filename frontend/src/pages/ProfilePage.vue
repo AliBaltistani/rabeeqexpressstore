@@ -22,7 +22,12 @@
             </div>
             <div class="form-group">
               <label>{{ $t('auth.phone') }}</label>
-              <input type="tel" v-model="profileForm.phone" @input="phoneDirty = true" />
+              <PhoneInput
+                v-model="profileForm.phone"
+                v-model:countryCode="profileCountryCode"
+                placeholder="501234567"
+                @input="phoneDirty = true"
+              />
             </div>
             <div class="form-actions">
               <button type="submit" class="btn-primary" :disabled="isUpdatingProfile">
@@ -123,6 +128,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import apiClient from '@/api/client'
+import PhoneInput from '@/components/common/PhoneInput.vue'
 
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
@@ -136,6 +142,7 @@ const profileForm = ref({
   name: auth.user?.name || '',
   phone: auth.user?.phone || ''
 })
+const profileCountryCode = ref('+966')
 const isUpdatingProfile = ref(false)
 const profileSuccess = ref(false)
 const profileError = ref('')
