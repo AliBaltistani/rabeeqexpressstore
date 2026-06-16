@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -104,8 +104,13 @@ const { t } = useI18n()
 
 const otpMode = computed(() => settingsStore.storeSettings.features.otpMode)
 
-// Start on email tab unless mode is phone-only
-const activeTab = ref<'email' | 'phone'>(otpMode.value === 'phone' ? 'phone' : 'email')
+// Reactive sync: otpMode loads async from /init, so activeTab MUST be a watch not a one-time ref
+const activeTab = ref<'email' | 'phone'>('email')
+watch(otpMode, (mode) => {
+  if (mode === 'phone') activeTab.value = 'phone'
+  else if (mode === 'email') activeTab.value = 'email'
+  // 'both' → keep user's selection
+}, { immediate: true })
 
 const form = ref({ email: '', phone: '', password: '' })
 const isLoading = ref(false)
