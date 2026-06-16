@@ -27,7 +27,7 @@
               
               <li class="root-level">
                 <router-link to="/products?offers=true" class="nav-link offers-link" aria-label="Offers">
-                  <span>Offer Test</span>
+                  <span>Offer</span>
                 </router-link>
               </li>
               
