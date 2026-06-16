@@ -52,7 +52,7 @@ Phase 13 → Testing, Optimization & Deployment
 ## PROMPT 1.1 — Initialize Laravel Project
 
 ```
-Create a new Laravel 13 project named "rabeq-express-store".
+Create a new Laravel 13 project named "rabeeq-express-store".
 Install the following packages via Composer:
 - filament/filament (V5)
 - livewire/livewire (V4)
@@ -475,7 +475,7 @@ Create a DatabaseSeeder that:
 1. Creates all permissions
 2. Creates all roles and assigns correct permissions
 3. Creates first Super Admin account:
-   Name: Super Admin, Email: admin@rabeq-express-store.com, Password: (from .env ADMIN_DEFAULT_PASSWORD)
+   Name: Super Admin, Email: admin@rabeeq-express-store.com, Password: (from .env ADMIN_DEFAULT_PASSWORD)
 ```
 
 ---
@@ -1620,7 +1620,7 @@ Implement these critical features on the Vue.js frontend:
    - On switch: update settingsStore.currentCurrency, save to localStorage
    - All price displays: run through useCurrency().format(amount) composable
    - Cart totals and checkout use selected currency
-   - Currency selector matches rabeq-express-store.com modal reference (with radio buttons + OK)
+   - Currency selector matches rabeeq-express-store.com modal reference (with radio buttons + OK)
 
 3. PRODUCT LISTING & FILTERING:
    - Left sidebar filters: Category tree, Brand checkboxes, Rating stars, Price range slider
@@ -1628,7 +1628,7 @@ Implement these critical features on the Vue.js frontend:
    - Grid view: 3 columns desktop, 2 columns tablet, 1 column mobile
    - Product card: image (with hover second image), name, brand, price + compare-price strikethrough, rating stars, "Add to Cart" button, wishlist heart icon, "Unisex shoes" / "Men's shoes" badge (from category)
    - Flash sale price shown with countdown timer on card
-   - "Load More" pagination button (matching rabeq-express-store.com "تحميل المزيد" button)
+   - "Load More" pagination button (matching rabeeq-express-store.com "تحميل المزيد" button)
 
 4. PRODUCT DETAIL PAGE:
    - Image gallery: main image + thumbnail strip (left side), zoom on hover
@@ -1660,7 +1660,7 @@ Implement these critical features on the Vue.js frontend:
    - On place order: create PaymentIntent via API → confirm with Stripe.js → API captures
 
 7. ANNOUNCEMENT BANNER:
-   - Red scrolling ticker (marquee-style) across top — matches rabeq-express-store.com
+   - Red scrolling ticker (marquee-style) across top — matches rabeeq-express-store.com
    - Text from Settings → General → Announcement Text EN/AR
    - Closeable (dismiss persists in localStorage for 24h)
 
@@ -1755,18 +1755,18 @@ LARAVEL PRODUCTION SETUP:
    - Every week: Generate sitemap
 
 NGINX CONFIGURATION:
-- Backend (admin + API): api.rabeq-express-store.com
+- Backend (admin + API): api.rabeeq-express-store.com
   - Laravel app server
   - /admin/* → Filament admin panel
   - /api/* → API routes
-- Frontend: rabeq-express-store.com
+- Frontend: rabeeq-express-store.com
   - Serve Vue.js dist/ folder
   - All routes → index.html (SPA fallback)
   - Cache static assets (JS, CSS, images): 1 year
 
 VUE.JS BUILD:
 - npm run build → generates dist/
-- Environment: VITE_API_BASE_URL=https://api.rabeq-express-store.com/api/v1
+- Environment: VITE_API_BASE_URL=https://api.rabeeq-express-store.com/api/v1
                VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
 
 MEDIA STORAGE:
@@ -1804,7 +1804,7 @@ Week 11:    Phase 13 (Testing + Deployment)
 
 # 🔑 RABEQ EXPRESS STORE SPECIFIC NOTES
 
-These details are specific to replicating rabeq-express-store.com:
+These details are specific to replicating rabeeq-express-store.com:
 
 ```
 TARGET MARKET: Saudi Arabia + GCC region
@@ -1857,4 +1857,4 @@ SETTINGS: General, Languages, Currencies, Payment Gateways, Shipping, Email, SEO
 ---
 
 *Blueprint Version 1.0 | Rabeq Express Store Clone | Laravel 13 + Filament V5 + Vue.js 3*
-*Generated based on: rabeq-express-store.com analysis + Porto Shop admin panel reference + provided screenshots*
+*Generated based on: rabeeq-express-store.com analysis + Porto Shop admin panel reference + provided screenshots*

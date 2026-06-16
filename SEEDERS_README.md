@@ -18,10 +18,10 @@ These seeders create essential configuration data and are safe to run on product
 ### 2. **AdminUserSeeder**
 - **Purpose:** Creates admin user accounts with assigned roles
 - **Emails:** 
-  - `admin@rabeq-express-store.com` (Super Admin)
-  - `manager@rabeq-express-store.com` (Manager)
-  - `editor@rabeq-express-store.com` (Editor)
-  - `support@rabeq-express-store.com` (Support)
+  - `admin@rabeeq-express-store.com` (Super Admin)
+  - `manager@rabeeq-express-store.com` (Manager)
+  - `editor@rabeeq-express-store.com` (Editor)
+  - `support@rabeeq-express-store.com` (Support)
 - **Passwords:** 
   - Read from `.env` environment variables
   - `ADMIN_DEFAULT_PASSWORD` for super admin
@@ -172,7 +172,7 @@ php artisan db:seed --class=Database\\Seeders\\LoyaltyRewardSeeder
 
 ### Step 3: Verify Admin Access
 1. Visit `/admin/login`
-2. Login with: `admin@rabeq-express-store.com` and your `ADMIN_DEFAULT_PASSWORD`
+2. Login with: `admin@rabeeq-express-store.com` and your `ADMIN_DEFAULT_PASSWORD`
 3. Change the password immediately after first login
 
 ---
@@ -221,4 +221,4 @@ php artisan db:seed --class=Database\\Seeders\\CountrySeeder
 - AdminUserSeeder reads passwords from environment variables for security
 - DummyDataSeeder is **completely disabled** in the main DatabaseSeeder to prevent accidental production data pollution
 - For real server: Only run `php artisan db:seed` - it will only seed production-safe data
-- All email addresses have been updated to `rabeq-express-store.com` domain
+- All email addresses have been updated to `rabeeq-express-store.com` domain

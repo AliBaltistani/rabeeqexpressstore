@@ -6,9 +6,9 @@ Complete all remaining placeholder pages to make the Raqeeb Express Store  front
 
 Step 1 (Account pages) is ✅ complete: `WishlistPage`, `AddressesPage`, `ProfilePage`, `OrdersListPage`, `OrderDetailPage`.
 
-A `SearchModal` component was created and wired into [DefaultLayout.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/layouts/DefaultLayout.vue). The [SearchResultsPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/SearchResultsPage.vue) was corrupted by a bad file copy and needs a full rewrite.
+A `SearchModal` component was created and wired into [DefaultLayout.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/layouts/DefaultLayout.vue). The [SearchResultsPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/SearchResultsPage.vue) was corrupted by a bad file copy and needs a full rewrite.
 
-All backend API endpoints already exist. All [services.ts](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts) functions are ready.
+All backend API endpoints already exist. All [services.ts](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts) functions are ready.
 
 ## Proposed Changes
 
@@ -16,20 +16,20 @@ All backend API endpoints already exist. All [services.ts](file:///c:/wamp64/www
 
 ---
 
-#### [NEW] [SearchResultsPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/SearchResultsPage.vue)
+#### [NEW] [SearchResultsPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/SearchResultsPage.vue)
 - **Overwrite** the corrupted file with a clean search results page
 - Reads `?q=` from the route query params
-- Calls [fetchProducts({ search: q })](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#68-71) to get results
-- Reuses the same product grid markup and [mapProduct](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/CategoryPage.vue#332-345) helper from `CategoryPage`
+- Calls [fetchProducts({ search: q })](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#68-71) to get results
+- Reuses the same product grid markup and [mapProduct](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/CategoryPage.vue#332-345) helper from `CategoryPage`
 - Includes sort dropdown and pagination
 - Shows "No results found" empty state
 
 #### Brand Page — Already handled
-- The router already maps `/brand/:slug` to [CategoryPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/CategoryPage.vue) — this works because `CategoryPage` detects the route name and passes the `brand` param. **No changes needed.**
+- The router already maps `/brand/:slug` to [CategoryPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/CategoryPage.vue) — this works because `CategoryPage` detects the route name and passes the `brand` param. **No changes needed.**
 
-#### [MODIFY] [FlashSalePage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/FlashSalePage.vue)
+#### [MODIFY] [FlashSalePage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/FlashSalePage.vue)
 - Replace stub with a dynamic page
-- Calls [fetchActiveFlashSale()](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#104-114) → product grid + countdown timer
+- Calls [fetchActiveFlashSale()](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#104-114) → product grid + countdown timer
 - Shows product cards with sale prices and discount badges
 
 ---
@@ -38,22 +38,22 @@ All backend API endpoints already exist. All [services.ts](file:///c:/wamp64/www
 
 ---
 
-#### [MODIFY] [CmsPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/CmsPage.vue)
-- Replace stub with dynamic page using [fetchCmsPage(slug)](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#263-269)
+#### [MODIFY] [CmsPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/CmsPage.vue)
+- Replace stub with dynamic page using [fetchCmsPage(slug)](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#263-269)
 - Renders `page.title` and `page.content` (HTML body)
 - Catches all unmatched slugs via the existing `/:slug` route
 
 #### Blog Pages (new files + route registration)
 
-#### [NEW] [BlogListPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/BlogListPage.vue)
-- Paginated list of blog posts via [fetchBlogPosts(page)](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#248-254)
+#### [NEW] [BlogListPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/BlogListPage.vue)
+- Paginated list of blog posts via [fetchBlogPosts(page)](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#248-254)
 - Card layout with image, title, excerpt, date
 
-#### [NEW] [BlogPostPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/BlogPostPage.vue)
-- Single blog post via [fetchBlogPost(slug)](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#255-258)
+#### [NEW] [BlogPostPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/BlogPostPage.vue)
+- Single blog post via [fetchBlogPost(slug)](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#255-258)
 - Full content rendering with title, image, date, body
 
-#### [MODIFY] [router/index.ts](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/router/index.ts)
+#### [MODIFY] [router/index.ts](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/router/index.ts)
 - Add `/blog` route → `BlogListPage`
 - Add `/blog/:slug` route → `BlogPostPage`
 - These must be placed **above** the `/:slug` catch-all CMS route
@@ -64,15 +64,15 @@ All backend API endpoints already exist. All [services.ts](file:///c:/wamp64/www
 
 ---
 
-#### [MODIFY] [ResetPasswordPage — NEW](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/ResetPasswordPage.vue)
+#### [MODIFY] [ResetPasswordPage — NEW](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/ResetPasswordPage.vue)
 - Create page to handle password reset tokens from email links
 - Reads `token` and `email` from URL query
-- Calls [resetPasswordApi()](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#165-168)
+- Calls [resetPasswordApi()](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#165-168)
 
-#### [MODIFY] [router/index.ts](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/router/index.ts)
+#### [MODIFY] [router/index.ts](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/router/index.ts)
 - Add `/reset-password` route → `ResetPasswordPage`
 
-#### [MODIFY] [en.json](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/i18n/en.json) / [ar.json](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/i18n/ar.json)
+#### [MODIFY] [en.json](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/i18n/en.json) / [ar.json](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/i18n/ar.json)
 - Add translation keys for search, blog, CMS, flash-sale, and reset-password sections
 
 #### [MODIFY] [task.md](file:///C:/Users/PMLS/.gemini/antigravity/brain/24e93f83-10b3-4a72-98c7-8a353853b88a/task.md)

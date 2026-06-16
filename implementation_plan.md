@@ -14,12 +14,12 @@ This plan covers 10 major frontend modification requests for the Rabeq Express S
 
 ### 1. Search Bar — Live Results with Loader & No-Results
 
-#### [MODIFY] [SearchModal.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/components/common/SearchModal.vue)
+#### [MODIFY] [SearchModal.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/components/common/SearchModal.vue)
 
 **Current:** Search input only — submits to search results page on Enter. No live dropdown.
 
 **Changes:**
-- Add debounced `watch` on `searchQuery` (300ms delay) that calls [searchProducts(q)](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#89-92) from API services
+- Add debounced `watch` on `searchQuery` (300ms delay) that calls [searchProducts(q)](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#89-92) from API services
 - Show a **results dropdown** below the search input with product image, name, and price (matching the provided screenshot)
 - Show a **loader spinner** while the API call is in progress
 - Show **"No results found"** state when results come back empty
@@ -31,20 +31,20 @@ This plan covers 10 major frontend modification requests for the Rabeq Express S
 
 ### 2. Mobile Nav Categories Fix [Completed]
 
-#### [MODIFY] [MobileMenu.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/components/common/MobileMenu.vue)
+#### [MODIFY] [MobileMenu.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/components/common/MobileMenu.vue)
 
 **Current:** `MobileMenu` receives `menuCategories` as a prop. The issue is likely that the parent component isn't passing the categories. [DONE]
 **Changes:**
 - Investigate parent (`MainNavigation.vue` or `BottomNavigation.vue`) to see how `MobileMenu` is invoked
-- If categories aren't passed, import [useMenuCategories](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/composables/useMenuCategories.ts#13-40) composable directly inside `MobileMenu` as a fallback
-- Add a fallback: if `props.menuCategories` is empty, use [useMenuCategories().menuItems](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/composables/useMenuCategories.ts#13-40) directly
+- If categories aren't passed, import [useMenuCategories](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/composables/useMenuCategories.ts#13-40) composable directly inside `MobileMenu` as a fallback
+- Add a fallback: if `props.menuCategories` is empty, use [useMenuCategories().menuItems](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/composables/useMenuCategories.ts#13-40) directly
 - Verify the categories render correctly with drill-down navigation
 
 ---
 
 ### 3. Product Card — Spinners & Add-to-Cart Confirmation [Pending]
 
-#### [MODIFY] [ProductCard.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/components/home/ProductCard.vue)
+#### [MODIFY] [ProductCard.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/components/home/ProductCard.vue)
 
 **Changes:**
 - Add loading states: `addingToCart`, `togglingWishlist`, `openingQuickView` refs
@@ -61,7 +61,7 @@ This plan covers 10 major frontend modification requests for the Rabeq Express S
 
 ### 4. Scroll to Top — Left-Aligned Circular Progress Bar
 
-#### [MODIFY] [ScrollToTop.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/components/common/ScrollToTop.vue)
+#### [MODIFY] [ScrollToTop.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/components/common/ScrollToTop.vue)
 
 **Changes:**
 - Move button to **left side** of the browser (currently right on desktop, already left on mobile)
@@ -74,15 +74,15 @@ This plan covers 10 major frontend modification requests for the Rabeq Express S
 
 ### 5. Product Variants in QuickView & ProductDetail
 
-#### [MODIFY] [QuickViewModal.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/components/product/QuickViewModal.vue)
+#### [MODIFY] [QuickViewModal.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/components/product/QuickViewModal.vue)
 
 **Changes:**
 - Read `product.variants` (already available from API — the `ProductDetail` response includes `variants[]`)
 - For each variant group (extracted from variant attributes), render a **dropdown selector** (label + `<select>`)
-- When a variant is selected, update `selectedVariantId` to pass to [addToCart](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/ProductDetailPage.vue#263-266)
+- When a variant is selected, update `selectedVariantId` to pass to [addToCart](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/ProductDetailPage.vue#263-266)
 - Show variant name/attribute labels dynamically
 
-#### [MODIFY] [ProductDetailPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/ProductDetailPage.vue)
+#### [MODIFY] [ProductDetailPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/ProductDetailPage.vue)
 
 **Changes:**
 - Currently maps variants to just `sizes` array with `v.name || v.sku`. This loses attribute info.
@@ -95,7 +95,7 @@ This plan covers 10 major frontend modification requests for the Rabeq Express S
 
 ### 6. Product Detail Tabs & Comment System
 
-#### [MODIFY] [ProductDetailPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/ProductDetailPage.vue)
+#### [MODIFY] [ProductDetailPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/ProductDetailPage.vue)
 
 **Layout fix:**
 - Change `.pdp-tabs` to vertical layout with right-border active indicator (matching screenshot style)
@@ -105,7 +105,7 @@ This plan covers 10 major frontend modification requests for the Rabeq Express S
 - Add a review submission form inside the `rating` tab content:
   - Star rating selector (clickable 1-5 stars)
   - Comment textarea
-  - Submit button (calls existing [submitReview](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#100-103) API)
+  - Submit button (calls existing [submitReview](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#100-103) API)
   - Show success/error feedback
   
 **Rating breakdown:**
@@ -120,20 +120,20 @@ This plan covers 10 major frontend modification requests for the Rabeq Express S
 
 ### 7. Cart Page — Product Attribute Display
 
-#### [MODIFY] [CartPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/CartPage.vue)
+#### [MODIFY] [CartPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/CartPage.vue)
 
 **Changes:**
-- Check if cart item has variant info (the [CartItem](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#122-125) type likely includes `variantName` — already rendered)
+- Check if cart item has variant info (the [CartItem](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#122-125) type likely includes `variantName` — already rendered)
 - If product has variant attributes (size, color), show them as read-only labels under the product name
-- The API [CartItem](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/api/services.ts#122-125) already returns `variantName` — display this prominently if present
+- The API [CartItem](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/api/services.ts#122-125) already returns `variantName` — display this prominently if present
 
 ---
 
 ### 8. Checkout Page Improvements
 
-#### [MODIFY] [CheckoutPage.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/pages/CheckoutPage.vue)
+#### [MODIFY] [CheckoutPage.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/pages/CheckoutPage.vue)
 
-#### [MODIFY] [router/index.ts](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/router/index.ts)
+#### [MODIFY] [router/index.ts](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/router/index.ts)
 
 **8a. Hide Header/Footer:**
 - Move checkout route out of `DefaultLayout` children and give it its own route entry with no layout wrapper (or a minimal `CheckoutLayout.vue`)
@@ -170,7 +170,7 @@ This plan covers 10 major frontend modification requests for the Rabeq Express S
 > [!NOTE]
 > This requires backend: OTP generation/verification endpoints, social OAuth providers. Frontend modal will be built with UI stubs.
 
-#### [NEW] [LoginModal.vue](file:///c:/wamp64/www/laravel_pro/eseven-store/frontend/src/components/common/LoginModal.vue)
+#### [NEW] [LoginModal.vue](file:///c:/wamp64/www/laravel_pro/raqeeb-store/frontend/src/components/common/LoginModal.vue)
 
 - Step 1: Email input → "Enter" button → social login (Google, Facebook, Apple)
 - Step 2: 4-digit OTP → "Verify" → countdown timer

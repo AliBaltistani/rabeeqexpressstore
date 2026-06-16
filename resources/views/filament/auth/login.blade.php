@@ -62,7 +62,7 @@
                 <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p class="text-sm text-blue-800 font-semibold mb-2">Demo Credentials:</p>
                     <div class="space-y-1 text-xs text-blue-700">
-                        <p><strong>Email:</strong> admin@rabeq-express-store.com</p>
+                        <p><strong>Email:</strong> admin@rabeeq-express-store.com</p>
                         <p><strong>Password:</strong> password</p>
                     </div>
                 </div>

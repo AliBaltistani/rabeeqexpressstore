@@ -103,8 +103,8 @@ Two test admin accounts created:
 
 | Email | Password | Language | RTL |
 |-------|----------|----------|-----|
-| `admin@eseven.test` | `password` | English (en) | No |
-| `admin-ar@eseven.test` | `password` | Arabic (ar) | Yes |
+| `admin@raqeeb.test` | `password` | English (en) | No |
+| `admin-ar@raqeeb.test` | `password` | Arabic (ar) | Yes |
 
 **Seeders**: 
 - [database/seeders/AdminUserSeeder.php](database/seeders/AdminUserSeeder.php)
@@ -120,13 +120,13 @@ Filament's default avatar provider is enabled for user profile pictures. Users c
 ### Admin Login
 - **URL**: `http://localhost/admin/login`
 - **Test Account 1**:
-  - Email: `admin@eseven.test`
+  - Email: `admin@raqeeb.test`
   - Password: `password`
   - Language: English
   - Theme: Light sidebar (LTR)
   
 - **Test Account 2**:
-  - Email: `admin-ar@eseven.test`
+  - Email: `admin-ar@raqeeb.test`
   - Password: `password`
   - Language: Arabic
   - Theme: RTL-enabled dark sidebar
@@ -213,12 +213,12 @@ DB_PASSWORD=
 ## Testing the Admin Panel
 
 ### Test RTL Functionality:
-1. Login with `admin-ar@eseven.test` / `password`
+1. Login with `admin-ar@raqeeb.test` / `password`
 2. Observe the sidebar is right-aligned (RTL layout)
 3. All text and UI elements should be right-to-left
 
 ### Test LTR Functionality:
-1. Login with `admin@eseven.test` / `password`
+1. Login with `admin@raqeeb.test` / `password`
 2. Observe the sidebar is left-aligned (LTR layout)
 3. All text and UI elements should be left-to-right
 

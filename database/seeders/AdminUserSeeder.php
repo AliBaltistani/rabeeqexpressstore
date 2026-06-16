@@ -26,7 +26,7 @@ class AdminUserSeeder extends Seeder
 
         // Create Super Admin user if not already exists
         $superAdmin = Admin::firstOrCreate(
-            ['email' => 'admin@rabeq-express-store.com'],
+            ['email' => 'admin@rabeeq-express-store.com'],
             [
                 'name' => 'Super Admin',
                 'password' => bcrypt($defaultPassword),
@@ -40,7 +40,7 @@ class AdminUserSeeder extends Seeder
 
         // Create Manager user if not already exists
         $manager = Admin::firstOrCreate(
-            ['email' => 'manager@rabeq-express-store.com'],
+            ['email' => 'manager@rabeeq-express-store.com'],
             [
                 'name' => 'Store Manager',
                 'password' => bcrypt($managerPassword),
@@ -54,7 +54,7 @@ class AdminUserSeeder extends Seeder
 
         // Create Editor user if not already exists
         $editor = Admin::firstOrCreate(
-            ['email' => 'editor@rabeq-express-store.com'],
+            ['email' => 'editor@rabeeq-express-store.com'],
             [
                 'name' => 'Content Editor',
                 'password' => bcrypt($editorPassword),
@@ -68,7 +68,7 @@ class AdminUserSeeder extends Seeder
 
         // Create Support user if not already exists
         $support = Admin::firstOrCreate(
-            ['email' => 'support@rabeq-express-store.com'],
+            ['email' => 'support@rabeeq-express-store.com'],
             [
                 'name' => 'Support Agent',
                 'password' => bcrypt($supportPassword),

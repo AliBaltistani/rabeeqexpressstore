@@ -107,13 +107,13 @@
 **Test Accounts**:
 
 1. **English (LTR) Admin**
-   - Email: `admin@eseven.test`
+   - Email: `admin@raqeeb.test`
    - Password: `password`
    - Language: English (en)
    - RTL: Disabled
 
 2. **Arabic (RTL) Admin**
-   - Email: `admin-ar@eseven.test`
+   - Email: `admin-ar@raqeeb.test`
    - Password: `password`
    - Language: Arabic (ar)
    - RTL: Enabled
@@ -128,7 +128,7 @@
 ✅ **Published and configured**
 
 **Configuration**:
-- Brand name: "Eseven Store Admin"
+- Brand name: "Raqeeb Express Store Admin"
 - Sidebar collapsible on desktop
 - Sticky topbar enabled
 - Database notifications enabled
@@ -166,12 +166,12 @@ Server runs on: `http://127.0.0.1:8000`
 - **Dashboard**: `http://127.0.0.1:8000/admin`
 
 ### Test RTL Functionality
-1. Login with `admin-ar@eseven.test` / `password`
+1. Login with `admin-ar@raqeeb.test` / `password`
 2. Sidebar will be right-aligned (RTL layout)
 3. Language automatically switches to Arabic
 
 ### Test LTR Functionality
-1. Login with `admin@eseven.test` / `password`
+1. Login with `admin@raqeeb.test` / `password`
 2. Sidebar will be left-aligned (LTR layout)
 3. Language remains in English
 

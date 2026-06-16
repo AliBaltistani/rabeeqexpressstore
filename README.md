@@ -28,7 +28,7 @@ Rabeq Express Store is a modern, high-performance, and multi-lingual e-commerce 
 This is a **monorepo-style** structure where Laravel servers the API/Admin and Vue manages the public storefront.
 
 ```text
-eseven-store/ → rabeq-express-store/
+raqeeb-store/ → rabeeq-express-store/
 ├── app/                  # Backend Logic (Models, API Controllers, Filament Resources)
 ├── bootstrap/            # Laravel Bootstrapping
 ├── config/               # Global Laravel Configuration
