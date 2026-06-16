@@ -387,6 +387,7 @@
     "continue": "متابعة",
     "otpTitle": "أدخل رمز التحقق",
     "otpSubtitle": "أرسلنا رمزًا مكونًا من 4 أرقام إلى {email}",
+    "otpSubtitlePhone": "أرسلنا رمزًا مكونًا من 4 أرقام إلى {phone}",
     "verify": "تحقق",
     "resendCode": "إعادة إرسال الرمز",
     "resendIn": "إعادة الإرسال خلال {seconds} ثانية",

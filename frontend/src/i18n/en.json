@@ -387,6 +387,7 @@
     "continue": "Continue",
     "otpTitle": "Enter Verification Code",
     "otpSubtitle": "We sent a 4-digit code to {email}",
+    "otpSubtitlePhone": "We sent a 4-digit code to {phone}",
     "verify": "Verify",
     "resendCode": "Resend Code",
     "resendIn": "Resend in {seconds}s",
