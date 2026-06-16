@@ -150,7 +150,13 @@
               <!-- Phone input -->
               <div v-else class="checkout-field">
                 <label class="checkout-label">{{ $t('auth.phone') }}</label>
-                <input type="tel" v-model="otpPhone" class="checkout-input" :class="{ 'input-error': errors.otpPhone }" placeholder="+966501234567" @keydown.enter.prevent="handleEmailEnter" />
+                <PhoneInput
+                  v-model="otpPhone"
+                  v-model:countryCode="otpPhoneCode"
+                  :error="!!errors.otpPhone"
+                  placeholder="501234567"
+                  @enter="handleEmailEnter"
+                />
                 <span v-if="errors.otpPhone" class="field-error">{{ errors.otpPhone }}</span>
               </div>
               <p v-if="authError" class="auth-error-msg">{{ authError }}</p>
@@ -194,12 +200,11 @@
               </div>
               <div class="checkout-field">
                 <label class="checkout-label">{{ $t('checkout.mobileNumber') || 'Mobile Number' }}</label>
-                <div class="phone-input-row">
-                  <select v-model="registerCountryCode" class="country-code-dropdown">
-                    <option v-for="c in countries" :key="c.iso2" :value="c.phone_code">{{ c.phone_code }}</option>
-                  </select>
-                  <input type="tel" v-model="registerForm.phone" class="checkout-input phone-input" :placeholder="'0301 2345678'" />
-                </div>
+                <PhoneInput
+                  v-model="registerForm.phone"
+                  v-model:countryCode="registerCountryCode"
+                  placeholder="501234567"
+                />
               </div>
               <label class="checkout-checkbox">
                 <input type="checkbox" v-model="joinMailingList" />
@@ -233,12 +238,12 @@
               </div>
               <div class="checkout-field">
                 <label class="checkout-label">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
-                <div class="phone-input-row">
-                  <select v-model="guestCountryCode" class="country-code-dropdown">
-                    <option v-for="c in countries" :key="c.iso2" :value="c.phone_code">{{ c.phone_code }}</option>
-                  </select>
-                  <input type="tel" v-model="guestForm.phone" class="checkout-input phone-input" :class="{ 'input-error': errors.gPhone }" :placeholder="'0301 2345678'" />
-                </div>
+                <PhoneInput
+                  v-model="guestForm.phone"
+                  v-model:countryCode="guestCountryCode"
+                  :error="!!errors.gPhone"
+                  placeholder="501234567"
+                />
                 <span v-if="errors.gPhone" class="field-error">{{ errors.gPhone }}</span>
               </div>
             </div>
@@ -293,14 +298,12 @@
               <div class="checkout-form-grid">
                 <div class="checkout-field">
                   <label class="checkout-label checkout-label--colored">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
-                  <div class="phone-input-row">
-                    <div class="country-code-select">
-                      <span class="country-code-arrow">›</span>
-                      <img v-if="selectedRecipientCountry?.flag_url" :src="selectedRecipientCountry.flag_url" class="country-flag-img" />
-                      <span class="country-code-val">{{ recipientCountryCode }}</span>
-                    </div>
-                    <input type="tel" v-model="recipientForm.phone" class="checkout-input phone-input" :placeholder="'0301 2345678'" />
-                  </div>
+                  <PhoneInput
+                    v-model="recipientForm.phone"
+                    v-model:countryCode="recipientCountryCode"
+                    :error="!!errors.recipientPhone"
+                    placeholder="501234567"
+                  />
                   <span v-if="errors.recipientPhone" class="field-error">{{ errors.recipientPhone }}</span>
                 </div>
                 <div class="checkout-field">
@@ -380,12 +383,12 @@
                 <div class="checkout-form-grid">
                   <div class="checkout-field">
                     <label class="checkout-label checkout-label--colored">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
-                    <div class="phone-input-row">
-                      <select v-model="recipientCountryCode" class="country-code-dropdown">
-                        <option v-for="c in countries" :key="c.iso2" :value="c.phone_code">{{ c.phone_code }}</option>
-                      </select>
-                      <input type="tel" v-model="recipientForm.phone" class="checkout-input phone-input" />
-                    </div>
+                    <PhoneInput
+                      v-model="recipientForm.phone"
+                      v-model:countryCode="recipientCountryCode"
+                      :error="!!errors.recipientPhone"
+                      placeholder="501234567"
+                    />
                   </div>
                   <div class="checkout-field">
                     <label class="checkout-label checkout-label--colored">{{ $t('checkout.recipientEmail') }} ({{ $t('common.optional') }})</label>
@@ -455,12 +458,12 @@
         <div v-if="currentStep === 4" class="section-content">
           <div class="checkout-field">
             <label class="checkout-label checkout-label--colored">{{ $t('checkout.mobileNumber') || 'Mobile Number' }} <span class="req">*</span></label>
-            <div class="phone-input-row">
-              <select v-model="addrCountryCode" class="country-code-dropdown">
-                <option v-for="c in countries" :key="c.iso2" :value="c.phone_code">{{ c.phone_code }}</option>
-              </select>
-              <input type="tel" v-model="additionalPhone" class="checkout-input phone-input" :class="{ 'input-error': errors.additionalPhone }" :placeholder="'0301 2345678'" />
-            </div>
+            <PhoneInput
+              v-model="additionalPhone"
+              v-model:countryCode="addrCountryCode"
+              :error="!!errors.additionalPhone"
+              placeholder="501234567"
+            />
             <span v-if="errors.additionalPhone" class="field-error">{{ errors.additionalPhone }}</span>
           </div>
           <button class="checkout-btn checkout-btn--dark" @click="submitAdditionalInfo">{{ $t('checkout.confirmInfo') }}</button>
@@ -536,6 +539,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, confirmStripePayment, fetchActiveCountries, updateProfile, fetchMyCoupons } from '@/api/services'
 import { useI18n } from 'vue-i18n'
+import PhoneInput from '@/components/common/PhoneInput.vue'
 
 const router = useRouter()
 const cart = useCartStore()
@@ -562,6 +566,7 @@ const addressMode = ref<'map' | 'manual'>('map')
 // ── Auth Forms ──
 const otpEmail = ref('')
 const otpPhone = ref('')
+const otpPhoneCode = ref('+966')
 const otpChannel = ref<'email' | 'phone'>('email') // active OTP channel
 const otpMode = computed(() => settings.storeSettings.features.otpMode)
 const otpStep = ref<'email' | 'code' | 'register'>('email')
@@ -618,10 +623,10 @@ let googleMap: any = null
 let googleMarker: any = null
 let autocomplete: any = null
 
-// ── Country helpers ──
-const selectedGuestCountry = computed(() => countries.value.find(c => c.phone_code === guestCountryCode.value))
-const selectedAddrCountry = computed(() => countries.value.find(c => c.phone_code === addrCountryCode.value))
-const selectedRecipientCountry = computed(() => countries.value.find(c => c.phone_code === recipientCountryCode.value))
+// ── Country helpers (kept for backward compat with phone composition) ──
+const selectedGuestCountry = computed(() => countries.value.find((c: any) => c.phone_code === guestCountryCode.value))
+const selectedAddrCountry = computed(() => countries.value.find((c: any) => c.phone_code === addrCountryCode.value))
+const selectedRecipientCountry = computed(() => countries.value.find((c: any) => c.phone_code === recipientCountryCode.value))
 
 // ── Computed ──
 const cashbackMessage = computed(() => { return '' })
@@ -659,7 +664,8 @@ async function handleEmailEnter() {
     // Phone OTP flow
     if (!otpPhone.value.trim()) { errors.otpPhone = t('checkout.required'); return }
     authLoading.value = true
-    result = await auth.sendPhoneOtp(otpPhone.value)
+    const fullPhone = otpPhoneCode.value + otpPhone.value.replace(/^0+/, '')
+    result = await auth.sendPhoneOtp(fullPhone)
   } else {
     // Email OTP flow
     if (!otpEmail.value.trim()) { errors.otpEmail = t('checkout.required'); return }
@@ -686,7 +692,7 @@ async function handleSendOtp() {
   authLoading.value = true
   let result: any
   if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
-    result = await auth.sendPhoneOtp(otpPhone.value)
+    result = await auth.sendPhoneOtp(otpPhoneCode.value + otpPhone.value.replace(/^0+/, ''))
   } else {
     result = await auth.sendOtp(otpEmail.value)
   }
@@ -705,7 +711,7 @@ async function handleVerifyOtp() {
   authLoading.value = true
   let result: any
   if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
-    result = await auth.verifyPhoneOtp(otpPhone.value, code)
+    result = await auth.verifyPhoneOtp(otpPhoneCode.value + otpPhone.value.replace(/^0+/, ''), code)
   } else {
     result = await auth.verifyOtp(otpEmail.value, code)
   }
