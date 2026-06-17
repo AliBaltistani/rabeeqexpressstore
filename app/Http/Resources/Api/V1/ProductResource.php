@@ -141,30 +141,7 @@ class ProductResource extends JsonResource
         return $placeholder;
     }
 
-    /**
-     * Get the active flash sale price for this product.
-     */
-    protected function getActiveFlashSalePrice(): ?float
-    {
-        if (!$this->relationLoaded('flashSales')) {
-            return null;
-        }
 
-        $now = now();
-        foreach ($this->flashSales as $flashSale) {
-            if ($flashSale->is_active && $flashSale->starts_at <= $now && $flashSale->ends_at >= $now) {
-                $pivot = $flashSale->pivot ?? null;
-                // Check if there's a flash_sale_products entry
-                $fsp = \App\Models\FlashSaleProduct::where('flash_sale_id', $flashSale->id)
-                    ->where('product_id', $this->id)
-                    ->first();
-                if ($fsp) {
-                    return (float) $fsp->sale_price;
-                }
-            }
-        }
-        return null;
-    }
 
     /**
      * Get the primary image URL.

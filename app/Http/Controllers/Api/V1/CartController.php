@@ -163,7 +163,7 @@ class CartController extends Controller
         }
 
         $items = $this->getCartItems($request);
-        $subtotal = $items->sum(fn($item) => ($item->variant?->price ?? $item->product?->price ?? 0) * $item->quantity);
+        $subtotal = $items->sum(fn($item) => ($item->product?->getActiveFlashSalePrice($item->variant_id) ?? $item->variant?->price ?? $item->product?->price ?? 0) * $item->quantity);
 
         if ($coupon->min_order_amount && $subtotal < $coupon->min_order_amount) {
             return $this->error("Minimum order amount is " . currency_symbol() . " " . number_format($coupon->min_order_amount, 2), 422);
@@ -234,7 +234,7 @@ class CartController extends Controller
 
     protected function buildCartData($items, Request $request): object
     {
-        $subtotal = $items->sum(fn($item) => ($item->variant?->price ?? $item->product?->price ?? 0) * $item->quantity);
+        $subtotal = $items->sum(fn($item) => ($item->product?->getActiveFlashSalePrice($item->variant_id) ?? $item->variant?->price ?? $item->product?->price ?? 0) * $item->quantity);
 
         return (object) [
             'items' => $items,

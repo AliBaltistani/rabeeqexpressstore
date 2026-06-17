@@ -120,4 +120,34 @@ class Product extends Model
     {
         return $this->hasMany(Wishlist::class);
     }
+
+    /**
+     * Get the active flash sale price for this product, optionally scoped to a variant.
+     */
+    public function getActiveFlashSalePrice(?int $variantId = null): ?float
+    {
+        if (!$this->relationLoaded('flashSales')) {
+            $this->load('flashSales');
+        }
+
+        $now = now();
+        foreach ($this->flashSales as $flashSale) {
+            if ($flashSale->is_active && $flashSale->starts_at <= $now && $flashSale->ends_at >= $now) {
+                $query = \App\Models\FlashSaleProduct::where('flash_sale_id', $flashSale->id)
+                    ->where('product_id', $this->id);
+                
+                if ($variantId) {
+                    $query->where('variant_id', $variantId);
+                }
+
+                $fsp = $query->first();
+
+                if ($fsp) {
+                    return (float) $fsp->sale_price;
+                }
+            }
+        }
+        return null;
+    }
 }
+

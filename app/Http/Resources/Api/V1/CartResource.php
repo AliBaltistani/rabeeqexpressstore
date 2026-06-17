@@ -24,7 +24,7 @@ class CartResource extends JsonResource
 
         $mappedItems = $items->map(function ($item) use ($locale, $code, $defaultCode, $symbol) {
             $product = $item->product;
-            $price = (float) ($item->variant?->price ?? $product?->price ?? 0);
+            $price = (float) ($item->product?->getActiveFlashSalePrice($item->variant_id) ?? $item->variant?->price ?? $product?->price ?? 0);
 
             if ($code !== $defaultCode) {
                 try { $price = Currency::convert($price, $defaultCode, $code); } catch (\Throwable) {}

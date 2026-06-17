@@ -11,6 +11,8 @@ class FlashSaleProduct extends Model
 {
     use HasFactory;
 
+    public $timestamps = false;
+
     protected $fillable = [
         'flash_sale_id',
         'product_id',
