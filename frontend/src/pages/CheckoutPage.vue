@@ -660,30 +660,40 @@ async function handleEmailEnter() {
   clearErrors(); authError.value = ''
   let result: any
 
-  if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
-    // Phone OTP flow
-    if (!otpPhone.value.trim()) { errors.otpPhone = t('checkout.required'); return }
-    authLoading.value = true
-    const fullPhone = otpPhoneCode.value + otpPhone.value.replace(/^0+/, '')
-    result = await auth.sendPhoneOtp(fullPhone)
-  } else {
-    // Email OTP flow
-    if (!otpEmail.value.trim()) { errors.otpEmail = t('checkout.required'); return }
-    if (!isEmail(otpEmail.value)) { errors.otpEmail = t('checkout.invalidEmail'); return }
-    authLoading.value = true
-    registerForm.value.email = otpEmail.value
-    result = await auth.sendOtp(otpEmail.value)
-  }
+  try {
+    if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
+      // Phone OTP flow
+      if (!otpPhone.value.trim()) { errors.otpPhone = t('checkout.required'); return }
+      authLoading.value = true
+      const fullPhone = normalizePhoneNumber(otpPhoneCode.value, otpPhone.value)
+      if (!fullPhone) {
+        errors.otpPhone = 'Invalid phone number format'
+        authLoading.value = false
+        return
+      }
+      result = await auth.sendPhoneOtp(fullPhone)
+    } else {
+      // Email OTP flow
+      if (!otpEmail.value.trim()) { errors.otpEmail = t('checkout.required'); return }
+      if (!isEmail(otpEmail.value)) { errors.otpEmail = t('checkout.invalidEmail'); return }
+      authLoading.value = true
+      registerForm.value.email = otpEmail.value
+      result = await auth.sendOtp(otpEmail.value)
+    }
 
-  authLoading.value = false
-  if (result.success) {
-    otpStep.value = 'code'
-    otpCodeDigits.value = ['', '', '', '']
-    startOtpCooldown((result as any).cooldown || 60)
-    nextTick(() => checkoutOtpRefs.value[0]?.focus())
-  } else {
-    const errKey = otpChannel.value === 'phone' ? 'otpPhone' : 'otpEmail'
-    authError.value = (result as any).message || t('common.error')
+    authLoading.value = false
+    if (result.success) {
+      otpStep.value = 'code'
+      otpCodeDigits.value = ['', '', '', '']
+      startOtpCooldown((result as any).cooldown || 60)
+      nextTick(() => checkoutOtpRefs.value[0]?.focus())
+    } else {
+      const errKey = otpChannel.value === 'phone' ? 'otpPhone' : 'otpEmail'
+      authError.value = (result as any).message || t('common.error')
+    }
+  } catch (error: any) {
+    authLoading.value = false
+    authError.value = error.message || t('common.error')
   }
 }
 
@@ -691,17 +701,47 @@ async function handleSendOtp() {
   clearErrors(); authError.value = ''
   authLoading.value = true
   let result: any
-  if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
-    result = await auth.sendPhoneOtp(otpPhoneCode.value + otpPhone.value.replace(/^0+/, ''))
-  } else {
-    result = await auth.sendOtp(otpEmail.value)
+
+  try {
+    if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
+      const fullPhone = normalizePhoneNumber(otpPhoneCode.value, otpPhone.value)
+      if (!fullPhone) {
+        authError.value = 'Invalid phone number format'
+        authLoading.value = false
+        return
+      }
+      result = await auth.sendPhoneOtp(fullPhone)
+    } else {
+      result = await auth.sendOtp(otpEmail.value)
+    }
+    authLoading.value = false
+    if (result.success) {
+      otpCodeDigits.value = ['', '', '', '']
+      startOtpCooldown((result as any).cooldown || 60)
+      nextTick(() => checkoutOtpRefs.value[0]?.focus())
+    } else { authError.value = (result as any).message || t('common.error') }
+  } catch (error: any) {
+    authLoading.value = false
+    authError.value = error.message || t('common.error')
   }
-  authLoading.value = false
-  if (result.success) {
-    otpCodeDigits.value = ['', '', '', '']
-    startOtpCooldown((result as any).cooldown || 60)
-    nextTick(() => checkoutOtpRefs.value[0]?.focus())
-  } else { authError.value = (result as any).message || t('common.error') }
+}
+
+function normalizePhoneNumber(countryCode: string, phone: string): string | null {
+  // Remove leading zeros and whitespace
+  const cleanPhone = phone.trim().replace(/^0+/, '')
+
+  // Ensure country code has + prefix
+  const code = countryCode.startsWith('+') ? countryCode : '+' + countryCode
+
+  // Combine
+  const fullPhone = code + cleanPhone
+
+  // Validate E.164 format: +[1-9]d{1,14}
+  if (!/^\+[1-9]\d{1,14}$/.test(fullPhone)) {
+    return null
+  }
+
+  return fullPhone
 }
 
 async function handleVerifyOtp() {
@@ -710,22 +750,34 @@ async function handleVerifyOtp() {
   if (code.length < 4) { errors.otpCode = t('loginModal.invalidOtp'); return }
   authLoading.value = true
   let result: any
-  if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
-    result = await auth.verifyPhoneOtp(otpPhoneCode.value + otpPhone.value.replace(/^0+/, ''), code)
-  } else {
-    result = await auth.verifyOtp(otpEmail.value, code)
-  }
-  authLoading.value = false
-  if (result.success) {
-    if ((result as any).isNewUser) { otpStep.value = 'register'; return }
-    // Refresh cart after auth (backend migrates guest cart items)
-    await cart.loadCart()
-    prefillAddressFromUser()
-    currentStep.value = 2
-  } else {
-    authError.value = (result as any).message || t('loginModal.invalidOtp')
-    otpCodeDigits.value = ['', '', '', '']
-    nextTick(() => checkoutOtpRefs.value[0]?.focus())
+
+  try {
+    if (otpChannel.value === 'phone' || otpMode.value === 'phone') {
+      const fullPhone = normalizePhoneNumber(otpPhoneCode.value, otpPhone.value)
+      if (!fullPhone) {
+        errors.otpCode = 'Invalid phone number format'
+        authLoading.value = false
+        return
+      }
+      result = await auth.verifyPhoneOtp(fullPhone, code)
+    } else {
+      result = await auth.verifyOtp(otpEmail.value, code)
+    }
+    authLoading.value = false
+    if (result.success) {
+      if ((result as any).isNewUser) { otpStep.value = 'register'; return }
+      // Refresh cart after auth (backend migrates guest cart items)
+      await cart.loadCart()
+      prefillAddressFromUser()
+      currentStep.value = 2
+    } else {
+      authError.value = (result as any).message || t('loginModal.invalidOtp')
+      otpCodeDigits.value = ['', '', '', '']
+      nextTick(() => checkoutOtpRefs.value[0]?.focus())
+    }
+  } catch (error: any) {
+    authLoading.value = false
+    authError.value = error.message || t('common.error')
   }
 }
 

@@ -7,6 +7,7 @@ use App\Http\Resources\Api\V1\UserResource;
 use App\Http\Traits\ApiResponse;
 use App\Models\OtpCode;
 use App\Models\UserAddress;
+use App\Services\OtpService;
 use App\Services\TwilioService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,10 @@ class ProfileController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(protected TwilioService $twilio) {}
+    public function __construct(
+        protected TwilioService $twilio,
+        protected OtpService $otpService
+    ) {}
 
     /**
      * GET /api/v1/profile
@@ -260,23 +264,17 @@ class ProfileController extends Controller
             return $this->error('No phone number found. Please update your profile first.', 422);
         }
 
-        if (OtpCode::isOnCooldownByPhone($phone)) {
-            return $this->error('Please wait before requesting another code.', 429);
-        }
-
-        $otp = OtpCode::generateForPhone($phone);
-
         try {
-            $this->twilio->sendOtp($phone, $otp->code, OtpCode::EXPIRY_MINUTES);
-        } catch (\Throwable) {
-            return $this->error('Failed to send SMS. Please check the phone number and try again.', 500);
+            $result = $this->otpService->sendPhoneOtp($phone);
+            if (!$result['success']) {
+                return $this->error($result['message'], 429);
+            }
+            return $this->success($result, 'Verification code sent to your phone.');
+        } catch (\InvalidArgumentException $e) {
+            return $this->error($e->getMessage(), 422);
+        } catch (\RuntimeException $e) {
+            return $this->error($e->getMessage(), 500);
         }
-
-        return $this->success([
-            'channel'   => 'sms',
-            'expiresIn' => OtpCode::EXPIRY_MINUTES * 60,
-            'cooldown'  => OtpCode::COOLDOWN_SECONDS,
-        ], 'Verification code sent to your phone.');
     }
 
     /**
@@ -290,19 +288,12 @@ class ProfileController extends Controller
             'code'  => ['required', 'string', 'size:4'],
         ]);
 
-        $phone = trim($request->phone);
-        $otp   = OtpCode::verifyByPhone($phone, $request->code);
-
-        if (!$otp) {
-            return $this->error('Invalid or expired verification code.', 422);
+        try {
+            $user = $request->user();
+            $updatedUser = $this->otpService->verifyProfilePhoneOtp($user, trim($request->phone), $request->code);
+            return $this->success(new UserResource($updatedUser), 'Phone number verified successfully.');
+        } catch (\InvalidArgumentException $e) {
+            return $this->error($e->getMessage(), 422);
         }
-
-        $user = $request->user();
-        $user->update([
-            'phone'             => $phone,
-            'phone_verified_at' => now(),
-        ]);
-
-        return $this->success(new UserResource($user->fresh()), 'Phone number verified successfully.');
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Traits\ApiResponse;
 use App\Mail\OtpMail;
 use App\Models\OtpCode;
 use App\Models\User;
+use App\Services\OtpService;
 use App\Services\TwilioService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,10 @@ class AuthController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(protected TwilioService $twilio) {}
+    public function __construct(
+        protected TwilioService $twilio,
+        protected OtpService $otpService
+    ) {}
 
     // ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -168,58 +172,25 @@ class AuthController extends Controller
         $channel = $this->resolveChannel($request, $mode);
         if ($channel instanceof JsonResponse) return $channel;
 
-        if ($channel === 'sms') {
-            return $this->sendPhoneOtp($request);
-        }
-
-        // --- Email OTP ---
-        $request->validate(['email' => ['required', 'email', 'max:255']]);
-        $email = strtolower(trim($request->email));
-
-        if (OtpCode::isOnCooldown($email)) {
-            return $this->error('Please wait before requesting another code.', 429);
-        }
-
-        $otp = OtpCode::generate($email);
-
         try {
-            Mail::to($email)->send(new OtpMail($otp->code, OtpCode::EXPIRY_MINUTES));
-        } catch (\Throwable) {
-            return $this->error('Failed to send verification email. Please try again.', 500);
+            if ($channel === 'sms') {
+                $request->validate(['phone' => ['required', 'string', 'max:20']]);
+                $result = $this->otpService->sendPhoneOtp($request->phone);
+            } else {
+                $request->validate(['email' => ['required', 'email', 'max:255']]);
+                $result = $this->otpService->sendEmailOtp($request->email);
+            }
+
+            if (!$result['success']) {
+                return $this->error($result['message'], 429);
+            }
+
+            return $this->success($result, 'Verification code sent.');
+        } catch (\InvalidArgumentException $e) {
+            return $this->error($e->getMessage(), 422);
+        } catch (\RuntimeException $e) {
+            return $this->error($e->getMessage(), 500);
         }
-
-        return $this->success([
-            'channel'   => 'email',
-            'expiresIn' => OtpCode::EXPIRY_MINUTES * 60,
-            'cooldown'  => OtpCode::COOLDOWN_SECONDS,
-        ], 'Verification code sent to your email.');
-    }
-
-    /**
-     * Internal: send an SMS OTP to a phone number.
-     */
-    private function sendPhoneOtp(Request $request): JsonResponse
-    {
-        $request->validate(['phone' => ['required', 'string', 'max:20']]);
-        $phone = trim($request->phone);
-
-        if (OtpCode::isOnCooldownByPhone($phone)) {
-            return $this->error('Please wait before requesting another code.', 429);
-        }
-
-        $otp = OtpCode::generateForPhone($phone);
-
-        try {
-            $this->twilio->sendOtp($phone, $otp->code, OtpCode::EXPIRY_MINUTES);
-        } catch (\Throwable $e) {
-            return $this->error('Failed to send SMS. Please try again.', 500);
-        }
-
-        return $this->success([
-            'channel'   => 'sms',
-            'expiresIn' => OtpCode::EXPIRY_MINUTES * 60,
-            'cooldown'  => OtpCode::COOLDOWN_SECONDS,
-        ], 'Verification code sent to your phone.');
     }
 
     /**
@@ -236,108 +207,30 @@ class AuthController extends Controller
 
         $request->validate(['code' => ['required', 'string', 'size:4']]);
 
-        if ($channel === 'sms') {
-            return $this->verifyPhoneOtpAndLogin($request);
+        try {
+            if ($channel === 'sms') {
+                $request->validate(['phone' => ['required', 'string', 'max:20']]);
+                $result = $this->otpService->verifyPhoneOtp($request->phone, $request->code);
+            } else {
+                $request->validate(['email' => ['required', 'email', 'max:255']]);
+                $result = $this->otpService->verifyEmailOtp($request->email, $request->code);
+            }
+
+            if (!$result['success']) {
+                return $this->error($result['message'], 422);
+            }
+
+            $this->migrateGuestCart($request, $result['user']);
+
+            return $this->success([
+                'user'      => new UserResource($result['user']),
+                'token'     => $result['token'],
+                'tokenType' => $result['tokenType'],
+                'isNewUser' => $result['isNewUser'],
+            ], $result['isNewUser'] ? 'Account created and verified.' : 'Login successful.');
+        } catch (\InvalidArgumentException $e) {
+            return $this->error($e->getMessage(), 422);
         }
-
-        // --- Email OTP Verification ---
-        $request->validate(['email' => ['required', 'email', 'max:255']]);
-        $email = strtolower(trim($request->email));
-
-        $otp = OtpCode::verify($email, $request->code);
-        if (!$otp) {
-            return $this->error('Invalid or expired verification code.', 422);
-        }
-
-        // Find or auto-create user by email
-        $isNewUser = false;
-        $user = User::where('email', $email)->first();
-
-        if (!$user) {
-            $user = User::create([
-                'name'                => Str::before($email, '@'),
-                'email'               => $email,
-                'password'            => Hash::make(Str::random(32)),
-                'email_verified_at'   => now(),
-                'language_preference' => $request->query('lang', 'en'),
-            ]);
-            $isNewUser = true;
-            $this->sendWelcomeNotifications($user);
-        } else {
-            if (!$user->email_verified_at) {
-                $user->update(['email_verified_at' => now()]);
-            }
-            if ($user->is_banned) {
-                return $this->error('Your account has been suspended. Reason: ' . ($user->ban_reason ?? 'N/A'), 403);
-            }
-            if (!$user->is_active) {
-                return $this->error('Your account is not active.', 403);
-            }
-        }
-
-        $this->migrateGuestCart($request, $user);
-
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        return $this->success([
-            'user'      => new UserResource($user),
-            'token'     => $token,
-            'tokenType' => 'Bearer',
-            'isNewUser' => $isNewUser,
-        ], $isNewUser ? 'Account created and verified.' : 'Login successful.');
-    }
-
-    /**
-     * Internal: verify SMS OTP and authenticate/create user by phone.
-     */
-    private function verifyPhoneOtpAndLogin(Request $request): JsonResponse
-    {
-        $request->validate(['phone' => ['required', 'string', 'max:20']]);
-        $phone = trim($request->phone);
-
-        $otp = OtpCode::verifyByPhone($phone, $request->code);
-        if (!$otp) {
-            return $this->error('Invalid or expired verification code.', 422);
-        }
-
-        // Find or auto-create user by phone
-        $isNewUser = false;
-        $user = User::where('phone', $phone)->first();
-
-        if (!$user) {
-            // Auto-register a new user by phone
-            $user = User::create([
-                'name'                => 'User ' . substr($phone, -4),
-                'email'               => null,  // no email initially
-                'password'            => Hash::make(Str::random(32)),
-                'phone'               => $phone,
-                'phone_verified_at'   => now(),
-                'language_preference' => $request->query('lang', 'en'),
-            ]);
-            $isNewUser = true;
-        } else {
-            // Update phone_verified_at
-            if (!$user->phone_verified_at) {
-                $user->update(['phone_verified_at' => now()]);
-            }
-            if ($user->is_banned) {
-                return $this->error('Your account has been suspended. Reason: ' . ($user->ban_reason ?? 'N/A'), 403);
-            }
-            if (!$user->is_active) {
-                return $this->error('Your account is not active.', 403);
-            }
-        }
-
-        $this->migrateGuestCart($request, $user);
-
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        return $this->success([
-            'user'      => new UserResource($user),
-            'token'     => $token,
-            'tokenType' => 'Bearer',
-            'isNewUser' => $isNewUser,
-        ], $isNewUser ? 'Account created and verified.' : 'Login successful.');
     }
 
     /**

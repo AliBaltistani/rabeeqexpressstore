@@ -129,6 +129,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import apiClient from '@/api/client'
 import PhoneInput from '@/components/common/PhoneInput.vue'
+import { normalizePhoneNumber } from '@/composables/usePhoneOtp'
 
 const auth = useAuthStore()
 const settingsStore = useSettingsStore()
@@ -174,7 +175,15 @@ onUnmounted(() => { if (cooldownTimer) clearInterval(cooldownTimer) })
 async function sendPhoneOtp() {
   phoneOtpError.value = ''
   sendingPhoneOtp.value = true
-  const result = await auth.sendProfilePhoneOtp(profileForm.value.phone || undefined)
+
+  const fullPhone = normalizePhoneNumber(profileCountryCode.value, profileForm.value.phone)
+  if (!fullPhone) {
+    phoneOtpError.value = 'Invalid phone number format.'
+    sendingPhoneOtp.value = false
+    return
+  }
+
+  const result = await auth.sendProfilePhoneOtp(fullPhone)
   sendingPhoneOtp.value = false
 
   if ((result as any).success) {
@@ -189,7 +198,15 @@ async function sendPhoneOtp() {
 async function verifyPhone() {
   phoneOtpError.value = ''
   verifyingPhone.value = true
-  const result = await auth.verifyProfilePhone(profileForm.value.phone, phoneOtpCode.value)
+
+  const fullPhone = normalizePhoneNumber(profileCountryCode.value, profileForm.value.phone)
+  if (!fullPhone) {
+    phoneOtpError.value = 'Invalid phone number format.'
+    verifyingPhone.value = false
+    return
+  }
+
+  const result = await auth.verifyProfilePhone(fullPhone, phoneOtpCode.value)
   verifyingPhone.value = false
 
   if ((result as any).success) {

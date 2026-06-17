@@ -176,6 +176,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useI18n } from 'vue-i18n'
 import PhoneInput from '@/components/common/PhoneInput.vue'
+import { normalizePhoneNumber } from '@/composables/usePhoneOtp'
 
 const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits<{
@@ -286,26 +287,37 @@ async function handleSendOtp() {
   emailError.value = ''
   let result: any
 
-  if (activeTab.value === 'phone') {
-    if (!phone.value.trim()) { emailError.value = t('checkout.required'); return }
-    sending.value = true
-    result = await auth.sendPhoneOtp(countryCode.value + phone.value.replace(/^0+/, ''))
-  } else {
-    if (!email.value.trim()) { emailError.value = t('checkout.required'); return }
-    if (!isEmail(email.value)) { emailError.value = t('checkout.invalidEmail'); return }
-    sending.value = true
-    result = await auth.sendOtp(email.value)
-  }
-  sending.value = false
+  try {
+    if (activeTab.value === 'phone') {
+      if (!phone.value.trim()) { emailError.value = t('checkout.required'); return }
+      const fullPhone = normalizePhoneNumber(countryCode.value, phone.value)
+      if (!fullPhone) {
+        emailError.value = 'Invalid phone number format'
+        return
+      }
+      sending.value = true
+      result = await auth.sendPhoneOtp(fullPhone)
+    } else {
+      if (!email.value.trim()) { emailError.value = t('checkout.required'); return }
+      if (!isEmail(email.value)) { emailError.value = t('checkout.invalidEmail'); return }
+      sending.value = true
+      result = await auth.sendOtp(email.value)
+    }
+    sending.value = false
 
-  if (result.success) {
-    step.value = 'otp'
-    startCooldown((result as any).cooldown || 60)
-    nextTick(() => otpRefs.value[0]?.focus())
-  } else {
-    emailError.value = (result as any).message || t('common.error')
+    if (result.success) {
+      step.value = 'otp'
+      startCooldown((result as any).cooldown || 60)
+      nextTick(() => otpRefs.value[0]?.focus())
+    } else {
+      emailError.value = (result as any).message || t('common.error')
+    }
+  } catch (error: any) {
+    sending.value = false
+    emailError.value = error.message || t('common.error')
   }
 }
+
 
 // ── OTP Input Management ──
 function handleOtpInput(idx: number, event: Event) {
@@ -355,20 +367,32 @@ async function handleVerifyOtp() {
 
   verifying.value = true
   let result: any
-  if (activeTab.value === 'phone') {
-    result = await auth.verifyPhoneOtp(phone.value, code)
-  } else {
-    result = await auth.verifyOtp(email.value, code)
-  }
-  verifying.value = false
 
-  if (result.success) {
-    emit('authenticated')
-    close()
-  } else {
-    otpError.value = (result as any).message || t('loginModal.invalidOtp')
-    otpDigits.value = ['', '', '', '']
-    nextTick(() => otpRefs.value[0]?.focus())
+  try {
+    if (activeTab.value === 'phone') {
+      const fullPhone = normalizePhoneNumber(countryCode.value, phone.value)
+      if (!fullPhone) {
+        otpError.value = 'Invalid phone number format'
+        verifying.value = false
+        return
+      }
+      result = await auth.verifyPhoneOtp(fullPhone, code)
+    } else {
+      result = await auth.verifyOtp(email.value, code)
+    }
+    verifying.value = false
+
+    if (result.success) {
+      emit('authenticated')
+      close()
+    } else {
+      otpError.value = (result as any).message || t('loginModal.invalidOtp')
+      otpDigits.value = ['', '', '', '']
+      nextTick(() => otpRefs.value[0]?.focus())
+    }
+  } catch (error: any) {
+    verifying.value = false
+    otpError.value = error.message || t('common.error')
   }
 }
 
@@ -376,20 +400,32 @@ async function handleVerifyOtp() {
 async function handleResendOtp() {
   resending.value = true
   let result: any
-  if (activeTab.value === 'phone') {
-    result = await auth.resendPhoneOtp(phone.value)
-  } else {
-    result = await auth.resendOtp(email.value)
-  }
-  resending.value = false
 
-  if (result.success) {
-    startCooldown((result as any).cooldown || 60)
-    otpDigits.value = ['', '', '', '']
-    otpError.value = ''
-    nextTick(() => otpRefs.value[0]?.focus())
-  } else {
-    otpError.value = (result as any).message || t('common.error')
+  try {
+    if (activeTab.value === 'phone') {
+      const fullPhone = normalizePhoneNumber(countryCode.value, phone.value)
+      if (!fullPhone) {
+        otpError.value = 'Invalid phone number format'
+        resending.value = false
+        return
+      }
+      result = await auth.resendPhoneOtp(fullPhone)
+    } else {
+      result = await auth.resendOtp(email.value)
+    }
+    resending.value = false
+
+    if (result.success) {
+      startCooldown((result as any).cooldown || 60)
+      otpDigits.value = ['', '', '', '']
+      otpError.value = ''
+      nextTick(() => otpRefs.value[0]?.focus())
+    } else {
+      otpError.value = (result as any).message || t('common.error')
+    }
+  } catch (error: any) {
+    resending.value = false
+    otpError.value = error.message || t('common.error')
   }
 }
 

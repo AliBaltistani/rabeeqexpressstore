@@ -102,6 +102,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useI18n } from 'vue-i18n'
 import PhoneInput from '@/components/common/PhoneInput.vue'
+import { normalizePhoneNumber } from '@/composables/usePhoneOtp'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -180,9 +181,24 @@ async function handleSendOtp() {
   try {
     let result
     if (activeTab.value === 'phone') {
-      const fullPhone = countryCode.value + form.value.phone.replace(/^0+/, '')
+      if (!form.value.phone.trim()) {
+        errorMsg.value = t('checkout.required')
+        isLoading.value = false
+        return
+      }
+      const fullPhone = normalizePhoneNumber(countryCode.value, form.value.phone)
+      if (!fullPhone) {
+        errorMsg.value = 'Invalid phone number format'
+        isLoading.value = false
+        return
+      }
       result = await authStore.sendPhoneOtp(fullPhone)
     } else {
+      if (!form.value.email.trim()) {
+        errorMsg.value = t('checkout.required')
+        isLoading.value = false
+        return
+      }
       result = await authStore.sendOtp(form.value.email)
     }
 
@@ -198,6 +214,7 @@ async function handleSendOtp() {
   }
 }
 
+
 async function handleVerifyOtp() {
   isLoading.value = true
   errorMsg.value = ''
@@ -205,7 +222,13 @@ async function handleVerifyOtp() {
   try {
     let result
     if (activeTab.value === 'phone') {
-      result = await authStore.verifyPhoneOtp(form.value.phone, otpCode.value)
+      const fullPhone = normalizePhoneNumber(countryCode.value, form.value.phone)
+      if (!fullPhone) {
+        errorMsg.value = 'Invalid phone number format'
+        isLoading.value = false
+        return
+      }
+      result = await authStore.verifyPhoneOtp(fullPhone, otpCode.value)
     } else {
       result = await authStore.verifyOtp(form.value.email, otpCode.value)
     }

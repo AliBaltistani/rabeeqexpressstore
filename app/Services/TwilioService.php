@@ -12,15 +12,16 @@ class TwilioService
     protected function client(): Client
     {
         if (!$this->client) {
-            $sid   = Setting::get('twilio.account_sid') ?: config('services.twilio.sid');
-            $token = Setting::get('twilio.auth_token')  ?: config('services.twilio.token');
+            $sid   = Setting::get('twilio.account_sid');
+            $token = Setting::get('twilio.auth_token');
 
             if (!$sid || !$token) {
-                throw new \RuntimeException('Twilio credentials are not configured.');
+                throw new \RuntimeException(
+                    'SMS is not configured. Please add your Twilio credentials in Admin → Settings → SMS & Auth.'
+                );
             }
 
-            // By default, Twilio uses its own CurlClient. On local WAMP environments, 
-            // we override it to disable strict SSL verification.
+            // On local WAMP environments disable strict SSL verification.
             $options = app()->environment('local') ? [CURLOPT_SSL_VERIFYPEER => false] : [];
             $httpClient = new \Twilio\Http\CurlClient($options);
 
@@ -32,10 +33,12 @@ class TwilioService
 
     protected function fromNumber(): string
     {
-        $from = Setting::get('twilio.from_number') ?: config('services.twilio.from');
+        $from = Setting::get('twilio.from_number');
 
         if (!$from) {
-            throw new \RuntimeException('Twilio sender number is not configured.');
+            throw new \RuntimeException(
+                'SMS sender number is not configured. Please set the From Number in Admin → Settings → SMS & Auth.'
+            );
         }
 
         return $from;
@@ -45,6 +48,7 @@ class TwilioService
     {
         return Setting::get('twilio.messaging_service_sid') ?: null;
     }
+
 
     /**
      * Send an OTP code via SMS.
@@ -59,9 +63,15 @@ class TwilioService
 
     /**
      * Send a raw SMS message to a phone number.
+     * Phone must be in E.164 format (e.g., +966501234567)
      */
     public function sendSms(string $toPhone, string $body): void
     {
+        // Validate E.164 format
+        if (!preg_match('/^\+[1-9]\d{1,14}$/', $toPhone)) {
+            throw new \InvalidArgumentException('Phone number must be in E.164 format (e.g., +966501234567). Received: ' . $toPhone);
+        }
+
         $params = ['body' => $body];
 
         $messagingServiceSid = $this->messagingServiceSid();
@@ -72,6 +82,33 @@ class TwilioService
             $params['from'] = $this->fromNumber();
         }
 
-        $this->client()->messages->create($toPhone, $params);
+        try {
+            $this->client()->messages->create($toPhone, $params);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Twilio SMS send failed', [
+                'phone' => $toPhone,
+                'error' => $e->getMessage(),
+                'exception' => get_class($e),
+            ]);
+            
+            $rawMsg = $e->getMessage();
+            
+            // 1. Strip HTTP status and technical prefix
+            $msg = preg_replace('/^\[HTTP \d+\] Unable to create record:\s*/i', '', $rawMsg);
+            
+            // 2. Hide sensitive Account SID
+            $msg = preg_replace('/Account AC[a-f0-9]{32}/i', 'This account', $msg);
+            
+            // 3. User-friendly mapping for common Twilio trial/validation errors
+            if (stripos($msg, 'unverified') !== false) {
+                $msg = 'Failed to send SMS: The provided phone number is unverified.';
+            } elseif (stripos($msg, 'daily messages limit') !== false) {
+                $msg = 'Daily SMS message limit has been exceeded. Please try again later.';
+            } elseif (stripos($msg, 'not a valid phone number') !== false) {
+                $msg = 'The provided phone number is invalid.';
+            }
+            
+            throw new \RuntimeException($msg);
+        }
     }
 }
