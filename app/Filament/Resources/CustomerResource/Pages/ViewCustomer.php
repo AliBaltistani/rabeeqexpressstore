@@ -130,11 +130,11 @@ class ViewCustomer extends ViewRecord
                                                     ->schema([
                                                         Forms\Components\Placeholder::make('customer_name')
                                                             ->label('Full Name')
-                                                            ->content(fn(): string => $this->getRecord()->name),
+                                                            ->content(fn(): string => $this->getRecord()->name ?? '—'),
 
                                                         Forms\Components\Placeholder::make('customer_email')
                                                             ->label('Email')
-                                                            ->content(fn(): string => $this->getRecord()->email),
+                                                            ->content(fn(): string => $this->getRecord()->email ?? '—'),
 
                                                         Forms\Components\Placeholder::make('customer_phone')
                                                             ->label('Phone')
