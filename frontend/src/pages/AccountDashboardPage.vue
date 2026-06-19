@@ -180,8 +180,13 @@ function parsePhone(raw: string): { code: string; number: string } {
 onMounted(async () => {
   try {
     const user = await fetchProfile()
-    form.value.firstName = user.firstName || user.first_name || ''
-    form.value.lastName = user.lastName || user.last_name || ''
+    // Fallback: split full name if explicit first/last name isn't provided
+    const nameParts = (user.name || '').trim().split(' ')
+    const defaultFirstName = nameParts[0] || ''
+    const defaultLastName = nameParts.slice(1).join(' ') || ''
+
+    form.value.firstName = user.firstName || user.first_name || defaultFirstName
+    form.value.lastName = user.lastName || user.last_name || defaultLastName
     form.value.birthDate = user.birthDate || user.birth_date || ''
     form.value.gender = user.gender || ''
     form.value.email = user.email || ''
