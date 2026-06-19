@@ -42,16 +42,22 @@ class SocialLoginController extends Controller
         ]);
 
         try {
+            $driver = \Laravel\Socialite\Facades\Socialite::driver($provider)->stateless();
+            
+            // Bypass SSL verification in local dev/WAMP to prevent cURL error 60
+            if (app()->environment('local')) {
+                $driver->setHttpClient(new \GuzzleHttp\Client(['verify' => false]));
+            }
+
             // Use token-based stateless validation
-            $socialUser = \Laravel\Socialite\Facades\Socialite::driver($provider)
-                ->stateless()
-                ->userFromToken($request->input('token'));
+            $socialUser = $driver->userFromToken($request->input('token'));
         } catch (\Throwable $e) {
-            return $this->error('Invalid social login token: ' . $e->getMessage(), 401);
+            // Return 422 instead of 401 to prevent global axios interceptor from redirecting to /login
+            return $this->error('Invalid social login token: ' . $e->getMessage(), 422);
         }
 
         if (!$socialUser) {
-            return $this->error('Could not retrieve user from social provider.', 401);
+            return $this->error('Could not retrieve user from social provider.', 422);
         }
 
         $email    = $socialUser->getEmail();
