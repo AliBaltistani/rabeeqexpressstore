@@ -69,6 +69,11 @@ export const useSettingsStore = defineStore('settings', () => {
       otpMode: 'email' as 'email' | 'phone' | 'both',
       emailOtpEnabled: true,
       phoneOtpEnabled: false,
+      socialLogin: {
+        google: { enabled: false, clientId: null as string | null },
+        facebook: { enabled: false, clientId: null as string | null },
+        apple: { enabled: false, clientId: null as string | null },
+      },
     },
     googleMapsApiKey: '' as string,
     footerPages: [] as { slug: string; title: string }[],
@@ -195,6 +200,20 @@ export const useSettingsStore = defineStore('settings', () => {
             otpMode: data.features?.otpMode ?? 'email',
             emailOtpEnabled: data.features?.emailOtpEnabled ?? true,
             phoneOtpEnabled: data.features?.phoneOtpEnabled ?? false,
+            socialLogin: {
+              google: {
+                enabled: data.features?.socialLogin?.google?.enabled ?? false,
+                clientId: data.features?.socialLogin?.google?.clientId ?? null,
+              },
+              facebook: {
+                enabled: data.features?.socialLogin?.facebook?.enabled ?? false,
+                clientId: data.features?.socialLogin?.facebook?.clientId ?? null,
+              },
+              apple: {
+                enabled: data.features?.socialLogin?.apple?.enabled ?? false,
+                clientId: data.features?.socialLogin?.apple?.clientId ?? null,
+              },
+            },
           },
           googleMapsApiKey: (data as any).googleMapsApiKey ?? '',
           footerPages: data.footerPages ?? [],

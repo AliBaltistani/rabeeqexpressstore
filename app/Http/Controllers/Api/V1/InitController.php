@@ -71,6 +71,21 @@ class InitController extends Controller
                 'otpMode'               => setting('auth.otp_mode', 'email'),
                 'emailOtpEnabled'       => (bool) setting('auth.email_otp_enabled', true),
                 'phoneOtpEnabled'       => (bool) setting('auth.phone_otp_enabled', false),
+                // Social login providers
+                'socialLogin' => [
+                    'google'   => [
+                        'enabled'  => (bool) setting('social.google_enabled', false),
+                        'clientId' => setting('social.google_enabled') ? setting('social.google_client_id') : null,
+                    ],
+                    'facebook' => [
+                        'enabled'  => (bool) setting('social.facebook_enabled', false),
+                        'clientId' => setting('social.facebook_enabled') ? setting('social.facebook_client_id') : null,
+                    ],
+                    'apple'    => [
+                        'enabled'  => (bool) setting('social.apple_enabled', false),
+                        'clientId' => setting('social.apple_enabled') ? setting('social.apple_client_id') : null,
+                    ],
+                ],
             ],
             'seo' => [
                 'siteTitle' => setting('seo.site_title_' . $locale, setting('seo.site_title_en')),

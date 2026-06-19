@@ -4,6 +4,7 @@ import {
   loginApi, registerApi, logoutApi, fetchMe,
   sendOtpApi, verifyOtpApi, resendOtpApi,
   sendProfilePhoneOtpApi, verifyProfilePhoneApi,
+  socialLoginApi,
 } from '@/api/services'
 import type { User } from '@/types'
 
@@ -163,6 +164,22 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // ─── Social Login (Google / Facebook / Apple) ─────────────────────────────
+  async function socialLogin(provider: 'google' | 'facebook' | 'apple', accessToken: string, name?: string) {
+    isLoading.value = true
+    try {
+      const result = await socialLoginApi(provider, accessToken, name)
+      user.value = result.user
+      token.value = result.token
+      localStorage.setItem('auth_token', result.token)
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, message: e.response?.data?.message || 'Social login failed' }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   /** Restore session on app init — if token exists, fetch user data. */
   async function restoreSession() {
     if (token.value) await fetchUser()
@@ -177,5 +194,7 @@ export const useAuthStore = defineStore('auth', () => {
     sendPhoneOtp, verifyPhoneOtp, resendPhoneOtp,
     // Profile phone verification
     sendProfilePhoneOtp, verifyProfilePhone,
+    // Social Login
+    socialLogin,
   }
 })

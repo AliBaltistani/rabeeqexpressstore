@@ -192,6 +192,15 @@ export async function resendOtpApi(params: { email?: string; phone?: string }) {
   )
 }
 
+// ─── Social Login ───
+export async function socialLoginApi(
+  provider: 'google' | 'facebook' | 'apple',
+  token: string,
+  name?: string
+): Promise<{ user: User; token: string }> {
+  return unwrap(await apiClient.post(`/auth/social/${provider}`, { token, name }))
+}
+
 // ═══════════════════════════════════════════
 // PROFILE
 // ═══════════════════════════════════════════

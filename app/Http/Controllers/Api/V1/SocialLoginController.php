@@ -3,15 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Api\V1\UserResource;
 use App\Http\Traits\ApiResponse;
 use App\Models\Setting;
-use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Laravel\Socialite\Facades\Socialite;
 
 class SocialLoginController extends Controller
 {
@@ -23,7 +17,7 @@ class SocialLoginController extends Controller
      * Accepts an OAuth token from the frontend, verifies it with the provider,
      * finds or creates a user, and returns a Sanctum token.
      */
-    public function handleProvider(Request $request, string $provider): JsonResponse
+    public function handleProvider(\Illuminate\Http\Request $request, string $provider): JsonResponse
     {
         // Validate provider
         if (!in_array($provider, ['google', 'facebook', 'apple'])) {
@@ -37,12 +31,19 @@ class SocialLoginController extends Controller
 
         $request->validate([
             'token' => 'required|string',
-            'name' => 'nullable|string|max:255', // For Apple first-time login
+            'name'  => 'nullable|string|max:255', // For Apple first-time login
+        ]);
+
+        // Dynamically set Socialite credentials from DB settings
+        // (config/services.php reads .env at boot; DB may not be available then)
+        config([
+            "services.{$provider}.client_id"     => Setting::get("social.{$provider}_client_id"),
+            "services.{$provider}.client_secret" => Setting::get("social.{$provider}_client_secret"),
         ]);
 
         try {
             // Use token-based stateless validation
-            $socialUser = Socialite::driver($provider)
+            $socialUser = \Laravel\Socialite\Facades\Socialite::driver($provider)
                 ->stateless()
                 ->userFromToken($request->input('token'));
         } catch (\Throwable $e) {
@@ -53,17 +54,17 @@ class SocialLoginController extends Controller
             return $this->error('Could not retrieve user from social provider.', 401);
         }
 
-        $email = $socialUser->getEmail();
+        $email    = $socialUser->getEmail();
         $socialId = $socialUser->getId();
-        $name = $socialUser->getName() ?? $request->input('name') ?? 'User';
-        $avatar = $socialUser->getAvatar();
+        $name     = $socialUser->getName() ?? $request->input('name') ?? 'User';
+        $avatar   = $socialUser->getAvatar();
 
         if (!$email) {
             return $this->error('Email not provided by social provider. Please use another login method.', 422);
         }
 
         // Find existing user by social provider+id OR email
-        $user = User::withoutGlobalScopes()
+        $user = \App\Models\User::withoutGlobalScopes()
             ->where(function ($q) use ($provider, $socialId, $email) {
                 $q->where(fn($q2) => $q2->where('social_provider', $provider)->where('social_id', $socialId))
                   ->orWhere('email', strtolower($email));
@@ -75,7 +76,7 @@ class SocialLoginController extends Controller
             if (!$user->social_provider) {
                 $user->update([
                     'social_provider' => $provider,
-                    'social_id' => $socialId,
+                    'social_id'       => $socialId,
                 ]);
             }
 
@@ -90,14 +91,14 @@ class SocialLoginController extends Controller
             }
         } else {
             // Create new user
-            $user = User::create([
-                'name' => $name,
-                'email' => strtolower($email),
-                'password' => Hash::make(Str::random(32)),
-                'is_active' => true,
-                'social_provider' => $provider,
-                'social_id' => $socialId,
-                'avatar' => $avatar,
+            $user = \App\Models\User::create([
+                'name'              => $name,
+                'email'             => strtolower($email),
+                'password'          => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(32)),
+                'is_active'         => true,
+                'social_provider'   => $provider,
+                'social_id'         => $socialId,
+                'avatar'            => $avatar,
                 'email_verified_at' => now(),
             ]);
         }
@@ -107,7 +108,8 @@ class SocialLoginController extends Controller
 
         return $this->success([
             'token' => $token,
-            'user' => new UserResource($user),
+            'user'  => new \App\Http\Resources\Api\V1\UserResource($user),
         ], 'Logged in successfully.');
     }
+
 }

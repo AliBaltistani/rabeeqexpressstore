@@ -70,6 +70,11 @@ export interface StoreFeatures {
   otpMode: 'email' | 'phone' | 'both'
   emailOtpEnabled: boolean
   phoneOtpEnabled: boolean
+  socialLogin: {
+    google: { enabled: boolean; clientId: string | null }
+    facebook: { enabled: boolean; clientId: string | null }
+    apple: { enabled: boolean; clientId: string | null }
+  }
 }
 
 export interface SeoSettings {

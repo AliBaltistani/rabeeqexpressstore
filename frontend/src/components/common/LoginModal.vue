@@ -82,15 +82,33 @@
                 <span>{{ $t('loginModal.orContinueWith') }}</span>
               </div>
               <div class="login-modal__socials">
-                <button class="login-modal__social-btn login-modal__social-btn--google" @click="showComingSoon" type="button">
+                <button
+                  v-if="socialEnabled.google"
+                  class="login-modal__social-btn login-modal__social-btn--google"
+                  @click="handleGoogleLogin"
+                  :disabled="socialLoading"
+                  type="button"
+                >
                   <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
                   <span>{{ $t('loginModal.google') }}</span>
                 </button>
-                <button class="login-modal__social-btn login-modal__social-btn--facebook" @click="showComingSoon" type="button">
+                <button
+                  v-if="socialEnabled.facebook"
+                  class="login-modal__social-btn login-modal__social-btn--facebook"
+                  @click="handleFacebookLogin"
+                  :disabled="socialLoading"
+                  type="button"
+                >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                   <span>{{ $t('loginModal.facebook') }}</span>
                 </button>
-                <button class="login-modal__social-btn login-modal__social-btn--apple" @click="showComingSoon" type="button">
+                <button
+                  v-if="socialEnabled.apple"
+                  class="login-modal__social-btn login-modal__social-btn--apple"
+                  @click="handleAppleLogin"
+                  :disabled="socialLoading"
+                  type="button"
+                >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
                   <span>{{ $t('loginModal.apple') }}</span>
                 </button>
@@ -158,10 +176,10 @@
             </div>
           </div>
 
-          <!-- Coming Soon Toast -->
+          <!-- Social Error Toast -->
           <Transition name="toast-fade">
-            <div v-if="comingSoonVisible" class="login-modal__toast">
-              {{ $t('loginModal.comingSoon') }}
+            <div v-if="socialToast" class="login-modal__toast" :class="{ 'login-modal__toast--error': socialToastError }">
+              {{ socialToast }}
             </div>
           </Transition>
         </div>
@@ -177,6 +195,8 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { useI18n } from 'vue-i18n'
 import PhoneInput from '@/components/common/PhoneInput.vue'
 import { normalizePhoneNumber } from '@/composables/usePhoneOtp'
+import { useGoogleLogin, useFacebookLogin, useAppleLogin } from '@/composables/useSocialLogin'
+import apiClient from '@/api/client'
 
 const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits<{
@@ -190,6 +210,29 @@ const { t } = useI18n()
 
 const otpMode = computed(() => settingsStore.storeSettings.features.otpMode)
 const activeTab = ref<'email' | 'phone'>('email')
+
+// Social login enabled flags & client IDs
+const socialEnabled = computed(() => ({
+  google: settingsStore.storeSettings.features.socialLogin.google.enabled,
+  facebook: settingsStore.storeSettings.features.socialLogin.facebook.enabled,
+  apple: settingsStore.storeSettings.features.socialLogin.apple.enabled,
+}))
+const socialClientIds = computed(() => ({
+  google: settingsStore.storeSettings.features.socialLogin.google.clientId,
+  facebook: settingsStore.storeSettings.features.socialLogin.facebook.clientId,
+  apple: settingsStore.storeSettings.features.socialLogin.apple.clientId,
+}))
+const socialLoading = ref(false)
+const socialToast = ref('')
+const socialToastError = ref(false)
+let socialToastTimer: ReturnType<typeof setTimeout> | null = null
+
+function showSocialToast(msg: string, isError = false) {
+  socialToast.value = msg
+  socialToastError.value = isError
+  if (socialToastTimer) clearTimeout(socialToastTimer)
+  socialToastTimer = setTimeout(() => { socialToast.value = '' }, 3000)
+}
 
 // Keep activeTab in sync with otpMode — fires immediately and whenever otpMode changes
 // (settingsStore loads asynchronously from /init, so this MUST be a watch not a one-time ref)
@@ -278,7 +321,7 @@ if (typeof window !== 'undefined') window.addEventListener('keydown', onEscape)
 onUnmounted(() => {
   if (typeof window !== 'undefined') window.removeEventListener('keydown', onEscape)
   if (cooldownTimer) clearInterval(cooldownTimer)
-  if (comingSoonTimer) clearTimeout(comingSoonTimer)
+  if (socialToastTimer) clearTimeout(socialToastTimer)
   document.body.style.overflow = ''
 })
 
@@ -429,11 +472,59 @@ async function handleResendOtp() {
   }
 }
 
-// ── Social (Coming Soon) ──
-function showComingSoon() {
-  comingSoonVisible.value = true
-  if (comingSoonTimer) clearTimeout(comingSoonTimer)
-  comingSoonTimer = setTimeout(() => { comingSoonVisible.value = false }, 2500)
+// ── Social Login ──
+async function handleGoogleLogin() {
+  if (!socialClientIds.value.google) {
+    showSocialToast('Google client ID not configured', true); return
+  }
+  socialLoading.value = true
+  try {
+    const { loginWithGoogle } = useGoogleLogin(socialClientIds.value.google)
+    const { token, name } = await loginWithGoogle()
+    const result = await auth.socialLogin('google', token, name)
+    if (result.success) { emit('authenticated'); close() }
+    else showSocialToast(result.message || 'Google login failed', true)
+  } catch (e: any) {
+    showSocialToast(e.message || 'Google login failed', true)
+  } finally {
+    socialLoading.value = false
+  }
+}
+
+async function handleFacebookLogin() {
+  if (!socialClientIds.value.facebook) {
+    showSocialToast('Facebook App ID not configured', true); return
+  }
+  socialLoading.value = true
+  try {
+    const { loginWithFacebook } = useFacebookLogin(socialClientIds.value.facebook)
+    const { token } = await loginWithFacebook()
+    const result = await auth.socialLogin('facebook', token)
+    if (result.success) { emit('authenticated'); close() }
+    else showSocialToast(result.message || 'Facebook login failed', true)
+  } catch (e: any) {
+    showSocialToast(e.message || 'Facebook login failed', true)
+  } finally {
+    socialLoading.value = false
+  }
+}
+
+async function handleAppleLogin() {
+  if (!socialClientIds.value.apple) {
+    showSocialToast('Apple client ID not configured', true); return
+  }
+  socialLoading.value = true
+  try {
+    const { loginWithApple } = useAppleLogin(socialClientIds.value.apple)
+    const { token, name } = await loginWithApple()
+    const result = await auth.socialLogin('apple', token, name)
+    if (result.success) { emit('authenticated'); close() }
+    else showSocialToast(result.message || 'Apple login failed', true)
+  } catch (e: any) {
+    showSocialToast(e.message || 'Apple login failed', true)
+  } finally {
+    socialLoading.value = false
+  }
 }
 </script>
 
@@ -733,6 +824,9 @@ html[dir="rtl"] .login-modal__close { right: auto; left: 1rem; }
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   z-index: 1;
+}
+.login-modal__toast--error {
+  background: #ef4444;
 }
 
 /* Transitions */
