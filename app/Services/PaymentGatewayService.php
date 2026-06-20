@@ -119,22 +119,12 @@ final class PaymentGatewayService
         $stripeSecret = $this->getStripeSecret();
 
         if (empty($stripeSecret)) {
-            // Simulated mode: mark order as paid directly
-            Log::info('Stripe not configured, simulating payment', ['order' => $order->order_number]);
-
-            $order->update([
-                'payment_status'    => 'paid',
-                'payment_gateway'   => 'stripe',
-                'status'            => 'processing',
+            Log::error('Stripe payment attempted but Stripe secret key is not configured.', [
+                'order' => $order->order_number,
             ]);
-
-            return [
-                'success'           => true,
-                'client_secret'     => null,
-                'payment_intent_id' => 'sim_' . $order->order_number,
-                'requires_action'   => false,
-                'error'             => null,
-            ];
+            throw new \RuntimeException(
+                'Stripe is not configured. Please contact the store administrator.'
+            );
         }
 
         try {
@@ -188,14 +178,11 @@ final class PaymentGatewayService
         $stripeSecret = $this->getStripeSecret();
 
         if (empty($stripeSecret)) {
-            // Simulated confirmation
-            $order->update([
-                'payment_status'  => 'paid',
-                'status'          => 'processing',
-                'transaction_id'  => $paymentIntentId,
+            Log::error('Stripe confirmation attempted but Stripe secret key is not configured.', [
+                'order'             => $order->order_number,
+                'paymentIntentId'   => $paymentIntentId,
             ]);
-
-            return ['success' => true, 'error' => null];
+            return ['success' => false, 'error' => 'Stripe is not configured on the server.'];
         }
 
         try {

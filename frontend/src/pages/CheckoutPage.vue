@@ -1021,6 +1021,16 @@ async function confirmPayment() {
   clearErrors(); orderError.value = ''
   if (!selectedPayment.value) { errors.payment = t('checkout.selectPayment'); return }
   if (!agreeTerms.value) { errors.terms = t('checkout.agreeTermsRequired'); return }
+
+  // ── Snapshot cart BEFORE any async call so we can restore it on failure ──
+  const cartSnapshot = {
+    items: JSON.parse(JSON.stringify(cart.items)),
+    subtotal: { ...cart.subtotal },
+    discount: { ...cart.discount },
+    total: { ...cart.total },
+    couponCode: cart.couponCode,
+  }
+
   orderLoading.value = true
   try {
     const isGuestMode = authMode.value === 'guest' && !auth.isAuthenticated
@@ -1041,15 +1051,50 @@ async function confirmPayment() {
     if (!payload.shippingAddress.city) payload.shippingAddress.city = '-'
     if (!payload.shippingAddress.country) payload.shippingAddress.country = '-'
     if (isGuestMode) { payload.guestEmail = guestForm.value.email; payload.guestName = `${payload.shippingAddress.firstName} ${payload.shippingAddress.lastName}`; payload.guestPhone = guestForm.value.phone }
+
     const response = await placeOrder(payload)
-    if (selectedPayment.value === 'stripe' && response.clientSecret && stripeInstance && stripeCard) {
-      const { error, paymentIntent } = await stripeInstance.confirmCardPayment(response.clientSecret, { payment_method: { card: stripeCard } })
-      if (error) { orderError.value = error.message || 'Payment failed'; orderLoading.value = false; return }
-      if (paymentIntent?.status === 'succeeded') await confirmStripePayment(response.orderNumber, response.paymentIntentId)
+
+    // ── Stripe: confirm card on the client, then verify with backend ──
+    if (selectedPayment.value === 'stripe') {
+      if (!response.clientSecret || !stripeInstance || !stripeCard) {
+        // Backend didn't provide a client_secret — restore cart and show error
+        cart.syncFromApi(cartSnapshot as any)
+        orderError.value = 'Payment could not be initialised. Please refresh and try again.'
+        orderLoading.value = false
+        return
+      }
+      const { error, paymentIntent } = await stripeInstance.confirmCardPayment(
+        response.clientSecret,
+        { payment_method: { card: stripeCard } }
+      )
+      if (error) {
+        // Stripe hard decline (wrong CVV, card number, insufficient funds, etc.)
+        // Cart was NOT cleared by the backend on Stripe path until client_secret was issued,
+        // but we restore the snapshot to keep the display consistent for retry.
+        cart.syncFromApi(cartSnapshot as any)
+        orderError.value = error.message || 'Payment failed. Please check your card details and try again.'
+        orderLoading.value = false
+        return
+      }
+      if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+        // 3DS cancelled / authentication failed
+        cart.syncFromApi(cartSnapshot as any)
+        orderError.value = `Payment was not completed (status: ${paymentIntent?.status ?? 'unknown'}). Please try again.`
+        orderLoading.value = false
+        return
+      }
+      // Payment succeeded on Stripe — verify with our backend
+      // throws on HTTP 4xx/5xx, caught below
+      await confirmStripePayment(response.orderNumber, paymentIntent.id)
     }
-    cart.clearCart()
+
+    // ── Success: only now clear the local cart ──
+    await cart.loadCart()   // sync the already-cleared server cart to frontend
     router.push('/checkout/success/' + response.orderNumber)
+
   } catch (e: any) {
+    // Restore cart snapshot so the user can retry without losing items
+    cart.syncFromApi(cartSnapshot as any)
     const resp = e.response?.data
     if (resp?.errors) {
       const allErrors = Object.values(resp.errors).flat().join('. ')

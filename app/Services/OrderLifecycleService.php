@@ -241,25 +241,43 @@ final class OrderLifecycleService
                 ]);
             }
 
-            // ── Clear cart ──
-            $userId    = $user?->id;
-            $sessionId = $userId ? null : $request->session()->getId();
-
-            CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
-                ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
-                ->delete();
-
-            session()->forget(['cart_coupon', 'cart_discount']);
-
             // ── Handle payment gateway ──
+            // NOTE: Cart is cleared AFTER the gateway call so that if Stripe
+            // initialization fails, the customer's cart is still intact and
+            // they can retry payment without losing their items.
             $paymentResult = [];
 
             if ($data['paymentMethod'] === 'stripe') {
+                // createStripeIntent() throws RuntimeException on failure,
+                // which rolls back the entire DB transaction (order not created).
                 $paymentResult = $this->paymentGateway->createStripeIntent($order);
+
+                // Only clear the cart once Stripe has issued a valid client_secret.
+                if (!empty($paymentResult['client_secret'])) {
+                    $userId    = $user?->id;
+                    $sessionId = $userId ? null : $request->session()->getId();
+                    CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
+                        ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
+                        ->delete();
+                    session()->forget(['cart_coupon', 'cart_discount']);
+                }
             } elseif ($data['paymentMethod'] === 'cod') {
-                // COD: order stays pending/unpaid until delivery
+                // COD: clear cart immediately — no async payment step needed.
+                $userId    = $user?->id;
+                $sessionId = $userId ? null : $request->session()->getId();
+                CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
+                    ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
+                    ->delete();
+                session()->forget(['cart_coupon', 'cart_discount']);
                 $paymentResult = ['success' => true, 'error' => null];
             } else {
+                // Bank transfer / wallet / other — clear cart immediately.
+                $userId    = $user?->id;
+                $sessionId = $userId ? null : $request->session()->getId();
+                CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
+                    ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
+                    ->delete();
+                session()->forget(['cart_coupon', 'cart_discount']);
                 $paymentResult = ['success' => true, 'error' => null];
             }
 
