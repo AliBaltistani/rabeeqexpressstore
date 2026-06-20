@@ -37,42 +37,29 @@ export function useGoogleLogin(clientId: string) {
 
         return new Promise((resolve, reject) => {
             const google = (window as any).google
-            if (!google?.accounts?.id) {
+            if (!google?.accounts?.oauth2) {
                 reject(new Error('Google Identity Services failed to load'))
                 return
             }
 
-            let settled = false
-
-            google.accounts.id.initialize({
+            const client = google.accounts.oauth2.initTokenClient({
                 client_id: clientId,
-                callback: (response: { credential: string }) => {
-                    if (settled) return
-                    settled = true
-                    if (response.credential) {
-                        // Decode name from JWT payload (no library needed)
-                        try {
-                            const payload = JSON.parse(atob(response.credential.split('.')[1]))
-                            resolve({ token: response.credential, name: payload.name })
-                        } catch {
-                            resolve({ token: response.credential })
-                        }
+                scope: 'email profile openid',
+                callback: (response: any) => {
+                    if (response && response.access_token) {
+                        // Return the access_token which Socialite natively expects
+                        resolve({ token: response.access_token })
                     } else {
-                        reject(new Error('Google sign-in was cancelled'))
+                        reject(new Error('Google sign-in was cancelled or failed'))
                     }
                 },
-                cancel_on_tap_outside: true,
-            })
-
-            // Use popup flow instead of One Tap for reliability
-            google.accounts.id.prompt((notification: any) => {
-                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                    if (!settled) {
-                        settled = true
-                        reject(new Error('Google sign-in popup was dismissed or blocked'))
-                    }
+                error_callback: (error: any) => {
+                    reject(new Error(error?.type || 'Google popup failed/blocked'))
                 }
             })
+
+            // Trigger the explicit popup (reliable on button click, no FedCM)
+            client.requestAccessToken()
         })
     }
 

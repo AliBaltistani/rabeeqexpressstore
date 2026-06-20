@@ -74,7 +74,7 @@ class SocialLoginSettingsPage extends Page
                                 $frontUrl = rtrim(env('FRONTEND_URL', $appUrl), '/');
                                 return new \Illuminate\Support\HtmlString('
                                     <div style="background:#f0f7ff;border:1px solid #c3dafe;border-radius:8px;padding:14px 16px;font-size:13px;line-height:1.7;color:#1e3a5f">
-                                        <strong>📌 How to get your Google Client ID &amp; Secret</strong><br>
+                                        <strong> How to get your Google Client ID &amp; Secret</strong><br>
                                         1. Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#4285F4;text-decoration:underline">Google Cloud Console → APIs &amp; Services → Credentials</a><br>
                                         2. Click <strong>Create Credentials → OAuth 2.0 Client ID</strong>, type: <strong>Web application</strong><br>
                                         3. Under <strong>Authorised JavaScript origins</strong>, add:<br>
@@ -118,7 +118,7 @@ class SocialLoginSettingsPage extends Page
                                 $frontUrl = rtrim(env('FRONTEND_URL', config('app.url')), '/');
                                 return new \Illuminate\Support\HtmlString('
                                     <div style="background:#f0f4ff;border:1px solid #bfcfff;border-radius:8px;padding:14px 16px;font-size:13px;line-height:1.7;color:#1a1f6e">
-                                        <strong>📌 How to get your Facebook App ID &amp; Secret</strong><br>
+                                        <strong>How to get your Facebook App ID &amp; Secret</strong><br>
                                         1. Go to <a href="https://developers.facebook.com/apps" target="_blank" style="color:#1877F2;text-decoration:underline">Meta for Developers → My Apps</a><br>
                                         2. Create an app (type: <strong>Consumer</strong> or <strong>None</strong>), then go to <strong>Settings → Basic</strong><br>
                                         3. Under <strong>App Domains</strong>, add: <code style="background:#dde6ff;padding:1px 6px;border-radius:4px">' . parse_url($frontUrl, PHP_URL_HOST) . '</code><br>
@@ -162,7 +162,7 @@ class SocialLoginSettingsPage extends Page
                                 $domain   = parse_url($frontUrl, PHP_URL_HOST);
                                 return new \Illuminate\Support\HtmlString('
                                     <div style="background:#f5f5f7;border:1px solid #d1d1d6;border-radius:8px;padding:14px 16px;font-size:13px;line-height:1.7;color:#1c1c1e">
-                                        <strong>📌 How to get your Apple Service ID &amp; Secret</strong><br>
+                                        <strong>How to get your Apple Service ID &amp; Secret</strong><br>
                                         1. Go to <a href="https://developer.apple.com/account/resources/identifiers/list/serviceId" target="_blank" style="color:#555;text-decoration:underline">Apple Developer → Identifiers → Services IDs</a><br>
                                         2. Create a <strong>Services ID</strong> — this is your <strong>Client ID</strong> (e.g. <em>com.yourapp.web</em>)<br>
                                         3. Enable <strong>Sign In with Apple</strong> and click Configure:<br>
