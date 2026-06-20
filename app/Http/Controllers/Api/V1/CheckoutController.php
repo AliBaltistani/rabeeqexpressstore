@@ -167,6 +167,9 @@ class CheckoutController extends Controller
         );
 
         if ($result['success']) {
+            // ── Clear cart now that payment is fully confirmed ──
+            $this->orderLifecycle->clearCartForUser($user, $request);
+
             // Log status transition
             $this->orderLifecycle->transitionStatus($order, 'processing');
 

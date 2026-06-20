@@ -242,42 +242,22 @@ final class OrderLifecycleService
             }
 
             // ── Handle payment gateway ──
-            // NOTE: Cart is cleared AFTER the gateway call so that if Stripe
-            // initialization fails, the customer's cart is still intact and
-            // they can retry payment without losing their items.
             $paymentResult = [];
 
             if ($data['paymentMethod'] === 'stripe') {
                 // createStripeIntent() throws RuntimeException on failure,
-                // which rolls back the entire DB transaction (order not created).
+                // which rolls back the entire DB transaction (order never created).
+                // Cart is intentionally NOT cleared here — it is only cleared later
+                // inside confirmStripe() once the PaymentIntent is verified as 'succeeded'.
+                // This allows the customer to retry with correct card details.
                 $paymentResult = $this->paymentGateway->createStripeIntent($order);
-
-                // Only clear the cart once Stripe has issued a valid client_secret.
-                if (!empty($paymentResult['client_secret'])) {
-                    $userId    = $user?->id;
-                    $sessionId = $userId ? null : $request->session()->getId();
-                    CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
-                        ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
-                        ->delete();
-                    session()->forget(['cart_coupon', 'cart_discount']);
-                }
             } elseif ($data['paymentMethod'] === 'cod') {
-                // COD: clear cart immediately — no async payment step needed.
-                $userId    = $user?->id;
-                $sessionId = $userId ? null : $request->session()->getId();
-                CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
-                    ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
-                    ->delete();
-                session()->forget(['cart_coupon', 'cart_discount']);
+                // COD: clear cart immediately — payment happens at delivery.
+                $this->clearCartForUser($user, $request);
                 $paymentResult = ['success' => true, 'error' => null];
             } else {
                 // Bank transfer / wallet / other — clear cart immediately.
-                $userId    = $user?->id;
-                $sessionId = $userId ? null : $request->session()->getId();
-                CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
-                    ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
-                    ->delete();
-                session()->forget(['cart_coupon', 'cart_discount']);
+                $this->clearCartForUser($user, $request);
                 $paymentResult = ['success' => true, 'error' => null];
             }
 
@@ -286,6 +266,22 @@ final class OrderLifecycleService
                 'payment' => $paymentResult,
             ];
         });
+    }
+
+    /**
+     * Clear all cart items for the given user or session.
+     * Called after Stripe payment is fully confirmed, or immediately for COD/bank.
+     */
+    public function clearCartForUser(?User $user, Request $request): void
+    {
+        $userId    = $user?->id;
+        $sessionId = $userId ? null : $request->session()->getId();
+
+        CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
+            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
+            ->delete();
+
+        session()->forget(['cart_coupon', 'cart_discount']);
     }
 
     /**
