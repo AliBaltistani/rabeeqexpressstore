@@ -83,7 +83,7 @@
               <p>Or split in <strong>4 payments</strong> of <strong>SAR {{ (product.salePrice / 4).toFixed(2) }}</strong></p>
               <p class="pdp-info__installment-sub">- No late fees, Sharia compliant! <a href="#" class="pdp-info__link">Learn more</a></p>
             </div>
-            <img src="https://cdn.salla.sa/RvPxw/iEP6VGV6IrUHSpWx0M39HR3cvuGuKmQXUBAcE30B.png" alt="tamara" class="pdp-info__installment-logo" style="height:24px; width:auto;" />
+            <img v-if="settingsStore.storeSettings.logo" :src="settingsStore.storeSettings.logo" alt="store logo" class="pdp-info__installment-logo" />
           </div>
 
           <!-- Product Attributes -->
@@ -266,6 +266,7 @@ import ProductCard from '@/components/home/ProductCard.vue'
 import { fetchProductBySlug, fetchProducts, fetchProductReviews, submitReview } from '@/api/services'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { flyToCart, pulseElement } from '@/composables/useActionAnimations'
 import { useCartToast } from '@/composables/useCartToast'
 import { useShareMenu } from '@/composables/useShareMenu'
@@ -277,6 +278,7 @@ const router = useRouter()
 const { t } = useI18n()
 const cart = useCartStore()
 const wishlist = useWishlistStore()
+const settingsStore = useSettingsStore()
 const { showToast } = useCartToast()
 const { openShare } = useShareMenu()
 
@@ -653,6 +655,12 @@ watch(() => route.params.slug, (newSlug) => {
   align-items: center;
   justify-content: center;
   aspect-ratio: 1;
+  max-height: 320px;
+}
+@media (min-width: 768px) {
+  .pdp-gallery__main {
+    max-height: none;
+  }
 }
 .pdp-gallery__main-img {
   width: 100%;
@@ -808,6 +816,13 @@ watch(() => route.params.slug, (newSlug) => {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.pdp-info__installment-logo {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .pdp-info__installment-text {
   font-size: 0.8125rem;

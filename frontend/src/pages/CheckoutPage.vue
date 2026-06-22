@@ -70,8 +70,18 @@
                     <img :src="item.image || ''" :alt="item.productName" class="drawer-item__img" />
                     <div class="drawer-item__info">
                       <p class="drawer-item__name">{{ item.productName }}</p>
-                      <p v-if="item.attributes && item.attributes.length" class="drawer-item__attrs">
-                        <span v-for="attr in item.attributes" :key="attr.id" class="drawer-item__attr">{{ attr.name }}: {{ attr.values.map(v => v.value).join(', ') }}</span>
+                      <!-- Only show attributes when a variant was explicitly selected -->
+                      <p v-if="item.variantId && (item.variantName || (item.attributes && item.attributes.length))" class="drawer-item__attrs">
+                        <!-- Prefer variantName — it's pre-formatted by the API e.g. "Size: 36" -->
+                        <span v-if="item.variantName" class="drawer-item__attr">{{ item.variantName }}</span>
+                        <!-- Fallback: filter each attribute's values to only the selected one(s) -->
+                        <template v-else-if="item.attributes">
+                          <span v-for="attr in item.attributes" :key="attr.id" class="drawer-item__attr">
+                            {{ attr.name }}: {{ item.selectedAttributeValues
+                              ? attr.values.filter((v: any) => item.selectedAttributeValues!.includes(v.id)).map((v: any) => v.value).join(', ')
+                              : attr.values[0]?.value || '' }}
+                          </span>
+                        </template>
                       </p>
                       <p class="drawer-item__price">{{ item.unitPrice?.formatted || '' }}</p>
                       <div class="drawer-item__qty">
