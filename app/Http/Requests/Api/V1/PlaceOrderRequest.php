@@ -38,6 +38,7 @@ class PlaceOrderRequest extends FormRequest
             'couponCode'                   => ['nullable', 'string', 'max:50'],
             'notes'                        => ['nullable', 'string', 'max:1000'],
             'currency'                     => ['nullable', 'string', 'max:3'],
+            'paymentIntentId'              => ['nullable', 'string', 'max:255'],
             'guestEmail'                   => [$user ? 'nullable' : 'required', 'email', 'max:255'],
             'guestName'                    => ['nullable', 'string', 'max:200'],
             'guestPhone'                   => ['nullable', 'string', 'max:20'],

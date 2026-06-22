@@ -316,8 +316,22 @@ export async function placeOrder(data: any) {
   return unwrap<any>(await apiClient.post('/checkout/place-order', data))
 }
 
+export async function createStripePaymentIntent(data: { shippingMethodId?: number | null; couponCode?: string; currency?: string }) {
+  return unwrap<{ clientSecret: string; paymentIntentId: string; amount: number; currency: string }>(
+    await apiClient.post('/checkout/stripe/create-intent', data)
+  )
+}
+
 export async function confirmStripePayment(orderNumber: string, paymentIntentId: string) {
   return unwrap<any>(await apiClient.post('/checkout/stripe/confirm', { orderNumber, paymentIntentId }))
+}
+
+export async function cancelStripeOrder(orderNumber: string) {
+  try {
+    return unwrap<any>(await apiClient.post('/checkout/stripe/cancel', { orderNumber }))
+  } catch {
+    // Fire-and-forget — cancellation is best-effort
+  }
 }
 
 export async function fetchOrderSuccess(orderNumber: string) {

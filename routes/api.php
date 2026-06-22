@@ -108,7 +108,9 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
         Route::post('shipping-methods', [CheckoutController::class, 'shippingMethods']);
         Route::post('shipping-rates', [CheckoutController::class, 'shippingRates']);
         Route::post('place-order', [CheckoutController::class, 'placeOrder']);
+        Route::post('stripe/create-intent', [CheckoutController::class, 'createStripeIntent']);
         Route::post('stripe/confirm', [CheckoutController::class, 'confirmStripe']);
+        Route::post('stripe/cancel', [CheckoutController::class, 'cancelStripeOrder']);
         Route::get('order-success/{orderNumber}', [CheckoutController::class, 'orderSuccess']);
     });
 

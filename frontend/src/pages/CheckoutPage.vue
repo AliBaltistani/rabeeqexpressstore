@@ -537,7 +537,7 @@ import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, confirmStripePayment, fetchActiveCountries, updateProfile, fetchMyCoupons } from '@/api/services'
+import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, createStripePaymentIntent, confirmStripePayment, cancelStripeOrder, fetchActiveCountries, updateProfile, fetchMyCoupons } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 import PhoneInput from '@/components/common/PhoneInput.vue'
 
@@ -1021,80 +1021,94 @@ async function confirmPayment() {
   clearErrors(); orderError.value = ''
   if (!selectedPayment.value) { errors.payment = t('checkout.selectPayment'); return }
   if (!agreeTerms.value) { errors.terms = t('checkout.agreeTermsRequired'); return }
-
-  // ── Snapshot cart BEFORE any async call so we can restore it on failure ──
-  const cartSnapshot = {
-    items: JSON.parse(JSON.stringify(cart.items)),
-    subtotal: { ...cart.subtotal },
-    discount: { ...cart.discount },
-    total: { ...cart.total },
-    couponCode: cart.couponCode,
+  if (selectedPayment.value === 'stripe' && (!stripeInstance || !stripeCard)) {
+    orderError.value = 'Card payment form is not ready. Please refresh and try again.'
+    return
   }
+
+  // ── Build base order payload ──
+  const isGuestMode = authMode.value === 'guest' && !auth.isAuthenticated
+  const selectedOpt = shippingOptions.value.find((s: any) => s.id === selectedShippingId.value)
+  const isNewMethod = selectedOpt?.slug || selectedOpt?.carrier_type
+  const payload: any = {
+    shippingAddress: { firstName: addressForm.value.firstName, lastName: addressForm.value.lastName, phone: additionalPhone.value || addressForm.value.phone, addressLine1: addressForm.value.street, city: addressForm.value.city, country: addressForm.value.country, state: addressForm.value.state, postalCode: addressForm.value.postalCode },
+    paymentMethod: selectedPayment.value,
+    ...(isNewMethod ? { shippingMethodId: selectedShippingId.value } : { shippingRateId: selectedShippingId.value }),
+    couponCode: couponCode.value || cart.couponCode || undefined,
+    notes: '',
+    currency: settings.currentCurrencyCode,
+  }
+  const userNameParts = auth.user?.name?.split(' ') || []
+  if (!payload.shippingAddress.firstName) payload.shippingAddress.firstName = guestForm.value.firstName || userNameParts[0] || 'Customer'
+  if (!payload.shippingAddress.lastName)  payload.shippingAddress.lastName  = guestForm.value.lastName  || userNameParts.slice(1).join(' ') || '-'
+  if (!payload.shippingAddress.phone)     payload.shippingAddress.phone     = guestForm.value.phone || auth.user?.phone || ''
+  if (!payload.shippingAddress.addressLine1) payload.shippingAddress.addressLine1 = '-'
+  if (!payload.shippingAddress.city)    payload.shippingAddress.city    = '-'
+  if (!payload.shippingAddress.country) payload.shippingAddress.country = '-'
+  if (isGuestMode) { payload.guestEmail = guestForm.value.email; payload.guestName = `${payload.shippingAddress.firstName} ${payload.shippingAddress.lastName}`; payload.guestPhone = guestForm.value.phone }
 
   orderLoading.value = true
   try {
-    const isGuestMode = authMode.value === 'guest' && !auth.isAuthenticated
-    const selectedOpt = shippingOptions.value.find((s: any) => s.id === selectedShippingId.value)
-    const isNewMethod = selectedOpt?.slug || selectedOpt?.carrier_type
-    const payload: any = {
-      shippingAddress: { firstName: addressForm.value.firstName, lastName: addressForm.value.lastName, phone: additionalPhone.value || addressForm.value.phone, addressLine1: addressForm.value.street, city: addressForm.value.city, country: addressForm.value.country, state: addressForm.value.state, postalCode: addressForm.value.postalCode },
-      paymentMethod: selectedPayment.value,
-      ...(isNewMethod ? { shippingMethodId: selectedShippingId.value } : { shippingRateId: selectedShippingId.value }),
-      couponCode: couponCode.value || cart.couponCode || undefined, notes: '', currency: settings.currentCurrencyCode,
-    }
-    // Resolve name: prefer addressForm, fall back to auth user, then guest form
-    const userNameParts = auth.user?.name?.split(' ') || []
-    if (!payload.shippingAddress.firstName) payload.shippingAddress.firstName = guestForm.value.firstName || userNameParts[0] || 'Customer'
-    if (!payload.shippingAddress.lastName) payload.shippingAddress.lastName = guestForm.value.lastName || userNameParts.slice(1).join(' ') || '-'
-    if (!payload.shippingAddress.phone) payload.shippingAddress.phone = guestForm.value.phone || auth.user?.phone || ''
-    if (!payload.shippingAddress.addressLine1) payload.shippingAddress.addressLine1 = '-'
-    if (!payload.shippingAddress.city) payload.shippingAddress.city = '-'
-    if (!payload.shippingAddress.country) payload.shippingAddress.country = '-'
-    if (isGuestMode) { payload.guestEmail = guestForm.value.email; payload.guestName = `${payload.shippingAddress.firstName} ${payload.shippingAddress.lastName}`; payload.guestPhone = guestForm.value.phone }
+    // ════════════════════════════════════════════════════════
+    //  STRIPE — Payment-First Flow
+    //  Step 1 → Create PI (no order created yet)
+    //  Step 2 → Confirm card on client (no order created yet)
+    //  Step 3 → Only on success: place order with paymentIntentId
+    // ════════════════════════════════════════════════════════
+    if (selectedPayment.value === 'stripe') {
 
+      // 1️⃣  Ask backend to create a Stripe PaymentIntent from exact cart total
+      let intentData: any
+      try {
+        intentData = await createStripePaymentIntent({
+          shippingMethodId: isNewMethod ? (selectedShippingId.value ?? undefined) : undefined,
+          couponCode:       couponCode.value || cart.couponCode || undefined,
+          currency:         settings.currentCurrencyCode,
+        })
+      } catch (piErr: any) {
+        const msg = piErr.response?.data?.message || piErr.message || 'Could not initialise payment.'
+        orderError.value = `Payment initialisation failed: ${msg}`
+        orderLoading.value = false
+        return   // ← NO order created
+      }
+
+      // 2️⃣  Confirm card on the frontend (Stripe.js handles 3DS / CVV / etc.)
+      const { error: stripeErr, paymentIntent } = await stripeInstance.confirmCardPayment(
+        intentData.clientSecret,
+        { payment_method: { card: stripeCard, billing_details: { name: cardHolderName.value || undefined } } }
+      )
+
+      if (stripeErr) {
+        // Declined, wrong card, testmode error, etc. — NO order created ✅
+        const codeHint = stripeErr.decline_code || stripeErr.code || null
+        orderError.value = `Payment declined: ${stripeErr.message || 'Unknown card error.'}${codeHint ? ` (code: ${codeHint})` : ''}`
+        orderLoading.value = false
+        return   // ← NO order created
+      }
+
+      if (!paymentIntent || paymentIntent.status !== 'succeeded') {
+        // 3DS cancelled / failed — NO order created ✅
+        const status = paymentIntent?.status ?? 'unknown'
+        orderError.value = `Payment not completed. Stripe status: "${status}". Please try again or use a different card.`
+        orderLoading.value = false
+        return   // ← NO order created
+      }
+
+      // 3️⃣  Card charged! Attach verified paymentIntentId to the order payload
+      //     Backend will re-verify with Stripe before creating the order as paid.
+      payload.paymentIntentId = paymentIntent.id
+    }
+
+    // ── Place the order (for Stripe: backend verifies PI → creates order as paid) ──
     const response = await placeOrder(payload)
 
-    // ── Stripe: confirm card on the client, then verify with backend ──
-    if (selectedPayment.value === 'stripe') {
-      if (!response.clientSecret || !stripeInstance || !stripeCard) {
-        // Backend didn't provide a client_secret — restore cart and show error
-        cart.syncFromApi(cartSnapshot as any)
-        orderError.value = 'Payment could not be initialised. Please refresh and try again.'
-        orderLoading.value = false
-        return
-      }
-      const { error, paymentIntent } = await stripeInstance.confirmCardPayment(
-        response.clientSecret,
-        { payment_method: { card: stripeCard } }
-      )
-      if (error) {
-        // Stripe hard decline (wrong CVV, card number, insufficient funds, etc.)
-        // Cart was NOT cleared by the backend on Stripe path until client_secret was issued,
-        // but we restore the snapshot to keep the display consistent for retry.
-        cart.syncFromApi(cartSnapshot as any)
-        orderError.value = error.message || 'Payment failed. Please check your card details and try again.'
-        orderLoading.value = false
-        return
-      }
-      if (!paymentIntent || paymentIntent.status !== 'succeeded') {
-        // 3DS cancelled / authentication failed
-        cart.syncFromApi(cartSnapshot as any)
-        orderError.value = `Payment was not completed (status: ${paymentIntent?.status ?? 'unknown'}). Please try again.`
-        orderLoading.value = false
-        return
-      }
-      // Payment succeeded on Stripe — verify with our backend
-      // throws on HTTP 4xx/5xx, caught below
-      await confirmStripePayment(response.orderNumber, paymentIntent.id)
-    }
-
-    // ── Success: only now clear the local cart ──
-    await cart.loadCart()   // sync the already-cleared server cart to frontend
+    // ── Success ──
+    await cart.loadCart()
     router.push('/checkout/success/' + response.orderNumber)
 
   } catch (e: any) {
     // Restore cart snapshot so the user can retry without losing items
-    cart.syncFromApi(cartSnapshot as any)
+    cart.syncFromApi({ items: JSON.parse(JSON.stringify(cart.items)), subtotal: { ...cart.subtotal }, discount: { ...cart.discount }, total: { ...cart.total }, couponCode: cart.couponCode } as any)
     const resp = e.response?.data
     if (resp?.errors) {
       const allErrors = Object.values(resp.errors).flat().join('. ')
@@ -1104,6 +1118,7 @@ async function confirmPayment() {
     }
   }
   finally { orderLoading.value = false }
+
 }
 
 // ── Coupon ──

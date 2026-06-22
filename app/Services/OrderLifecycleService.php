@@ -141,6 +141,26 @@ final class OrderLifecycleService
 
             $total = $subtotal - $discount + $shippingAmount + $codFee;
 
+            // ── Stripe: verify PaymentIntent BEFORE creating the order ──
+            // Payment-first flow: frontend confirms card, then sends paymentIntentId with the order.
+            // We verify the PI succeeded so the order is only ever created for genuine payments.
+            $stripeIntentId = null;
+            if (($data['paymentMethod'] ?? '') === 'stripe') {
+                // Read from both validated data and raw request as fallback
+                $intentId = $data['paymentIntentId']
+                    ?? $request->input('paymentIntentId')
+                    ?? null;
+
+                if (empty($intentId)) {
+                    throw new \RuntimeException('Payment intent ID is required for Stripe payments. Please complete card authorisation first.');
+                }
+                $verification = $this->paymentGateway->verifyStripePaymentIntent($intentId);
+                if (!$verification['success']) {
+                    throw new \RuntimeException($verification['error'] ?? 'Stripe payment was not completed. Please try again.');
+                }
+                $stripeIntentId = $intentId;
+            }
+
             // ── Wallet payment ──
             $paymentStatus = 'unpaid';
             if (($data['paymentMethod'] ?? '') === 'wallet') {
@@ -159,6 +179,11 @@ final class OrderLifecycleService
                 $paymentStatus = 'paid';
             }
 
+            // Stripe PI was verified — mark as paid immediately
+            if ($stripeIntentId) {
+                $paymentStatus = 'paid';
+            }
+
             // ── Create order ──
             $order = Order::create([
                 'order_number'      => 'ORD-' . strtoupper(Str::random(8)),
@@ -166,10 +191,13 @@ final class OrderLifecycleService
                 'guest_email'       => $data['guestEmail'] ?? null,
                 'guest_name'        => $data['guestName'] ?? null,
                 'guest_phone'       => $data['guestPhone'] ?? null,
-                'status'            => 'pending',
+                // Stripe-verified orders start as processing (paid), others as pending
+                'status'            => $paymentStatus === 'paid' ? 'processing' : 'pending',
                 'payment_status'    => $paymentStatus,
                 'payment_method'    => $data['paymentMethod'],
                 'payment_gateway'   => $data['paymentMethod'] === 'stripe' ? 'stripe' : null,
+                'payment_intent_id' => $stripeIntentId,
+                'transaction_id'    => $stripeIntentId,
                 'shipping_rate_id'  => null,
                 'shipping_method'   => $shippingMethodName,
                 'shipping_status'       => 'pending',
@@ -241,24 +269,18 @@ final class OrderLifecycleService
                 ]);
             }
 
-            // ── Handle payment gateway ──
-            $paymentResult = [];
+            // ── Handle cart clearing & payment result ──
+            $paymentResult = ['success' => true, 'error' => null];
 
             if ($data['paymentMethod'] === 'stripe') {
-                // createStripeIntent() throws RuntimeException on failure,
-                // which rolls back the entire DB transaction (order never created).
-                // Cart is intentionally NOT cleared here — it is only cleared later
-                // inside confirmStripe() once the PaymentIntent is verified as 'succeeded'.
-                // This allows the customer to retry with correct card details.
-                $paymentResult = $this->paymentGateway->createStripeIntent($order);
+                // PI was already verified above; cart is cleared here since payment is confirmed.
+                $this->clearCartForUser($user, $request);
             } elseif ($data['paymentMethod'] === 'cod') {
                 // COD: clear cart immediately — payment happens at delivery.
                 $this->clearCartForUser($user, $request);
-                $paymentResult = ['success' => true, 'error' => null];
             } else {
                 // Bank transfer / wallet / other — clear cart immediately.
                 $this->clearCartForUser($user, $request);
-                $paymentResult = ['success' => true, 'error' => null];
             }
 
             return [
@@ -266,6 +288,71 @@ final class OrderLifecycleService
                 'payment' => $paymentResult,
             ];
         });
+    }
+
+    /**
+     * Compute cart totals for the given checkout data without creating an order.
+     * Used by the Stripe payment-intent endpoint to determine the charge amount.
+     *
+     * @return array{subtotal: float, discount: float, shippingAmount: float, total: float}
+     */
+    public function computeTotals(array $data, ?User $user, Request $request): array
+    {
+        $cartItems = $this->getCartItems($user, $request);
+
+        if ($cartItems->isEmpty()) {
+            throw new \RuntimeException('Your cart is empty.');
+        }
+
+        $subtotal = 0;
+        foreach ($cartItems as $cartItem) {
+            $product = $cartItem->product;
+            if (!$product) continue;
+            $price     = (float) ($cartItem->variant?->price ?? $product->price);
+            $subtotal += $price * $cartItem->quantity;
+        }
+
+        // Coupon discount
+        $discount = 0;
+        $coupon   = null;
+        $freeShippingApplied = false;
+        if (!empty($data['couponCode'])) {
+            $coupon = \App\Models\Coupon::where('code', strtoupper($data['couponCode']))->first();
+            if ($coupon) {
+                $isValid = $user ? $coupon->isValidForUser($user) : $coupon->isValid();
+                if ($isValid) {
+                    $discount = $coupon->calculateDiscount($subtotal);
+                } else {
+                    $coupon = null;
+                }
+            }
+        }
+
+        // Shipping cost
+        $shippingAmount   = 0;
+        $shippingMethodId = $data['shippingMethodId'] ?? null;
+        if ($shippingMethodId) {
+            $method = \App\Models\ShippingMethod::find($shippingMethodId);
+            if ($method) {
+                $shippingAmount = $method->getEffectiveCost($subtotal);
+            }
+        }
+
+        // Free shipping coupon
+        if ($coupon && $coupon->isFreeShipping()) {
+            if (!$shippingMethodId || $coupon->appliesToShippingMethod($shippingMethodId)) {
+                $shippingAmount = 0;
+                $freeShippingApplied = true;
+            }
+        }
+
+        return [
+            'subtotal'            => $subtotal,
+            'discount'            => $discount,
+            'shippingAmount'      => $shippingAmount,
+            'freeShippingApplied' => $freeShippingApplied,
+            'total'               => $subtotal - $discount + $shippingAmount,
+        ];
     }
 
     /**

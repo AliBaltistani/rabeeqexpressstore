@@ -41,10 +41,57 @@ class CheckoutController extends Controller
             'gateways'             => $gateways,
             'stripePublishableKey' => $this->paymentGateway->getStripePublishableKey(),
             'wallet' => [
-                'enabled' => $walletEnabled,
-                'balance' => $walletBalance,
+                'enabled'  => $walletEnabled,
+                'balance'  => $walletBalance,
                 'currency' => currency_code(),
             ],
+        ]);
+    }
+
+    /**
+     * POST /api/v1/checkout/stripe/create-intent
+     * Payment-first flow: create a Stripe PaymentIntent from cart totals BEFORE the order.
+     * Frontend confirms the card, then calls place-order with the paymentIntentId.
+     */
+    public function createStripeIntent(Request $request): JsonResponse
+    {
+        $request->validate([
+            'shippingMethodId' => ['nullable', 'integer', 'exists:shipping_methods,id'],
+            'couponCode'       => ['nullable', 'string', 'max:50'],
+            'currency'         => ['nullable', 'string', 'max:3'],
+        ]);
+
+        $user = $request->user('sanctum');
+
+        // Compute the exact total the customer will be charged
+        try {
+            $totals = $this->orderLifecycle->computeTotals($request->all(), $user, $request);
+        } catch (\RuntimeException $e) {
+            return $this->error($e->getMessage(), 422);
+        }
+
+        $currency    = $request->input('currency') ?: currency_code();
+        $amountCents = (int) round($totals['total'] * 100);
+
+        if ($amountCents <= 0) {
+            return $this->error('Order total must be greater than zero.', 422);
+        }
+
+        try {
+            $result = $this->paymentGateway->createPaymentIntentForAmount($amountCents, $currency);
+        } catch (\RuntimeException $e) {
+            return $this->error($e->getMessage(), 422);
+        }
+
+        if (!$result['success']) {
+            return $this->error($result['error'] ?? 'Failed to initialise Stripe payment.', 422);
+        }
+
+        return $this->success([
+            'clientSecret'    => $result['client_secret'],
+            'paymentIntentId' => $result['payment_intent_id'],
+            'amount'          => $amountCents,
+            'currency'        => $currency,
         ]);
     }
 
@@ -149,7 +196,8 @@ class CheckoutController extends Controller
             'paymentIntentId' => ['required', 'string'],
         ]);
 
-        $user = $request->user('sanctum');
+        $user            = $request->user('sanctum');
+        $requestedIntentId = $request->input('paymentIntentId');
 
         /** @var \App\Models\Order|null $order */
         $order = \App\Models\Order::withoutGlobalScopes()
@@ -161,10 +209,26 @@ class CheckoutController extends Controller
             return $this->notFound('Order not found.');
         }
 
-        $result = $this->paymentGateway->confirmStripePayment(
-            $order,
-            $request->input('paymentIntentId')
-        );
+        // ── Security: verify the PaymentIntent ID matches what was attached to this order ──
+        if ($order->payment_intent_id && $order->payment_intent_id !== $requestedIntentId) {
+            \Illuminate\Support\Facades\Log::warning('Stripe confirm: PaymentIntent mismatch', [
+                'order'            => $order->order_number,
+                'stored_intent'    => $order->payment_intent_id,
+                'requested_intent' => $requestedIntentId,
+            ]);
+            return $this->error('Payment intent mismatch. This request cannot be processed.', 422);
+        }
+
+        // ── Idempotency: already paid — just return current state ──
+        if ($order->payment_status === 'paid') {
+            return $this->success([
+                'orderNumber'   => $order->order_number,
+                'status'        => $order->status,
+                'paymentStatus' => $order->payment_status,
+            ], 'Order is already paid.');
+        }
+
+        $result = $this->paymentGateway->confirmStripePayment($order, $requestedIntentId);
 
         if ($result['success']) {
             // ── Clear cart now that payment is fully confirmed ──
@@ -182,7 +246,14 @@ class CheckoutController extends Controller
             ], 'Payment confirmed.');
         }
 
-        return $this->error($result['error'] ?? 'Payment confirmation failed.', 422);
+        // ── Failure: return actual Stripe status + message so frontend can display it ──
+        $stripeStatus = $result['stripeStatus'] ?? null;
+        $errorMessage = $result['error'] ?? 'Payment confirmation failed.';
+        if ($stripeStatus) {
+            $errorMessage .= " Stripe status: {$stripeStatus}.";
+        }
+
+        return $this->error($errorMessage, 422);
     }
 
     /**
@@ -200,6 +271,41 @@ class CheckoutController extends Controller
         }
 
         return $this->success(new OrderResource($order));
+    }
+
+    /**
+     * POST /api/v1/checkout/stripe/cancel
+     * Called by the frontend when Stripe confirmCardPayment fails after an order was created.
+     * Cancels the pending unpaid order and restores stock so the customer can retry.
+     */
+    public function cancelStripeOrder(Request $request): JsonResponse
+    {
+        $request->validate([
+            'orderNumber' => ['required', 'string'],
+        ]);
+
+        $user  = $request->user('sanctum');
+        $order = \App\Models\Order::withoutGlobalScopes()
+            ->where('order_number', $request->input('orderNumber'))
+            ->when($user, fn($q) => $q->where('user_id', $user->id))
+            ->first();
+
+        if (!$order) {
+            // Return 200 — idempotent: if already gone, treat as success
+            return $this->success(null, 'Order not found or already removed.');
+        }
+
+        // Only cancel orders that are still pending & unpaid — never touch paid orders
+        if ($order->payment_status === 'paid' || $order->status === 'cancelled') {
+            return $this->success(null, 'Order is already processed.');
+        }
+
+        if ($order->payment_method === 'stripe' && $order->payment_status === 'unpaid') {
+            $this->orderLifecycle->cancelOrder($order);
+            return $this->success(null, 'Pending order cancelled.');
+        }
+
+        return $this->success(null, 'No action taken.');
     }
 
     /**

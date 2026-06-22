@@ -131,13 +131,13 @@ final class PaymentGatewayService
             \Stripe\Stripe::setApiKey($stripeSecret);
 
             $intent = \Stripe\PaymentIntent::create([
-                'amount'   => (int) round((float) $order->total * 100),
-                'currency' => strtolower($order->currency_code ?? 'sar'),
-                'metadata' => [
+                'amount'               => (int) round((float) $order->total * 100),
+                'currency'             => strtolower($order->currency_code ?? 'sar'),
+                'payment_method_types' => ['card'],
+                'metadata'             => [
                     'order_number' => $order->order_number,
                     'order_id'     => $order->id,
                 ],
-                'automatic_payment_methods' => ['enabled' => true],
             ]);
 
             $order->update([
@@ -197,18 +197,96 @@ final class PaymentGatewayService
                     'transaction_id'  => $paymentIntentId,
                 ]);
 
-                return ['success' => true, 'error' => null];
+                return ['success' => true, 'stripeStatus' => 'succeeded', 'error' => null];
             }
 
             return [
-                'success' => false,
-                'error'   => 'Payment not yet completed. Status: ' . $intent->status,
+                'success'      => false,
+                'stripeStatus' => $intent->status,
+                'error'        => 'Payment not yet completed. Stripe status: ' . $intent->status,
             ];
         } catch (\Stripe\Exception\ApiErrorException $e) {
             Log::error('Stripe confirmation failed', [
                 'order' => $order->order_number,
                 'error' => $e->getMessage(),
             ]);
+
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Create a raw Stripe PaymentIntent for a given amount (in cents) and currency.
+     * Used in the payment-first flow before the order is created.
+     *
+     * @return array{success: bool, client_secret: ?string, payment_intent_id: ?string, error: ?string}
+     */
+    public function createPaymentIntentForAmount(int $amountCents, string $currency): array
+    {
+        $stripeSecret = $this->getStripeSecret();
+
+        if (empty($stripeSecret)) {
+            throw new \RuntimeException('Stripe is not configured. Please contact the store administrator.');
+        }
+
+        try {
+            \Stripe\Stripe::setApiKey($stripeSecret);
+
+            $intent = \Stripe\PaymentIntent::create([
+                'amount'               => $amountCents,
+                'currency'             => strtolower($currency),
+                'payment_method_types' => ['card'],
+            ]);
+
+            return [
+                'success'           => true,
+                'client_secret'     => $intent->client_secret,
+                'payment_intent_id' => $intent->id,
+                'error'             => null,
+            ];
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            Log::error('Stripe PaymentIntent (amount-based) creation failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success'           => false,
+                'client_secret'     => null,
+                'payment_intent_id' => null,
+                'error'             => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Verify a Stripe PaymentIntent has status 'succeeded'.
+     * Used in placeOrder to confirm payment before creating the order.
+     *
+     * @return array{success: bool, error: ?string}
+     */
+    public function verifyStripePaymentIntent(string $paymentIntentId): array
+    {
+        $stripeSecret = $this->getStripeSecret();
+
+        if (empty($stripeSecret)) {
+            return ['success' => false, 'error' => 'Stripe is not configured.'];
+        }
+
+        try {
+            \Stripe\Stripe::setApiKey($stripeSecret);
+
+            $intent = \Stripe\PaymentIntent::retrieve($paymentIntentId);
+
+            if ($intent->status === 'succeeded') {
+                return ['success' => true, 'error' => null];
+            }
+
+            return [
+                'success' => false,
+                'error'   => 'Payment was not confirmed by Stripe. Status: ' . $intent->status,
+            ];
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            Log::error('Stripe PI verification failed', ['error' => $e->getMessage()]);
 
             return ['success' => false, 'error' => $e->getMessage()];
         }
