@@ -102,6 +102,7 @@ interface ProductItem {
   currency?: string
   primaryImage?: string
   images?: any[]
+  inStock?: boolean
   category?: {
     id: number
     name: string
@@ -198,6 +199,8 @@ function mapProduct(p: ProductItem) {
     oldPrice: p.comparePrice?.raw || undefined,
     discount: p.discountPercent || undefined,
     currency: p.currency || 'SAR',
+    inStock: p.inStock,
+    category: p.category,
   }
 }
 

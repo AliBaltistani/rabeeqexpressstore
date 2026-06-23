@@ -45,7 +45,9 @@
     "reviewPlaceholder": "Share your thoughts about this product...",
     "submitReview": "Submit Review",
     "relatedProducts": "It is usually purchased with",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "soldCount": "Sold {count} times",
+    "whatsappMsg": "Hello, I'm interested in {name}"
   },
   "cart": {
     "shoppingCart": "Shopping Cart",
@@ -409,5 +411,10 @@
     "title": "Under Maintenance",
     "defaultMessage": "We are currently performing scheduled maintenance. Please check back shortly.",
     "contactUs": "Need help? Contact us"
+  },
+  "topNav": {
+    "changeLanguage": "Change Language",
+    "changeCurrency": "Change Currency",
+    "confirm": "Confirm"
   }
 }

@@ -3,6 +3,30 @@ import { ref, computed } from 'vue'
 import { fetchInit, fetchCategories } from '@/api/services'
 import type { ApiCurrency, ApiLanguage, InitData, Category } from '@/types'
 
+export interface PromoBarConfig {
+  enabled: boolean
+  mode: 'marquee' | 'static' | 'rotate'
+  style: 'filled' | 'gradient' | 'outline'
+  bgColor: string
+  textColor: string
+  gradientFrom: string
+  gradientTo: string
+  message: string
+  items: string[] | null
+  icon: string
+  linkUrl: string
+  linkTarget: '_self' | '_blank'
+  marqueeSpeed: 'slow' | 'medium' | 'fast'
+  fontSize: 'xs' | 'sm' | 'md' | 'lg'
+  fontWeight: 'normal' | 'medium' | 'semibold' | 'bold'
+  barHeight: 'compact' | 'normal' | 'tall'
+  dismissible: boolean
+  dismissHours: number
+  showCountdown: boolean
+  countdownEnd: string | null
+  showOnMobile: boolean
+}
+
 export interface CurrencyLocal {
   code: string
   name: string
@@ -82,6 +106,29 @@ export const useSettingsStore = defineStore('settings', () => {
       enabled: false,
       message: '',
     },
+    promoBar: {
+      enabled: false,
+      mode: 'marquee',
+      style: 'filled',
+      bgColor: '#cc0000',
+      textColor: '#ffffff',
+      gradientFrom: '#cc0000',
+      gradientTo: '#ff6600',
+      message: '',
+      items: null,
+      icon: '',
+      linkUrl: '',
+      linkTarget: '_self',
+      marqueeSpeed: 'medium',
+      fontSize: 'sm',
+      fontWeight: 'semibold',
+      barHeight: 'normal',
+      dismissible: true,
+      dismissHours: 24,
+      showCountdown: false,
+      countdownEnd: null,
+      showOnMobile: true,
+    } as PromoBarConfig,
   })
 
   // Navigation categories (populated from /categories API)
@@ -222,6 +269,7 @@ export const useSettingsStore = defineStore('settings', () => {
             enabled: data.maintenance?.enabled ?? false,
             message: data.maintenance?.message ?? '',
           },
+          promoBar: (data as any).promoBar ?? storeSettings.value.promoBar,
         }
 
         // Dynamically set favicon

@@ -107,8 +107,13 @@ const settings = useSettingsStore()
 
 .footer-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: 1.5rem;
+}
+@media (min-width: 480px) {
+  .footer-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 @media (min-width: 1024px) {
   .footer-grid {
@@ -118,7 +123,10 @@ const settings = useSettingsStore()
 }
 
 .footer-col--brand {
-  grid-column: span 2;
+  grid-column: span 1;
+}
+@media (min-width: 480px) {
+  .footer-col--brand { grid-column: span 2; }
 }
 @media (min-width: 1024px) {
   .footer-col--brand { grid-column: span 1; }
@@ -142,6 +150,7 @@ const settings = useSettingsStore()
   line-height: 1.5rem;
   margin: 1rem 0;
   max-width: 24rem;
+  word-break: break-word;
 }
 @media (max-width: 1023px) {
   .footer-description { text-align: center; max-width: 100%; }
@@ -200,7 +209,10 @@ const settings = useSettingsStore()
 }
 
 .footer-col--app {
-  grid-column: span 2;
+  grid-column: span 1;
+}
+@media (min-width: 480px) {
+  .footer-col--app { grid-column: span 2; }
 }
 @media (min-width: 1024px) {
   .footer-col--app { grid-column: span 1; }
@@ -208,16 +220,18 @@ const settings = useSettingsStore()
 
 .app-badges {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-top: 0.75rem;
 }
 .app-badges a {
   display: block;
   transition: opacity 0.15s ease;
+  max-width: 100%;
 }
 .app-badges a:hover { opacity: 0.8; }
-.app-badges img { height: 40px; width: auto; }
+.app-badges img { height: 40px; width: auto; max-width: 135px; }
 
 /* Bottom Footer */
 .footer-bottom {

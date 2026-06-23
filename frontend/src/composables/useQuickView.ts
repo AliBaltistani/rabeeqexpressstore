@@ -12,6 +12,9 @@ export interface QuickViewProduct {
   oldPrice?: number
   discount?: number
   currency?: string
+  inStock?: boolean
+  soldCount?: number
+  category?: { id?: number; name?: string; slug?: string } | null
   attributes?: Array<{ id: number; name: string; values: Array<{ id: number; value: string }> }>
 }
 

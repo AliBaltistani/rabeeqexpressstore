@@ -439,6 +439,8 @@ function mapProduct(p: Product) {
     oldPrice: p.comparePrice?.raw || undefined,
     discount: p.discountPercent || undefined,
     currency: p.currency || 'SAR',
+    inStock: p.inStock,
+    category: p.category,
   }
 }
 

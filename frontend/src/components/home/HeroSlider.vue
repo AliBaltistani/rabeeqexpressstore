@@ -158,8 +158,8 @@ onBeforeUnmount(() => pauseAutoplay())
 .hero-slider--contained {
   max-width: 1280px;
   margin: 0 auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  /* padding-left: 1rem; */
+  /* padding-right: 1rem; */
 }
 .hero-slider {
   position: relative;

@@ -17,11 +17,6 @@
       <div class="pdp-layout">
         <!-- ======== LEFT: IMAGE GALLERY ======== -->
         <div class="pdp-gallery">
-          <!-- Main Image -->
-          <div class="pdp-gallery__main">
-            <span class="pdp-gallery__badge">Unisex shoes</span>
-            <img ref="mainImgRef" :src="selectedImage" :alt="product.name" class="pdp-gallery__main-img" />
-          </div>
           <!-- Thumbnails -->
           <div class="pdp-gallery__thumbs">
             <button
@@ -34,23 +29,77 @@
               <img :src="img" :alt="`${product.name} view ${Number(i) + 1}`" />
             </button>
           </div>
+          <!-- Main Image -->
+          <div class="pdp-gallery__main" @click="openLightbox(selectedImageIndex)">
+            <span class="pdp-gallery__badge">Unisex shoes</span>
+            <img ref="mainImgRef" :src="selectedImage" :alt="product.name" class="pdp-gallery__main-img" />
+            <!-- Zoom hint icon -->
+            <span class="pdp-gallery__zoom-hint" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </span>
+          </div>
         </div>
+
+        <!-- ======== LIGHTBOX ======== -->
+        <Teleport to="body">
+          <Transition name="lb-fade">
+            <div v-if="lightboxOpen" class="pdp-lightbox" @click.self="closeLightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+              <!-- Close -->
+              <button class="pdp-lb__close" @click="closeLightbox" aria-label="Close">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+
+              <!-- Prev -->
+              <button v-if="product.images.length > 1" class="pdp-lb__nav pdp-lb__nav--prev" @click="lightboxPrev" aria-label="Previous image">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+
+              <!-- Main image -->
+              <div class="pdp-lb__img-wrap">
+                <Transition :name="lbTransition" mode="out-in">
+                  <img :key="lightboxIndex" :src="product.images[lightboxIndex]" :alt="product.name" class="pdp-lb__img" />
+                </Transition>
+              </div>
+
+              <!-- Next -->
+              <button v-if="product.images.length > 1" class="pdp-lb__nav pdp-lb__nav--next" @click="lightboxNext" aria-label="Next image">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+
+              <!-- Counter -->
+              <div class="pdp-lb__counter" v-if="product.images.length > 1">{{ lightboxIndex + 1 }} / {{ product.images.length }}</div>
+
+              <!-- Thumbnail strip -->
+              <div v-if="product.images.length > 1" class="pdp-lb__thumbs">
+                <button
+                  v-for="(img, i) in product.images"
+                  :key="i"
+                  class="pdp-lb__thumb"
+                  :class="{ active: Number(i) === lightboxIndex }"
+                  @click="lightboxGoTo(Number(i))"
+                >
+                  <img :src="img" :alt="`View ${Number(i) + 1}`" />
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </Teleport>
 
         <!-- ======== RIGHT: PRODUCT INFO ======== -->
         <div class="pdp-info">
-          <!-- Share & Wishlist -->
-          <div class="pdp-info__actions-top">
-            <button ref="shareBtnRef" class="pdp-icon-btn" aria-label="Share" @click="handleShare">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            </button>
-            <button ref="wishlistBtnRef" class="pdp-icon-btn" :class="{ 'pdp-icon-btn--active': isWishlisted }" aria-label="Add to wishlist" @click="toggleWishlist" :disabled="togglingWishlist">
-              <svg v-if="!togglingWishlist" width="20" height="20" viewBox="0 0 24 24" :fill="isWishlisted ? '#ef4444' : 'none'" :stroke="isWishlisted ? '#ef4444' : 'currentColor'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              <span v-else class="btn-spinner"></span>
-            </button>
+          <!-- Title + Share & Wishlist row -->
+          <div class="pdp-info__title-row">
+            <h1 class="pdp-info__title">{{ product.name }}</h1>
+            <div class="pdp-info__actions-top">
+              <button ref="shareBtnRef" class="pdp-icon-btn" aria-label="Share" @click="handleShare">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              </button>
+              <button ref="wishlistBtnRef" class="pdp-icon-btn" :class="{ 'pdp-icon-btn--active': isWishlisted }" aria-label="Add to wishlist" @click="toggleWishlist" :disabled="togglingWishlist">
+                <svg v-if="!togglingWishlist" width="20" height="20" viewBox="0 0 24 24" :fill="isWishlisted ? '#ef4444' : 'none'" :stroke="isWishlisted ? '#ef4444' : 'currentColor'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <span v-else class="btn-spinner"></span>
+              </button>
+            </div>
           </div>
-
-          <!-- Title -->
-          <h1 class="pdp-info__title">{{ product.name }}</h1>
 
           <!-- Price -->
           <div class="pdp-info__price-row">
@@ -58,23 +107,39 @@
             <span v-if="product.oldPrice" class="pdp-info__old-price">{{ product.oldPrice }} SAR</span>
           </div>
 
-          <!-- Tags/Categories -->
-          <div class="pdp-info__tags">
-            <router-link v-for="tag in product.tags" :key="tag" :to="`/category/${tag.toLowerCase().replace(/\s+/g, '-')}`" class="pdp-info__tag">{{ tag }}</router-link>
+          <!-- Category tag -->
+          <div v-if="product.category?.name" class="pdp-info__category-tag">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            {{ product.category.name }}
           </div>
 
           <!-- Stock Status -->
           <div class="pdp-info__stock">
-            <span class="pdp-info__stock-badge in-stock">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              In Stock
+            <!-- In Stock -->
+            <span v-if="product.inStock" class="pdp-info__stock-badge in-stock">
+              <svg class="stock-check-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline class="stock-check-poly" points="20 6 9 17 4 12"/>
+              </svg>
+              {{ $t('product.inStock') }}
+            </span>
+            <!-- Out of Stock -->
+            <span v-else class="pdp-out-of-stock-badge">
+              <svg class="pdp-oos-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <line x1="15" y1="9" x2="9" y2="15"/>
+                <line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              <span>{{ $t('product.outOfStock') }}</span>
             </span>
           </div>
 
           <!-- Sold Count -->
           <div class="pdp-info__sold">
-            <span class="pdp-info__sold-icon">🔥</span>
-            <span class="pdp-info__sold-text">Sold Out <strong>{{ product.soldCount }}</strong> Time</span>
+            <svg class="sold-flame-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path class="sold-flame-path" d="M12 2C12 2 7 8 7 13a5 5 0 0 0 10 0c0-2.5-1.5-5-3-7 0 0-.5 2-2 3C10.5 7.5 12 2 12 2z" fill="#f97316"/>
+              <path class="sold-flame-inner" d="M12 10c0 0-1.5 2-1.5 3.5a1.5 1.5 0 0 0 3 0C13.5 12 12 10 12 10z" fill="#fbbf24"/>
+            </svg>
+            <span class="pdp-info__sold-text">{{ $t('product.soldCount', { count: product.soldCount }) }}</span>
           </div>
 
           <!-- Installment -->
@@ -114,7 +179,7 @@
             <div class="pdp-info__meta">
               <span class="pdp-info__meta-icon">⚖</span>
               <span class="pdp-info__meta-label">{{ $t('product.weight') }}</span>
-              <span class="pdp-info__meta-value">{{ product.weight }}</span>
+              <span class="pdp-info__meta-value">{{ product.weight }}KG</span>
             </div>
           </div>
 
@@ -127,8 +192,8 @@
             </div>
           </div>
 
-          <!-- Quantity -->
-          <div class="pdp-info__quantity-row">
+          <!-- Quantity (only when in stock) -->
+          <div v-if="product.inStock" class="pdp-info__quantity-row">
             <span class="pdp-info__quantity-label">{{ $t('product.quantity') }}</span>
             <div class="pdp-info__quantity-control">
               <button class="pdp-qty-btn" @click="incrementQty" aria-label="Increase">+</button>
@@ -137,8 +202,8 @@
             </div>
           </div>
 
-          <!-- Add to Cart & Buy Now -->
-          <div class="pdp-info__buttons">
+          <!-- Add to Cart & Buy Now (in stock only) -->
+          <div v-if="product.inStock" class="pdp-info__buttons">
             <button class="pdp-btn pdp-btn--cart" @click="addToCart" :disabled="addingToCart">
               <span v-if="addingToCart" class="btn-spinner"></span>
               <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
@@ -149,6 +214,32 @@
               <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
               {{ $t('product.buyNow') }}
             </button>
+          </div>
+
+          <!-- Out of Stock actions -->
+          <div v-else class="pdp-info__buttons">
+            <div class="pdp-btn pdp-btn--oos" aria-disabled="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              {{ $t('product.outOfStock') }}
+            </div>
+            <a
+              v-if="settingsStore.storeSettings.whatsappNumber"
+              :href="'https://wa.me/' + settingsStore.storeSettings.whatsappNumber.replace('+', '') + '?text=' + encodeURIComponent($t('product.whatsappMsg', { name: product.name }))"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="pdp-btn pdp-btn--contact"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              {{ $t('footer.contactUs') }}
+            </a>
+            <a
+              v-else
+              :href="'mailto:' + (settingsStore.storeSettings.email || '') + '?subject=' + encodeURIComponent($t('product.whatsappMsg', { name: product.name }))"
+              class="pdp-btn pdp-btn--contact"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0 1.1.9 2 2 2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              {{ $t('footer.contactUs') }}
+            </a>
           </div>
         </div>
       </div>
@@ -259,7 +350,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
@@ -309,6 +400,44 @@ const togglingWishlist = ref(false)
 const mainImgRef = ref<HTMLImageElement | null>(null)
 const shareBtnRef = ref<HTMLElement | null>(null)
 const wishlistBtnRef = ref<HTMLElement | null>(null)
+
+// ── Lightbox ──
+const lightboxOpen = ref(false)
+const lightboxIndex = ref(0)
+const lbTransition = ref('lb-slide-left')
+
+const selectedImageIndex = computed(() => {
+  const idx = product.value.images.indexOf(selectedImage.value)
+  return idx >= 0 ? idx : 0
+})
+
+function openLightbox(index: number) {
+  lightboxIndex.value = index
+  lightboxOpen.value = true
+  document.body.style.overflow = 'hidden'
+}
+function closeLightbox() {
+  lightboxOpen.value = false
+  document.body.style.overflow = ''
+}
+function lightboxNext() {
+  lbTransition.value = 'lb-slide-left'
+  lightboxIndex.value = (lightboxIndex.value + 1) % product.value.images.length
+}
+function lightboxPrev() {
+  lbTransition.value = 'lb-slide-right'
+  lightboxIndex.value = (lightboxIndex.value - 1 + product.value.images.length) % product.value.images.length
+}
+function lightboxGoTo(i: number) {
+  lbTransition.value = i > lightboxIndex.value ? 'lb-slide-left' : 'lb-slide-right'
+  lightboxIndex.value = i
+}
+function handleLightboxKey(e: KeyboardEvent) {
+  if (!lightboxOpen.value) return
+  if (e.key === 'Escape') closeLightbox()
+  if (e.key === 'ArrowRight') lightboxNext()
+  if (e.key === 'ArrowLeft') lightboxPrev()
+}
 
 const isWishlisted = computed(() => wishlist.isInWishlist(product.value.id))
 const activeTab = ref('details')
@@ -502,7 +631,7 @@ async function loadProduct(slug: string) {
       currency: data.currency || 'SAR',
       sku: data.sku || '',
       weight: data.weight || '',
-      soldCount: data.reviewCount || 0,
+      soldCount: data.reviews?.count ?? data.reviewCount ?? 0,
       tags: (data.tags || []).map((t: any) => typeof t === 'string' ? t : t.name),
       attributes: data.attributes || [],
       images: images.length ? images : [data.primaryImage].filter(Boolean),
@@ -561,6 +690,11 @@ async function loadProduct(slug: string) {
 onMounted(() => {
   const slug = route.params.slug as string
   if (slug) loadProduct(slug)
+  window.addEventListener('keydown', handleLightboxKey)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleLightboxKey)
+  document.body.style.overflow = ''
 })
 
 // Re-fetch when route slug changes (for related product navigation)
@@ -581,15 +715,22 @@ watch(() => route.params.slug, (newSlug) => {
 .container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 0.625rem;
+  padding: 0 1rem; /* ≥16px on all mobile */
 }
 @media (min-width: 480px) {
   .container { padding: 0 1.25rem; }
 }
+@media (min-width: 768px) {
+  .container { padding: 0 1.5rem; }
+}
+@media (min-width: 1024px) {
+  .container { padding: 0 2rem; }
+}
 
 /* ─── Breadcrumbs ─── */
 .pdp-breadcrumbs {
-  padding: 0.75rem 0;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 .breadcrumb-list {
   list-style: none;
@@ -623,13 +764,19 @@ watch(() => route.params.slug, (newSlug) => {
 .pdp-layout {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
-  margin-bottom: 2.5rem;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+@media (min-width: 640px) {
+  .pdp-layout {
+    gap: 2rem;
+  }
 }
 @media (min-width: 768px) {
   .pdp-layout {
     grid-template-columns: 1fr 1fr;
     gap: 2.5rem;
+    margin-bottom: 2.5rem;
   }
 }
 
@@ -655,11 +802,12 @@ watch(() => route.params.slug, (newSlug) => {
   align-items: center;
   justify-content: center;
   aspect-ratio: 1;
-  max-height: 320px;
+  /* No max-height on mobile: let aspect-ratio fill 100% of column width */
+  max-height: none;
 }
 @media (min-width: 768px) {
   .pdp-gallery__main {
-    max-height: none;
+    max-height: 384px;
   }
 }
 .pdp-gallery__main-img {
@@ -671,7 +819,7 @@ watch(() => route.params.slug, (newSlug) => {
 .pdp-gallery__badge {
   position: absolute;
   top: 12px;
-  left: 12px;
+  inset-inline-start: 12px; /* RTL-aware */
   background: #ef4444;
   color: #fff;
   font-size: 0.6875rem;
@@ -720,11 +868,19 @@ watch(() => route.params.slug, (newSlug) => {
 .pdp-info {
   position: relative;
 }
+.pdp-info__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
 .pdp-info__actions-top {
   display: flex;
   gap: 0.5rem;
-  justify-content: flex-end;
-  margin-bottom: 0.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  padding-top: 0.125rem; /* optical alignment with title baseline */
 }
 .pdp-icon-btn {
   width: 36px;
@@ -748,7 +904,8 @@ watch(() => route.params.slug, (newSlug) => {
   font-weight: 700;
   color: var(--store-text-primary, #111827);
   line-height: 1.3;
-  margin: 0 0 0.75rem;
+  margin: 0;
+  flex: 1;
 }
 .pdp-info__price-row {
   display: flex;
@@ -784,27 +941,111 @@ watch(() => route.params.slug, (newSlug) => {
 .pdp-info__tag:hover {
   color: var(--color-primary, #858585);
 }
+/* Category tag */
+.pdp-info__category-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary, #858585);
+  background: color-mix(in srgb, var(--color-primary, #858585) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary, #858585) 25%, transparent);
+  border-radius: 20px;
+  padding: 0.2rem 0.65rem;
+  margin-bottom: 0.625rem;
+  text-transform: capitalize;
+}
 .pdp-info__stock {
   margin-bottom: 0.375rem;
 }
 .pdp-info__stock-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.375rem;
   font-size: 0.8125rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 .pdp-info__stock-badge.in-stock {
   color: #22c55e;
 }
+/* Out of Stock badge */
+.pdp-out-of-stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #ef4444;
+  letter-spacing: 0.01em;
+}
+.pdp-oos-svg {
+  animation: pdpOosGlow 0.7s ease-in-out infinite alternate, pdpOosPulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pdpOosGlow {
+  from { filter: drop-shadow(0 0 2px #ef444466); }
+  to   { filter: drop-shadow(0 0 8px #ef4444cc); }
+}
+@keyframes pdpOosPulse {
+  0%, 100% { transform: scale(1); }
+  15%       { transform: scale(1.25) rotate(-8deg); }
+  30%       { transform: scale(1) rotate(0deg); }
+}
+.pdp-out-of-stock-badge span {
+  animation: pdpOosText 1.4s ease-in-out infinite;
+}
+@keyframes pdpOosText {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+/* Animated checkmark — continuous loop: draw → hold → erase → repeat */
+.stock-check-poly {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: checkLoop 2s ease-in-out infinite;
+}
+@keyframes checkLoop {
+  0%   { stroke-dashoffset: 30; opacity: 1; }   /* start hidden */
+  30%  { stroke-dashoffset: 0;  opacity: 1; }   /* fully drawn */
+  70%  { stroke-dashoffset: 0;  opacity: 1; }   /* hold */
+  90%  { stroke-dashoffset: 0;  opacity: 0; }   /* fade out */
+  100% { stroke-dashoffset: 30; opacity: 0; }   /* reset (invisible) */
+}
+/* Continuous glow pulse on the checkmark */
+.stock-check-svg {
+  animation: checkGlow 0.9s ease-in-out infinite alternate;
+}
+@keyframes checkGlow {
+  from { filter: drop-shadow(0 0 2px #22c55e66); }
+  to   { filter: drop-shadow(0 0 9px #22c55eff); }
+}
+/* Flame animation */
 .pdp-info__sold {
   display: flex;
   align-items: center;
   gap: 0.375rem;
   margin-bottom: 1rem;
   font-size: 0.8125rem;
-  color: #ef4444;
-  font-weight: 500;
+  color: #ea580c;
+  font-weight: 600;
+}
+.sold-flame-svg {
+  flex-shrink: 0;
+  transform-origin: center bottom;
+  animation: flamePulse 0.4s ease-in-out infinite alternate;
+}
+@keyframes flamePulse {
+  0%   { transform: scaleY(1)    scaleX(1)    rotate(-3deg); filter: drop-shadow(0 0 5px #f97316bb); }
+  /* 50%  { transform: scaleY(1.25) scaleX(0.88) rotate(2deg);  filter: drop-shadow(0 0 14px #ef4444ee); } */
+  100% { transform: scaleY(1.1)  scaleX(0.94) rotate(-1deg); filter: drop-shadow(0 0 10px #fb923cdd); }
+}
+.sold-flame-path {
+  animation: flameColorShift 0.35s ease-in-out infinite alternate;
+}
+@keyframes flameColorShift {
+  from { fill: #f97316; }
+  to   { fill: #dc2626; }
 }
 .pdp-info__installment {
   display: flex;
@@ -880,8 +1121,6 @@ watch(() => route.params.slug, (newSlug) => {
 
 /* Meta: SKU, Weight */
 .pdp-info__meta-row {
-  display: flex;
-  justify-content: space-between;
   padding: 0.5rem 0;
   border-bottom: 1px solid #f3f4f6;
 }
@@ -890,7 +1129,6 @@ watch(() => route.params.slug, (newSlug) => {
   align-items: center;
   gap: 0.5rem;
   width: 100%;
-  justify-content: space-between;
   font-size: 0.8125rem;
   color: var(--store-text-primary, #111827);
 }
@@ -899,6 +1137,8 @@ watch(() => route.params.slug, (newSlug) => {
 }
 .pdp-info__meta-value {
   color: #6b7280;
+  margin-inline-start: auto; /* pushes value to end side — right in LTR, left in RTL */
+  text-align: end;
 }
 
 /* Price section */
@@ -979,21 +1219,35 @@ watch(() => route.params.slug, (newSlug) => {
 .pdp-info__buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: 0.625rem;
   margin-top: 1rem;
+}
+@media (max-width: 359px) {
+  /* Very small phones: stack buttons */
+  .pdp-info__buttons {
+    grid-template-columns: 1fr;
+  }
 }
 .pdp-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  gap: 0.375rem;
+  padding: 0.75rem 0.75rem;
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s;
   border: none;
+  min-height: 44px; /* tap-target */
+}
+@media (min-width: 480px) {
+  .pdp-btn {
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
 }
 .pdp-btn--cart {
   background: var(--color-primary, #858585);
@@ -1010,6 +1264,27 @@ watch(() => route.params.slug, (newSlug) => {
 .pdp-btn--buy:hover {
   border-color: var(--color-primary, #858585);
   color: var(--color-primary, #858585);
+}
+/* Out of Stock pill — looks disabled, not clickable */
+.pdp-btn--oos {
+  background: #f3f4f6;
+  border: 1.5px solid #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  user-select: none;
+  text-decoration: none;
+}
+/* Contact / WhatsApp button */
+.pdp-btn--contact {
+  background: #25d366;
+  color: #fff;
+  border: none;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s;
+}
+.pdp-btn--contact:hover {
+  background: #1ebe5c;
+  transform: translateY(-1px);
 }
 .pdp-btn:disabled {
   cursor: wait;
@@ -1092,12 +1367,16 @@ html[dir="rtl"] .pdp-tab.active {
     border-bottom: 1px solid #e5e7eb;
     min-width: auto;
     overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  .pdp-tabs::-webkit-scrollbar { display: none; }
   .pdp-tab {
     border-right: none;
     border-bottom: 3px solid transparent;
     white-space: nowrap;
-    padding: 0.75rem 1.25rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
   }
   .pdp-tab.active {
     border-right-color: transparent;
@@ -1116,7 +1395,7 @@ html[dir="rtl"] .pdp-tab.active {
     border-bottom-color: var(--color-primary, #858585);
   }
   .pdp-tab-content-area {
-    padding: 1.25rem 1rem;
+    padding: 1rem;
   }
 }
 .pdp-details__title {
@@ -1150,7 +1429,8 @@ html[dir="rtl"] .pdp-tab.active {
 /* Rating Breakdown */
 .pdp-rating-breakdown {
   display: flex;
-  gap: 2rem;
+  flex-wrap: wrap;
+  gap: 1.25rem;
   align-items: flex-start;
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
@@ -1359,10 +1639,13 @@ html[dir="rtl"] .pdp-tab.active {
   margin-bottom: 1.25rem;
 }
 .pdp-related__title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--store-text-primary, #111827);
   margin: 0;
+}
+@media (min-width: 768px) {
+  .pdp-related__title { font-size: 1.25rem; }
 }
 .pdp-related__arrows {
   display: flex;
@@ -1387,21 +1670,35 @@ html[dir="rtl"] .pdp-tab.active {
 }
 .pdp-related__track {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding-bottom: 0.5rem;
+  /* Negative margin trick to allow full-bleed scroll on mobile */
+  margin-inline: -1rem;
+  padding-inline: 1rem;
 }
 .pdp-related__track::-webkit-scrollbar {
   display: none;
 }
 .pdp-related__item {
-  flex: 0 0 220px;
+  /* ~2.2 cards visible on 375px phone */
+  flex: 0 0 clamp(160px, 42vw, 220px);
   scroll-snap-align: start;
 }
+@media (min-width: 480px) {
+  .pdp-related__item {
+    flex: 0 0 clamp(180px, 36vw, 220px);
+  }
+}
 @media (min-width: 768px) {
+  .pdp-related__track {
+    gap: 1rem;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
   .pdp-related__item {
     flex: 0 0 calc(20% - 0.8rem);
     min-width: 200px;
@@ -1449,4 +1746,181 @@ html[dir="rtl"] .pdp-tab.active {
 .pdp-info__attr-select:focus {
   border-color: var(--color-primary, #858585);
 }
+
+/* ═══ Gallery Zoom Hint ═══ */
+.pdp-gallery__main {
+  cursor: zoom-in;
+}
+.pdp-gallery__zoom-hint {
+  position: absolute;
+  bottom: 10px;
+  inset-inline-end: 10px;
+  width: 32px;
+  height: 32px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(4px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #374151;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.pdp-gallery__main:hover .pdp-gallery__zoom-hint {
+  opacity: 1;
+}
+.pdp-gallery__main:hover .pdp-gallery__main-img {
+  transform: scale(1.04);
+  transition: transform 0.35s ease;
+}
+.pdp-gallery__main-img {
+  transition: transform 0.35s ease;
+}
+
+/* ═══ Lightbox ═══ */
+.pdp-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* Close button */
+.pdp-lb__close {
+  position: absolute;
+  top: 1rem;
+  inset-inline-end: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 2;
+}
+.pdp-lb__close:hover { background: rgba(255,255,255,0.22); }
+
+/* Prev / Next nav */
+.pdp-lb__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 2;
+}
+.pdp-lb__nav:hover { background: rgba(255,255,255,0.25); }
+.pdp-lb__nav--prev { inset-inline-start: 1rem; }
+.pdp-lb__nav--next { inset-inline-end: 1rem; }
+@media (max-width: 640px) {
+  .pdp-lb__nav--prev { inset-inline-start: 0.25rem; }
+  .pdp-lb__nav--next { inset-inline-end: 0.25rem; }
+}
+
+/* Image wrapper */
+.pdp-lb__img-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-height: calc(100vh - 140px);
+  overflow: hidden;
+}
+.pdp-lb__img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Counter */
+.pdp-lb__counter {
+  position: absolute;
+  top: 1.125rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8125rem;
+  color: rgba(255,255,255,0.7);
+  font-weight: 500;
+  background: rgba(0,0,0,0.4);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
+
+/* Thumbnail strip */
+.pdp-lb__thumbs {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  padding: 0.75rem 0 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.pdp-lb__thumbs::-webkit-scrollbar { display: none; }
+.pdp-lb__thumb {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  border: 2px solid rgba(255,255,255,0.2);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+  background: transparent;
+  transition: border-color 0.2s;
+}
+.pdp-lb__thumb.active {
+  border-color: #fff;
+}
+.pdp-lb__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Lightbox overlay fade */
+.lb-fade-enter-active, .lb-fade-leave-active {
+  transition: opacity 0.28s ease;
+}
+.lb-fade-enter-from, .lb-fade-leave-to {
+  opacity: 0;
+}
+
+/* Slide transitions for lightbox images */
+.lb-slide-left-enter-active,
+.lb-slide-left-leave-active,
+.lb-slide-right-enter-active,
+.lb-slide-right-leave-active {
+  transition: opacity 0.2s ease, transform 0.22s ease;
+}
+.lb-slide-left-enter-from  { opacity: 0; transform: translateX(40px); }
+.lb-slide-left-leave-to    { opacity: 0; transform: translateX(-40px); }
+.lb-slide-right-enter-from { opacity: 0; transform: translateX(-40px); }
+.lb-slide-right-leave-to   { opacity: 0; transform: translateX(40px); }
 </style>

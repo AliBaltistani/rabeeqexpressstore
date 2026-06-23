@@ -3,9 +3,13 @@
     <!-- Promotion Banner -->
     <PromotionBanner />
 
-    <!-- Header -->
-    <header class="store-header">
+    <!-- Top Bar (scrolls away) -->
+    <div class="store-topbar">
       <TopNavbar @open-localization="showLocalization = true" />
+    </div>
+
+    <!-- Main Navigation (sticky) -->
+    <header class="store-header">
       <MainNavigation @open-search="showSearch = true" />
     </header>
 
@@ -66,9 +70,14 @@ onMounted(() => {
   min-height: 100vh;
   background: var(--bg-primary);
 }
+.store-topbar {
+  background: var(--header-bg);
+  color: var(--header-text-color);
+}
 .store-header {
-  position: relative;
-  z-index: 100;
+  position: sticky;
+  top: 0;
+  z-index: 200;
   background: var(--header-bg);
   color: var(--header-text-color);
 }

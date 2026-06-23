@@ -9,6 +9,7 @@ use App\Models\CmsPage;
 use App\Models\Currency;
 use App\Models\Language;
 use App\Models\Setting;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 
 class InitController extends Controller
@@ -128,6 +129,7 @@ class InitController extends Controller
                 'message' => setting('general.maintenance_message_' . $locale),
             ],
             'googleMapsApiKey' => setting('general.google_maps_api_key', ''),
+            'promoBar' => $this->getPromoBar($locale),
         ]);
     }
 
@@ -165,6 +167,71 @@ class InitController extends Controller
         }
 
         return $methods;
+    }
+
+    protected function getPromoBar(string $locale): array
+    {
+        $enabled     = (bool) setting('promo_bar.enabled', false);
+        $startsAt    = setting('promo_bar.starts_at');
+        $endsAt      = setting('promo_bar.ends_at');
+        $countdownEnd = setting('promo_bar.countdown_end');
+
+        // Schedule check
+        $now = now();
+        if ($startsAt && $now->lt(Carbon::parse($startsAt))) {
+            $enabled = false;
+        }
+        if ($endsAt && $now->gt(Carbon::parse($endsAt))) {
+            $enabled = false;
+        }
+
+        // Parse multi-message JSON arrays
+        $itemsEn = null;
+        $itemsAr = null;
+        $rawEn = setting('promo_bar.items_en');
+        $rawAr = setting('promo_bar.items_ar');
+        if (!empty($rawEn)) {
+            $decoded = json_decode($rawEn, true);
+            if (is_array($decoded) && count($decoded) > 0) {
+                $itemsEn = $decoded;
+            }
+        }
+        if (!empty($rawAr)) {
+            $decoded = json_decode($rawAr, true);
+            if (is_array($decoded) && count($decoded) > 0) {
+                $itemsAr = $decoded;
+            }
+        }
+
+        $message = $locale === 'ar'
+            ? setting('promo_bar.message_ar', setting('promo_bar.message_en', ''))
+            : setting('promo_bar.message_en', '');
+
+        $items = $locale === 'ar' ? ($itemsAr ?? $itemsEn) : ($itemsEn ?? $itemsAr);
+
+        return [
+            'enabled'       => $enabled,
+            'mode'          => setting('promo_bar.mode', 'marquee'),
+            'style'         => setting('promo_bar.style', 'filled'),
+            'bgColor'       => setting('promo_bar.bg_color', '#cc0000'),
+            'textColor'     => setting('promo_bar.text_color', '#ffffff'),
+            'gradientFrom'  => setting('promo_bar.gradient_from', '#cc0000'),
+            'gradientTo'    => setting('promo_bar.gradient_to', '#ff6600'),
+            'message'       => $message,
+            'items'         => $items,
+            'icon'          => setting('promo_bar.icon', ''),
+            'linkUrl'       => setting('promo_bar.link_url', ''),
+            'linkTarget'    => setting('promo_bar.link_target', '_self'),
+            'marqueeSpeed'  => setting('promo_bar.marquee_speed', 'medium'),
+            'fontSize'      => setting('promo_bar.font_size', 'sm'),
+            'fontWeight'    => setting('promo_bar.font_weight', 'semibold'),
+            'barHeight'     => setting('promo_bar.bar_height', 'normal'),
+            'dismissible'   => (bool) setting('promo_bar.dismissible', true),
+            'dismissHours'  => (int) setting('promo_bar.dismiss_hours', 24),
+            'showCountdown' => (bool) setting('promo_bar.show_countdown', false),
+            'countdownEnd'  => $countdownEnd,
+            'showOnMobile'  => (bool) setting('promo_bar.show_on_mobile', true),
+        ];
     }
 
     protected function resolveImageUrl(?string $path): ?string

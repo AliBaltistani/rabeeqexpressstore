@@ -21,7 +21,7 @@ const phoneNumber = settings.storeSettings.whatsappNumber.replace('+', '')
 <style scoped>
 .whatsapp-btn {
   position: fixed;
-  bottom: 5rem;
+  bottom: 2rem;
   right: 1.5rem;
   z-index: 200;
   width: 3.5rem;

@@ -45,7 +45,9 @@
     "reviewPlaceholder": "شاركنا رأيك حول هذا المنتج...",
     "submitReview": "إرسال التقييم",
     "relatedProducts": "عادة يتم شراؤها مع",
-    "viewAll": "عرض الكل"
+    "viewAll": "عرض الكل",
+    "soldCount": "بيع {count} مرة",
+    "whatsappMsg": "مرحباً، أنا مهتم بـ {name}"
   },
   "cart": {
     "shoppingCart": "سلة التسوق",
@@ -409,5 +411,10 @@
     "title": "تحت الصيانة",
     "defaultMessage": "نقوم حالياً بأعمال صيانة مجدولة. يرجى المحاولة مرة أخرى قريباً.",
     "contactUs": "تحتاج مساعدة؟ تواصل معنا"
+  },
+  "topNav": {
+    "changeLanguage": "تغيير اللغة",
+    "changeCurrency": "تغيير العملة",
+    "confirm": "تأكيد"
   }
 }

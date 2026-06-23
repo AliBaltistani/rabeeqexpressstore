@@ -349,6 +349,12 @@ const CategoryPanel: ReturnType<typeof defineComponent> = defineComponent({
   padding: 0.375rem 0;
   flex-shrink: 0;
   text-decoration: none;
+  /* On mobile: push right-side icons to the far end, logo stays at start (LTR=left, RTL=right) */
+  margin-inline-end: auto;
+}
+@media (min-width: 1024px) {
+  /* On desktop: reset auto-margin so the flex menu layout works normally */
+  .main-nav .navbar-brand { margin-inline-end: 0; }
 }
 .main-nav .navbar-brand img { height: 48px; width: auto; }
 
