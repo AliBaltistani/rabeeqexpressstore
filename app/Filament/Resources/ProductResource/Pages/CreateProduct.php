@@ -35,8 +35,12 @@ class CreateProduct extends CreateRecord
     protected function syncDynamicAttributes(): void
     {
         $dynamicAttributes = $this->form->getState()['dynamic_attributes'] ?? [];
-        $valueIds = collect($dynamicAttributes)->flatten()->filter()->map(fn($v) => (int) $v)->unique()->values()->all();
-        $this->record->attributeValues()->sync($valueIds);
+        $rawIds = collect($dynamicAttributes)->flatten()->filter()->map(fn($v) => (int) $v)->unique()->values()->all();
+
+        // Guard: only sync IDs that actually exist in the DB to prevent FK violations
+        $validIds = \App\Models\ProductAttributeValue::whereIn('id', $rawIds)->pluck('id')->all();
+
+        $this->record->attributeValues()->sync($validIds);
     }
 
     protected function getRedirectUrl(): string

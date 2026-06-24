@@ -4,7 +4,9 @@
     <nav class="container cart-breadcrumbs">
       <ol class="breadcrumb-list">
         <li><router-link to="/">{{ $t('breadcrumb.home') }}</router-link></li>
-        <li class="breadcrumb-sep"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M11.438 22.479l6.125-6.125-6.125-6.125 1.875-1.875 8 8-8 8z" fill="currentColor"/></svg></li>
+        <li class="breadcrumb-sep">
+          <svg width="14" height="14" viewBox="0 0 32 32"><path d="M11.438 22.479l6.125-6.125-6.125-6.125 1.875-1.875 8 8-8 8z" fill="currentColor"/></svg>
+        </li>
         <li class="breadcrumb-current">{{ $t('cart.shoppingCart') }}</li>
       </ol>
     </nav>
@@ -12,7 +14,10 @@
     <div class="container">
       <!-- Empty Cart -->
       <div v-if="cart.items.length === 0" class="cart-empty">
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+        </svg>
         <h2 class="cart-empty__title">{{ $t('cart.emptyTitle') }}</h2>
         <p class="cart-empty__text">{{ $t('cart.emptyText') }}</p>
         <router-link to="/" class="cart-empty__btn">{{ $t('cart.continueShopping') }}</router-link>
@@ -34,40 +39,45 @@
 
             <!-- Product Details -->
             <div class="cart-item__details">
-              <div class="cart-item__top-row">
+              <!-- Top row: name + remove -->
+              <div class="cart-item__header">
                 <div class="cart-item__info">
                   <h3 class="cart-item__name">{{ item.productName }}</h3>
                   <p v-if="item.variantName" class="cart-item__variant">{{ item.variantName }}</p>
                   <p class="cart-item__unit-price">{{ formatPrice(item.unitPrice) }}</p>
                 </div>
-
-                <!-- Quantity + Total + Remove -->
-                <div class="cart-item__controls">
-                  <div class="cart-item__qty">
-                    <button class="cart-qty-btn" @click="cart.updateQuantity(item.id, item.quantity + 1)" aria-label="Increase">+</button>
-                    <span class="cart-qty-value">{{ item.quantity }}</span>
-                    <button class="cart-qty-btn" @click="cart.updateQuantity(item.id, item.quantity - 1)" aria-label="Decrease">−</button>
-                  </div>
-                  <div class="cart-item__total">
-                    <span class="cart-item__total-label">{{ $t('cart.total') }}</span>
-                    <span class="cart-item__total-price">{{ formatPrice(item.lineTotal) }}</span>
-                  </div>
-                </div>
-
                 <!-- Remove Button -->
                 <button class="cart-item__remove" @click="cart.removeItem(item.id)" aria-label="Remove item">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
                 </button>
               </div>
 
-              <!-- Product Attributes -->
-              <div v-if="item.attributes && item.attributes.length > 0" class="cart-item__options-row">
-                <div v-for="attr in item.attributes" :key="attr.id" class="cart-item__option">
-                  <span class="cart-item__option-label">{{ attr.name }}:</span>
-                  <span class="cart-item__option-value">{{ getSelectedValueName(attr, item.selectedAttributeValues) }}</span>
+              <!-- Product Attributes — unified interactive editor -->
+              <AttributeSelector
+                v-if="item.attributes && item.attributes.length > 0"
+                :attributes="item.attributes"
+                :model-value="itemSelections[item.id] || {}"
+                :show-update="true"
+                :disabled="updatingItems[item.id]"
+                :updating="updatingItems[item.id]"
+                @update:model-value="(v) => { itemSelections[item.id] = v }"
+                @update="updateItemVariant(item)"
+              />
+
+              <!-- Bottom row: Quantity + Line Total -->
+              <div class="cart-item__footer">
+                <div class="cart-item__qty">
+                  <button class="cart-qty-btn" @click="cart.updateQuantity(item.id, item.quantity - 1)" aria-label="Decrease">−</button>
+                  <span class="cart-qty-value">{{ item.quantity }}</span>
+                  <button class="cart-qty-btn" @click="cart.updateQuantity(item.id, item.quantity + 1)" aria-label="Increase">+</button>
+                </div>
+                <div class="cart-item__total">
+                  <span class="cart-item__total-label">{{ $t('cart.total') }}</span>
+                  <span class="cart-item__total-price">{{ formatPrice(item.lineTotal) }}</span>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -88,15 +98,49 @@
               <input
                 type="text"
                 v-model="couponInput"
-                placeholder="Coupon code"
+                :placeholder="$t('cart.couponPlaceholder') || 'Coupon code'"
                 class="cart-summary__coupon-input"
+                :class="{
+                  'cart-summary__coupon-input--error': couponStatus === 'error',
+                  'cart-summary__coupon-input--success': couponStatus === 'success',
+                }"
+                @keyup.enter="applyCoupon"
               />
-              <button class="cart-summary__coupon-btn" @click="applyCoupon">{{ $t('cart.apply') }}</button>
+              <button
+                class="cart-summary__coupon-btn"
+                @click="applyCoupon"
+                :disabled="couponLoading"
+              >
+                <span v-if="couponLoading" class="coupon-spinner"></span>
+                <span v-else>{{ $t('cart.apply') }}</span>
+              </button>
             </div>
+            <!-- Inline feedback message -->
+            <transition name="coupon-msg">
+              <p
+                v-if="couponMessage"
+                class="cart-summary__coupon-message"
+                :class="`cart-summary__coupon-message--${couponStatus}`"
+              >
+                <svg v-if="couponStatus === 'success'" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {{ couponMessage }}
+              </p>
+            </transition>
           </div>
 
           <!-- Divider -->
           <div class="cart-summary__divider"></div>
+
+          <!-- Discount row (shown when coupon applied) -->
+          <div v-if="cart.discount && cart.discount.raw > 0" class="cart-summary__row cart-summary__row--discount">
+            <span>{{ $t('cart.discount') }}</span>
+            <span class="cart-summary__discount-amount">− {{ formatPrice(cart.discount) }}</span>
+          </div>
 
           <!-- Final Total -->
           <div class="cart-summary__row cart-summary__row--total">
@@ -133,44 +177,93 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, watch, onMounted } from 'vue'
 import { useCartStore } from '@/stores/cartStore'
 import { fetchFeaturedProducts } from '@/api/services'
 import ProductCard from '@/components/home/ProductCard.vue'
+import AttributeSelector from '@/components/product/AttributeSelector.vue'
 
 const cart = useCartStore()
-const couponInput = ref('')
 
-function formatPrice(price: any): string {
-  // Support API PriceValue objects
-  if (price && typeof price === 'object' && price.formatted) {
-    return price.formatted
-  }
-  return `${Number(price || 0).toFixed(0)} SAR`
-}
+// ── Per-item variant selection state ─────────────────────────────────────────
+// itemSelections[cartItemId][attributeGroupId] = selectedValueId
+const itemSelections = reactive<Record<number, Record<number, number>>>({})
+const updatingItems  = reactive<Record<number, boolean>>({})
 
-function getSelectedValueName(attr: any, selectedValues?: number[]): string {
-  if (!attr?.values?.length) return '-'
-  if (!selectedValues?.length) {
-    // If no specific selection stored, show first value
-    return attr.values[0]?.value || '-'
-  }
-  // Find the value whose id is in the selected array
-  const selected = attr.values.find((v: any) => selectedValues.includes(v.id))
-  return selected?.value || attr.values[0]?.value || '-'
-}
-
-async function applyCoupon() {
-  if (couponInput.value.trim()) {
-    const result = await cart.applyCoupon(couponInput.value.trim())
-    if (!result.success) {
-      alert(result.message)
+function initItemSelections(items: typeof cart.items) {
+  for (const item of items) {
+    if (!item.attributes?.length) continue
+    itemSelections[item.id] = {}
+    for (const group of item.attributes) {
+      // try to match the cart's selectedAttributeValues into the right group
+      const match = group.values?.find(
+        (v: any) => item.selectedAttributeValues?.includes(v.id)
+      )
+      itemSelections[item.id][group.id] = Number(match?.id ?? group.values?.[0]?.id ?? 0)
     }
   }
 }
 
-// ─── Related Products ───
+async function updateItemVariant(item: any) {
+  if (updatingItems[item.id]) return
+  const groupSelections = itemSelections[item.id]
+  if (!groupSelections) return
+  const attrValues = Object.values(groupSelections).filter(Boolean).map(v => Number(v))
+  updatingItems[item.id] = true
+  try {
+    await cart.updateItemAttributes(item.id, item.productId, item.quantity, attrValues)
+    // Re-init selections from newly synced cart items
+    initItemSelections(cart.items)
+  } catch (e) {
+    console.error('Failed to update variant:', e)
+  } finally {
+    updatingItems[item.id] = false
+  }
+}
+
+// ── Coupon ──────────────────────────────────────────────────────────────────
+const couponInput  = ref('')
+const couponMessage = ref('')
+const couponStatus  = ref<'error' | 'success' | ''>('')
+const couponLoading = ref(false)
+
+async function applyCoupon() {
+  const code = couponInput.value.trim()
+  if (!code) {
+    couponStatus.value  = 'error'
+    couponMessage.value = 'Please enter a coupon code.'
+    return
+  }
+  couponLoading.value  = true
+  couponMessage.value  = ''
+  couponStatus.value   = ''
+  try {
+    const result = await cart.applyCoupon(code)
+    if (result.success) {
+      couponStatus.value  = 'success'
+      couponMessage.value = result.message || 'Coupon applied successfully!'
+    } else {
+      couponStatus.value  = 'error'
+      couponMessage.value = result.message || 'Invalid coupon code.'
+    }
+  } catch {
+    couponStatus.value  = 'error'
+    couponMessage.value = 'Something went wrong. Please try again.'
+  } finally {
+    couponLoading.value = false
+  }
+}
+
+// ── Pricing ──────────────────────────────────────────────────────────────────
+function formatPrice(price: any): string {
+  if (price && typeof price === 'object' && price.formatted) return price.formatted
+  return `${Number(price || 0).toFixed(0)} SAR`
+}
+
+
+// ── Related Products ─────────────────────────────────────────────────────────
 const relatedTrackRef = ref<HTMLElement | null>(null)
+
 function scrollRelated(dir: number) {
   if (!relatedTrackRef.value) return
   relatedTrackRef.value.scrollBy({ left: dir * 300, behavior: 'smooth' })
@@ -179,7 +272,9 @@ function scrollRelated(dir: number) {
 const relatedProducts = ref<any[]>([])
 
 onMounted(async () => {
-  // Load related/suggested products
+  // Init variant selections from existing cart items
+  initItemSelections(cart.items)
+
   try {
     const featured = await fetchFeaturedProducts(6)
     relatedProducts.value = featured.map(p => ({
@@ -194,19 +289,24 @@ onMounted(async () => {
     }))
   } catch {}
 })
+
+// Re-init per-item selections whenever cart data changes from the API
+watch(() => cart.items, (items) => initItemSelections(items), { deep: true })
 </script>
 
 <style scoped>
 /* ─── Page ─── */
 .cart-page {
   background: var(--bg-primary, #fff);
-  padding-bottom: 3rem;
+  padding-bottom: 4rem;
   min-height: 60vh;
 }
+
+/* Local container override — tighter on mobile */
 .container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 0.625rem;
+  padding: 0 0.75rem;
 }
 @media (min-width: 480px) {
   .container { padding: 0 1.25rem; }
@@ -214,7 +314,8 @@ onMounted(async () => {
 
 /* ─── Breadcrumbs ─── */
 .cart-breadcrumbs {
-  padding: 0.75rem 0;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 .breadcrumb-list {
   list-style: none;
@@ -225,24 +326,16 @@ onMounted(async () => {
   gap: 0.25rem;
   font-size: 0.8125rem;
   color: #6b7280;
+  flex-wrap: wrap;
 }
 .breadcrumb-list a {
   color: #6b7280;
   text-decoration: none;
   transition: color 0.2s;
 }
-.breadcrumb-list a:hover {
-  color: var(--color-primary, #858585);
-}
-.breadcrumb-sep {
-  display: flex;
-  align-items: center;
-  color: #9ca3af;
-}
-.breadcrumb-current {
-  color: var(--store-text-primary, #111827);
-  font-weight: 500;
-}
+.breadcrumb-list a:hover { color: var(--color-primary, #858585); }
+.breadcrumb-sep { display: flex; align-items: center; color: #9ca3af; }
+.breadcrumb-current { color: var(--store-text-primary, #111827); font-weight: 500; }
 
 /* ─── Empty Cart ─── */
 .cart-empty {
@@ -254,10 +347,10 @@ onMounted(async () => {
   text-align: center;
 }
 .cart-empty__title {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--store-text-primary, #111827);
-  margin: 1.5rem 0 0.5rem;
+  margin: 1.25rem 0 0.5rem;
 }
 .cart-empty__text {
   font-size: 0.9375rem;
@@ -275,43 +368,45 @@ onMounted(async () => {
   text-decoration: none;
   transition: opacity 0.2s;
 }
-.cart-empty__btn:hover {
-  opacity: 0.9;
-}
+.cart-empty__btn:hover { opacity: 0.9; }
 
-/* ─── Cart Layout ─── */
+/* ─── Cart Layout: mobile=1col, desktop=2col ─── */
 .cart-layout {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.5rem;
+  gap: 1.25rem;
   margin-bottom: 2.5rem;
+  align-items: start;
 }
 @media (min-width: 768px) {
   .cart-layout {
-    grid-template-columns: 1fr 360px;
-    gap: 2rem;
+    grid-template-columns: 1fr 340px;
+    gap: 1.75rem;
   }
 }
 
-/* ─── Cart Items ─── */
+/* ─── Cart Items List ─── */
 .cart-items {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.75rem;
 }
+
+/* ─── Cart Item Card ─── */
 .cart-item {
   display: flex;
-  gap: 1rem;
-  padding: 1.25rem;
+  gap: 0.75rem;
+  padding: 0.875rem;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  margin-bottom: 1rem;
-  position: relative;
   background: #fff;
+  position: relative;
 }
+
+/* Product image */
 .cart-item__image {
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   flex-shrink: 0;
   border: 1px solid #f3f4f6;
   border-radius: 8px;
@@ -323,34 +418,38 @@ onMounted(async () => {
   height: 100%;
   object-fit: contain;
 }
+
+/* Details column */
 .cart-item__details {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
-.cart-item__top-row {
+
+/* Header: name + remove */
+.cart-item__header {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
+  gap: 0.5rem;
 }
-.cart-item__info {
-  flex: 1;
-  min-width: 0;
-}
+.cart-item__info { flex: 1; min-width: 0; }
 .cart-item__name {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--store-text-primary, #111827);
   margin: 0 0 0.125rem;
-  line-height: 1.4;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 .cart-item__variant {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: #9ca3af;
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.2rem;
 }
 .cart-item__unit-price {
   font-size: 0.8125rem;
@@ -359,13 +458,38 @@ onMounted(async () => {
   margin: 0;
 }
 
-/* Quantity */
-.cart-item__controls {
+/* Remove button — inline in header row */
+.cart-item__remove {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1px solid #fecaca;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  flex-shrink: 0;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 1px;
 }
+.cart-item__remove:hover {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+/* Footer: qty + line total */
+.cart-item__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Quantity control */
 .cart-item__qty {
   display: flex;
   align-items: center;
@@ -374,8 +498,8 @@ onMounted(async () => {
   overflow: hidden;
 }
 .cart-qty-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   background: transparent;
   border: none;
   font-size: 1rem;
@@ -385,22 +509,22 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   transition: background 0.15s;
+  flex-shrink: 0;
 }
-.cart-qty-btn:hover {
-  background: #f3f4f6;
-}
+.cart-qty-btn:hover { background: #f3f4f6; }
 .cart-qty-value {
-  width: 32px;
+  min-width: 28px;
+  padding: 0 0.25rem;
   text-align: center;
   font-size: 0.875rem;
   font-weight: 600;
   border-left: 1px solid #e5e7eb;
   border-right: 1px solid #e5e7eb;
-  line-height: 32px;
+  line-height: 30px;
   color: var(--store-text-primary, #111827);
 }
 
-/* Total */
+/* Line total */
 .cart-item__total {
   display: flex;
   flex-direction: column;
@@ -408,9 +532,10 @@ onMounted(async () => {
   white-space: nowrap;
 }
 .cart-item__total-label {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   color: #9ca3af;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .cart-item__total-price {
   font-size: 0.9375rem;
@@ -418,83 +543,30 @@ onMounted(async () => {
   color: var(--store-text-primary, #111827);
 }
 
-/* Remove */
-.cart-item__remove {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 28px;
-  height: 28px;
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.cart-item__remove:hover {
-  background: #dc2626;
-  transform: scale(1.1);
-}
 
-/* Options Row */
-.cart-item__options-row {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #f3f4f6;
-}
-.cart-item__option {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.cart-item__option-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #6b7280;
-  white-space: nowrap;
-}
-.cart-item__option-label .required {
-  color: #ef4444;
-}
-.cart-item__option-value {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--store-text-primary, #111827);
-  padding: 0.125rem 0.5rem;
-  background: #f3f4f6;
-  border-radius: 4px;
-}
-.cart-item__option-select {
-  flex: 1;
-  padding: 0.375rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  color: var(--store-text-primary, #111827);
-  background: var(--bg-primary, #fff);
-  outline: none;
-  cursor: pointer;
-}
 
 /* ─── Order Summary ─── */
 .cart-summary {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1.25rem;
   background: #fff;
-  height: fit-content;
-  position: sticky;
-  top: 5rem;
+  /* Sticky only on desktop */
 }
+@media (min-width: 768px) {
+  .cart-summary {
+    position: sticky;
+    top: 5rem;
+  }
+}
+
 .cart-summary__title {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--store-text-primary, #111827);
-  margin: 0 0 1.25rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
 }
 .cart-summary__row {
   display: flex;
@@ -502,22 +574,26 @@ onMounted(async () => {
   align-items: center;
   font-size: 0.875rem;
   color: var(--store-text-primary, #111827);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
-.cart-summary__amount {
-  font-weight: 600;
-}
+.cart-summary__amount { font-weight: 600; }
 .cart-summary__row--total {
   font-weight: 700;
   font-size: 1rem;
+  margin-bottom: 0;
 }
+.cart-summary__row--discount { color: #16a34a; }
 .cart-summary__total-amount {
   font-size: 1.125rem;
   font-weight: 700;
-  color: var(--store-text-primary, #111827);
+  color: var(--color-primary, #858585);
+}
+.cart-summary__discount-amount {
+  font-weight: 700;
+  color: #16a34a;
 }
 
-/* Coupon */
+/* ── Coupon field ── */
 .cart-summary__coupon {
   margin-bottom: 1rem;
 }
@@ -532,41 +608,99 @@ onMounted(async () => {
 }
 .cart-summary__coupon-input {
   flex: 1;
+  min-width: 0;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 7px;
   font-size: 0.8125rem;
   outline: none;
   color: var(--store-text-primary, #111827);
   background: var(--bg-primary, #fff);
+  transition: border-color 0.2s;
 }
 .cart-summary__coupon-input:focus {
   border-color: var(--color-primary, #858585);
 }
+.cart-summary__coupon-input--error {
+  border-color: #ef4444 !important;
+}
+.cart-summary__coupon-input--success {
+  border-color: #16a34a !important;
+}
 .cart-summary__coupon-btn {
-  padding: 0.5rem 1.25rem;
+  padding: 0.5rem 1rem;
   background: var(--color-primary, #858585);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-width: 68px;
 }
-.cart-summary__coupon-btn:hover {
-  opacity: 0.9;
+.cart-summary__coupon-btn:hover:not(:disabled) { opacity: 0.9; }
+.cart-summary__coupon-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* Inline feedback */
+.cart-summary__coupon-message {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin: 0.4rem 0 0;
+  padding: 0.375rem 0.625rem;
+  border-radius: 6px;
+}
+.cart-summary__coupon-message--error {
+  color: #dc2626;
+  background: #fef2f2;
+}
+.cart-summary__coupon-message--success {
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+/* Loading spinner inside coupon button */
+.coupon-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Coupon message enter/leave transition */
+.coupon-msg-enter-active,
+.coupon-msg-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.coupon-msg-enter-from,
+.coupon-msg-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 /* Divider */
 .cart-summary__divider {
   height: 1px;
   background: #e5e7eb;
-  margin: 1rem 0;
+  margin: 0.875rem 0;
 }
 
-/* Submit */
+/* Submit button */
 .cart-summary__submit-btn {
   display: block;
   width: 100%;
@@ -598,10 +732,10 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 .cart-related__title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--store-text-primary, #111827);
   margin: 0;
@@ -623,30 +757,28 @@ onMounted(async () => {
   color: #6b7280;
   transition: all 0.2s;
 }
-.cart-arrow-btn:hover {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-}
+.cart-arrow-btn:hover { background: #f3f4f6; border-color: #d1d5db; }
 .cart-related__track {
   display: flex;
-  gap: 1rem;
+  gap: 0.875rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding-bottom: 0.5rem;
 }
-.cart-related__track::-webkit-scrollbar {
-  display: none;
-}
+.cart-related__track::-webkit-scrollbar { display: none; }
 .cart-related__item {
-  flex: 0 0 200px;
+  flex: 0 0 160px;
   scroll-snap-align: start;
+}
+@media (min-width: 480px) {
+  .cart-related__item { flex: 0 0 190px; }
 }
 @media (min-width: 768px) {
   .cart-related__item {
-    flex: 0 0 calc(20% - 0.8rem);
-    min-width: 180px;
+    flex: 0 0 calc(20% - 0.7rem);
+    min-width: 160px;
   }
 }
 </style>

@@ -152,20 +152,13 @@
           </div>
 
           <!-- Product Attributes -->
-          <div v-if="productAttributes.length > 0" class="pdp-info__attributes">
-            <div v-for="group in productAttributes" :key="group.id" class="pdp-info__attr-group">
-              <div class="pdp-info__attr-header">
-                <span class="pdp-info__attr-label">{{ group.name }} <span class="pdp-info__attr-req">*</span></span>
-              </div>
-              <select
-                v-model="selectedAttributes[group.id]"
-                class="pdp-info__attr-select"
-              >
-                <option value="" disabled>{{ $t('product.chooseOption') || 'Choose' }}</option>
-                <option v-for="val in group.values" :key="val.id" :value="val.id">{{ val.value }}</option>
-              </select>
-            </div>
-          </div>
+          <AttributeSelector
+            v-if="productAttributes.length > 0"
+            :attributes="productAttributes"
+            :model-value="selectedAttributes"
+            show-required
+            @update:model-value="(v) => Object.assign(selectedAttributes, v)"
+          />
 
           <!-- SKU & Weight -->
           <div class="pdp-info__meta-row" v-if="product.sku">
@@ -354,6 +347,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
+import AttributeSelector from '@/components/product/AttributeSelector.vue'
 import { fetchProductBySlug, fetchProducts, fetchProductReviews, submitReview } from '@/api/services'
 import { useCartStore } from '@/stores/cartStore'
 import { useWishlistStore } from '@/stores/wishlistStore'
@@ -392,7 +386,7 @@ const product = ref<any>({
 const isLoading = ref(true)
 
 const selectedImage = ref('')
-const selectedAttributes = reactive<Record<number, number | string>>({})
+const selectedAttributes = reactive<Record<number, number>>({})
 const quantity = ref(1)
 const addingToCart = ref(false)
 const buyingNow = ref(false)
@@ -451,10 +445,10 @@ const productAttributes = computed(() => {
 function initSelectedAttributes() {
   // Clear previous selections
   Object.keys(selectedAttributes).forEach(k => delete selectedAttributes[Number(k)])
-  // Set default selection to first value of each attribute group
+  // Set default selection (cast to Number to prevent type mismatch bug)
   for (const group of productAttributes.value) {
     if (group.values?.length) {
-      selectedAttributes[group.id] = group.values[0].id
+      selectedAttributes[group.id] = Number(group.values[0].id)
     }
   }
 }

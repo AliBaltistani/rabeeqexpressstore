@@ -124,20 +124,13 @@
                 </div>
 
                 <!-- Product Attributes -->
-                <div v-if="productAttributes.length > 0" class="quickview__attributes">
-                  <div v-for="group in productAttributes" :key="group.id" class="quickview__attr-group">
-                    <div class="quickview__attr-header">
-                      <span class="quickview__attr-label">{{ group.name }} <span class="quickview__attr-req">*</span></span>
-                    </div>
-                    <select
-                      v-model="selectedAttributes[group.id]"
-                      class="quickview__attr-select"
-                    >
-                      <option value="" disabled>Choose</option>
-                      <option v-for="val in group.values" :key="val.id" :value="val.id">{{ val.value }}</option>
-                    </select>
-                  </div>
-                </div>
+                <AttributeSelector
+                  v-if="productAttributes.length > 0"
+                  :attributes="productAttributes"
+                  :model-value="selectedAttributes"
+                  show-required
+                  @update:model-value="(v) => Object.assign(selectedAttributes, v)"
+                />
 
                 <!-- Add to Cart + Quantity (in stock only) -->
                 <div v-if="fullProduct?.inStock ?? product.inStock ?? true" class="quickview__cart-row">
@@ -202,6 +195,7 @@ import { useCartToast } from '@/composables/useCartToast'
 import { useShareMenu } from '@/composables/useShareMenu'
 import { fetchProductBySlug } from '@/api/services'
 import { useSettingsStore } from '@/stores/settingsStore'
+import AttributeSelector from '@/components/product/AttributeSelector.vue'
 
 const { isOpen, product, close } = useQuickView()
 const cartStore = useCartStore()
@@ -215,7 +209,7 @@ const selectedImage = ref('')
 const addingToCart = ref(false)
 const togglingWishlist = ref(false)
 const qvShareBtnRef = ref<HTMLElement | null>(null)
-const selectedAttributes = reactive<Record<number, number | string>>({})
+const selectedAttributes = reactive<Record<number, number>>({})
 const isLoadingDetail = ref(false)
 const fullProduct = ref<any>(null)
 
@@ -270,7 +264,7 @@ watch(() => product.value, async (p) => {
   setTimeout(() => {
     for (const group of productAttributes.value) {
       if (group.values?.length) {
-        selectedAttributes[group.id] = group.values[0].id
+        selectedAttributes[group.id] = Number(group.values[0].id)
       }
     }
   }, 100)

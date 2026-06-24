@@ -69,6 +69,22 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
+  async function updateItemAttributes(id: number, productId: number, quantity: number, attributeValues: number[]) {
+    isLoading.value = true
+    try {
+      // API only supports quantity updates; to change attributes we remove + re-add
+      const removed = await removeCartItem(id)
+      syncFromApi(removed)
+      const data = await addCartItem(productId, quantity, undefined, attributeValues)
+      syncFromApi(data)
+    } catch (error) {
+      console.error('Failed to update item attributes:', error)
+      throw error
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function removeItem(id: number) {
     try {
       const data = await removeCartItem(id)
@@ -114,7 +130,7 @@ export const useCartStore = defineStore('cart', () => {
   return {
     items, couponCode, subtotal, discount, total, itemCount,
     currency, isLoading, shippingValue,
-    loadCart, addItem, updateQuantity, removeItem, clearCart,
+    loadCart, addItem, updateQuantity, updateItemAttributes, removeItem, clearCart,
     applyCoupon, removeCoupon, syncFromApi,
   }
 })

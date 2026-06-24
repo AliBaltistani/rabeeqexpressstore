@@ -64,7 +64,10 @@
     "total": "الإجمالي:",
     "addMore": "هل تريد اضافة شي آخر؟",
     "addedToCart": "تمت الإضافة إلى السلة",
-    "viewCart": "عرض السلة"
+    "viewCart": "عرض السلة",
+    "updateVariant": "تحديث",
+    "updating": "جارٍ التحديث...",
+    "discount": "الخصم"
   },
   "checkout": {
     "title": "إتمام الطلب",

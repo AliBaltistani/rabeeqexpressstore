@@ -70,19 +70,17 @@
                     <img :src="item.image || ''" :alt="item.productName" class="drawer-item__img" />
                     <div class="drawer-item__info">
                       <p class="drawer-item__name">{{ item.productName }}</p>
-                      <!-- Only show attributes when a variant was explicitly selected -->
-                      <p v-if="item.variantId && (item.variantName || (item.attributes && item.attributes.length))" class="drawer-item__attrs">
-                        <!-- Prefer variantName — it's pre-formatted by the API e.g. "Size: 36" -->
-                        <span v-if="item.variantName" class="drawer-item__attr">{{ item.variantName }}</span>
-                        <!-- Fallback: filter each attribute's values to only the selected one(s) -->
-                        <template v-else-if="item.attributes">
-                          <span v-for="attr in item.attributes" :key="attr.id" class="drawer-item__attr">
-                            {{ attr.name }}: {{ item.selectedAttributeValues
-                              ? attr.values.filter((v: any) => item.selectedAttributeValues!.includes(v.id)).map((v: any) => v.value).join(', ')
-                              : attr.values[0]?.value || '' }}
-                          </span>
-                        </template>
-                      </p>
+                      <!-- Attributes: interactive variant editor -->
+                      <AttributeSelector
+                        v-if="item.attributes && item.attributes.length"
+                        :attributes="item.attributes"
+                        :model-value="drawerSelections[item.id] || {}"
+                        :show-update="true"
+                        :disabled="updatingDrawerItems[item.id]"
+                        :updating="updatingDrawerItems[item.id]"
+                        @update:model-value="(v) => { drawerSelections[item.id] = v }"
+                        @update="updateItemVariantInDrawer(item)"
+                      />
                       <p class="drawer-item__price">{{ item.unitPrice?.formatted || '' }}</p>
                       <div class="drawer-item__qty">
                         <button class="qty-btn" @click="updateCartQty(item, -1)" :disabled="item.quantity <= 1">−</button>
@@ -550,12 +548,46 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, createStripePaymentIntent, confirmStripePayment, cancelStripeOrder, fetchActiveCountries, updateProfile, fetchMyCoupons } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 import PhoneInput from '@/components/common/PhoneInput.vue'
+import AttributeSelector from '@/components/product/AttributeSelector.vue'
 
 const router = useRouter()
 const cart = useCartStore()
 const auth = useAuthStore()
 const settings = useSettingsStore()
 const { t } = useI18n()
+
+// ── Drawer variant editor state ────────────────────────────────────────────
+const drawerSelections = reactive<Record<number, Record<number, number>>>({})
+const updatingDrawerItems = reactive<Record<number, boolean>>({})
+
+function initDrawerSelections(items: typeof cart.items) {
+  for (const item of items) {
+    if (!item.attributes?.length) continue
+    drawerSelections[item.id] = {}
+    for (const group of item.attributes) {
+      const match = group.values?.find(
+        (v: any) => item.selectedAttributeValues?.includes(v.id)
+      )
+      drawerSelections[item.id][group.id] = Number(match?.id ?? group.values?.[0]?.id ?? 0)
+    }
+  }
+}
+
+async function updateItemVariantInDrawer(item: any) {
+  if (updatingDrawerItems[item.id]) return
+  const groupSelections = drawerSelections[item.id]
+  if (!groupSelections) return
+  const attrValues = Object.values(groupSelections).filter(Boolean).map(v => Number(v))
+  updatingDrawerItems[item.id] = true
+  try {
+    await cart.updateItemAttributes(item.id, item.productId, item.quantity, attrValues)
+    initDrawerSelections(cart.items)
+  } catch (e) {
+    console.error('Failed to update drawer variant:', e)
+  } finally {
+    updatingDrawerItems[item.id] = false
+  }
+}
 
 // ── Core State ──
 const currentStep = ref(1)
@@ -1170,7 +1202,12 @@ onMounted(async () => {
   }
   try { countries.value = await fetchActiveCountries() } catch { /* use defaults */ }
   if (currentStep.value === 2) initGoogleMaps()
+  // Init drawer variant selections from current cart items
+  initDrawerSelections(cart.items)
 })
+
+// Re-init drawer selections whenever cart changes
+watch(() => cart.items, (items) => initDrawerSelections(items), { deep: true, immediate: true })
 
 watch(currentStep, (val) => { if (val === 2) nextTick(() => initGoogleMaps()) })
 
@@ -1402,4 +1439,204 @@ html[dir="rtl"] .country-code-dropdown { border-radius: 0 10px 10px 0; border-ri
 .payment-shimmer-card { height: 80px; border-radius: 12px; background: #f3f4f6; overflow: hidden; position: relative; }
 .shimmer-bar { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ═══════════════════════════════════════
+   MOBILE RESPONSIVE OVERRIDES
+   max-width: 600px — small phones/tablets
+═══════════════════════════════════════ */
+@media (max-width: 600px) {
+
+  /* ─ Container ─ */
+  .container { padding: 0 0.75rem; }
+
+  /* ─ Checkout Header ─ */
+  .checkout-header { padding: 0.875rem 0 0; }
+  .checkout-header__inner {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .checkout-header__left {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.5rem;
+  }
+  .checkout-header__thumbs {
+    flex-wrap: wrap;
+    max-width: calc(100vw - 180px);
+    overflow: hidden;
+  }
+  .checkout-header__thumb {
+    width: 28px;
+    height: 28px;
+  }
+  .checkout-header__logo-img {
+    width: 44px;
+    height: 44px;
+  }
+  .checkout-header__right {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .checkout-header__title { font-size: 0.875rem; }
+  .checkout-header__total { font-size: 1.25rem; }
+
+  /* ─ Coupon Row ─ */
+  .checkout-coupon__row {
+    flex-direction: row;
+    gap: 0.375rem;
+  }
+  .checkout-coupon__apply {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.8125rem;
+    flex-shrink: 0;
+  }
+  .checkout-coupon__loyalty-list { gap: 0.375rem; }
+  .checkout-coupon__loyalty-btn {
+    padding: 0.375rem 0.625rem;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+  }
+  .loyalty-coupon-icon { font-size: 1rem; }
+  .loyalty-coupon-name { font-size: 0.6875rem; white-space: normal; }
+
+  /* ─ Detail toggle ─ */
+  .checkout-header__details-toggle { padding: 0.75rem 0; }
+
+  /* ─ Sections ─ */
+  .checkout-section {
+    border-radius: 10px;
+    padding: 1rem 0.875rem;
+  }
+
+  /* ─ Section Header ─ */
+  .section-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .section-title-wrap { min-width: 0; }
+  .section-title { font-size: 1rem; }
+  .section-subtitle { font-size: 0.75rem; }
+  .section-icon { width: 22px; height: 22px; }
+  .edit-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    margin-left: auto;
+  }
+  .section-side-link { font-size: 0.8125rem; }
+
+  /* ─ OTP ─ */
+  .checkout-otp-row { gap: 0.5rem; margin: 0.75rem 0; }
+  .checkout-otp-box {
+    width: calc((100% - 3 * 0.5rem) / 4);
+    max-width: 62px;
+    height: 50px;
+    font-size: 1.125rem;
+  }
+  .otp-verify-block { gap: 0.75rem; }
+  .otp-verify-email { font-size: 0.875rem; }
+  .otp-resend-text { font-size: 0.75rem; }
+
+  /* ─ Buttons ─ */
+  .checkout-btn {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* ─ Form fields ─ */
+  .checkout-field { margin-bottom: 0.375rem; }
+  .checkout-input {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  .checkout-label { font-size: 0.8125rem; }
+
+  /* ─ Address / Map ─ */
+  .google-map { height: 220px; }
+  .map-search-overlay { padding: 0.5rem; }
+  .map-search-input {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+  .current-location-btn {
+    bottom: 8px;
+    left: 8px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.6875rem;
+  }
+  .recipient-block { padding: 0.75rem; }
+
+  /* ─ Shipping Cards ─ */
+  .shipping-card {
+    padding: 0.75rem 0.875rem;
+    gap: 0.5rem;
+  }
+  .shipping-logo {
+    width: 36px;
+    height: 28px;
+  }
+  .shipping-name { font-size: 0.875rem; }
+  .shipping-price { font-size: 0.875rem; }
+
+  /* ─ Payment Methods ─ */
+  .payment-methods-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.625rem;
+  }
+  .payment-card {
+    min-width: unset;
+    padding: 0.625rem 0.75rem;
+    gap: 0.375rem;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .payment-logo {
+    height: 22px;
+    max-width: 64px;
+  }
+  .payment-name-text { font-size: 0.75rem; }
+  .payment-shimmer-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+
+  /* ─ Card details / Stripe ─ */
+  .card-details-form { padding: 0.875rem; }
+
+  /* ─ Drawer ─ */
+  .drawer-panel {
+    width: 100vw;
+    max-width: 100vw;
+  }
+  .drawer-header { padding: 1rem 1rem; }
+  .drawer-body { padding: 0.875rem 1rem; }
+  .drawer-footer { padding: 0.875rem 1rem; }
+  .drawer-item { gap: 0.625rem; padding: 0.625rem; }
+  .drawer-item__img { width: 56px; height: 56px; }
+  .drawer-item__name { font-size: 0.8125rem; }
+  .drawer-item__price { font-size: 0.8125rem; }
+
+  /* ─ Section content spacing ─ */
+  .section-content { margin-top: 1rem; }
+
+  /* ─ Checkboxes ─ */
+  .checkout-checkbox { font-size: 0.75rem; }
+
+  /* ─ Checkout alt text ─ */
+  .checkout-alt-text { font-size: 0.75rem; flex-wrap: wrap; justify-content: center; }
+}
+
+/* ═══════════════════════════════════════
+   EXTRA SMALL — very narrow phones (< 380px)
+═══════════════════════════════════════ */
+@media (max-width: 380px) {
+  .checkout-header__inner { gap: 0.25rem; }
+  .checkout-header__logo-img { width: 38px; height: 38px; }
+  .checkout-header__total { font-size: 1.125rem; }
+  .checkout-header__title { font-size: 0.8125rem; }
+  .checkout-otp-box {
+    height: 44px;
+    font-size: 1rem;
+  }
+  .checkout-section { padding: 0.875rem 0.75rem; }
+  .payment-methods-grid { grid-template-columns: repeat(2, 1fr); }
+}
 </style>

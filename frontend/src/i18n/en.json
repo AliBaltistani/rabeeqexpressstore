@@ -64,7 +64,10 @@
     "total": "Total:",
     "addMore": "Would you like to add something else?",
     "addedToCart": "Added to Cart",
-    "viewCart": "View Cart"
+    "viewCart": "View Cart",
+    "updateVariant": "Update",
+    "updating": "Updating...",
+    "discount": "Discount"
   },
   "checkout": {
     "title": "Checkout",
