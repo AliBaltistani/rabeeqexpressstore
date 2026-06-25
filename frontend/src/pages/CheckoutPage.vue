@@ -277,7 +277,7 @@
           <button v-if="currentStep > 2" class="edit-btn" @click="currentStep = 2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg> {{ $t('checkout.edit') }}</button>
         </div>
         <div v-if="currentStep === 2" class="section-content">
-          <!-- MAP MODE -->
+          <!-- MAP MODE (auto-geocodes address, country, city) -->
           <div v-if="addressMode === 'map'" class="address-map-mode">
             <div class="map-container">
               <div class="map-search-overlay">
@@ -290,120 +290,46 @@
                 {{ $t('checkout.currentLocation') || 'Current location' }}
               </button>
             </div>
+            <!-- Name + Phone in map mode -->
             <div class="checkout-field">
-              <label class="checkout-label checkout-label--colored">{{ $t('checkout.buildingDesc') }}</label>
-              <input type="text" v-model="addressForm.buildingDesc" class="checkout-input" :placeholder="$t('checkout.buildingDesc')" />
+              <label class="checkout-label checkout-label--colored">{{ $t('checkout.name') }} <span class="req">*</span></label>
+              <input type="text" v-model="addressFullName" class="checkout-input" :class="{ 'input-error': errors.addrName }" :placeholder="$t('checkout.firstName') + ' ' + $t('checkout.lastName')" />
+              <span v-if="errors.addrName" class="field-error">{{ errors.addrName }}</span>
             </div>
-            <label class="checkout-checkbox">
-              <input type="checkbox" v-model="deliverToOther" />
-              <span>{{ $t('checkout.deliverToOther') }} <span class="info-icon">ⓘ</span></span>
-            </label>
-            <div v-if="deliverToOther" class="recipient-block">
-              <div class="checkout-field">
-                <label class="checkout-label checkout-label--colored">{{ $t('checkout.recipientName') }} <span class="req">*</span></label>
-                <input type="text" v-model="recipientForm.name" class="checkout-input" />
-              </div>
-              <div class="checkout-form-grid">
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
-                  <PhoneInput
-                    v-model="recipientForm.phone"
-                    v-model:countryCode="recipientCountryCode"
-                    :error="!!errors.recipientPhone"
-                    placeholder="501234567"
-                  />
-                  <span v-if="errors.recipientPhone" class="field-error">{{ errors.recipientPhone }}</span>
-                </div>
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.recipientEmail') }} ({{ $t('common.optional') }})</label>
-                  <input type="email" v-model="recipientForm.email" class="checkout-input" />
-                </div>
-              </div>
-              <label class="checkout-checkbox">
-                <input type="checkbox" v-model="smsUpdates" />
-                <span>{{ $t('checkout.smsUpdates') }}</span>
-              </label>
+            <div class="checkout-field">
+              <label class="checkout-label checkout-label--colored">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
+              <PhoneInput v-model="addrPhoneNum" v-model:countryCode="addrPhoneCode" :error="!!errors.addrPhone" placeholder="501234567" />
+              <span v-if="errors.addrPhone" class="field-error">{{ errors.addrPhone }}</span>
             </div>
             <p v-if="addressError" class="auth-error-msg">{{ addressError }}</p>
             <button class="checkout-btn checkout-btn--dark" :disabled="shippingLoading" @click="submitAddress">{{ shippingLoading ? $t('common.loading') : $t('checkout.save') }}</button>
             <button class="toggle-address-mode" @click="addressMode = 'manual'" type="button">{{ $t('checkout.enterManually') || 'Enter The Address Manually' }}</button>
           </div>
-          <!-- MANUAL MODE -->
+          <!-- MANUAL MODE — simplified: Name, Phone, Address -->
           <div v-else class="address-manual-mode">
             <form @submit.prevent="submitAddress">
-              <div class="checkout-form-grid">
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.country') }} <span class="req">*</span></label>
-                  <select v-model="addressForm.country" class="checkout-input checkout-select" :class="{ 'input-error': errors.addrCountry }">
-                    <option value="">{{ $t('checkout.country') }}...</option>
-                    <option v-for="c in countries" :key="c.code" :value="c.name">{{ c.name }}</option>
-                  </select>
-                  <span v-if="errors.addrCountry" class="field-error">{{ errors.addrCountry }}</span>
-                </div>
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.region') }} <span class="req">*</span></label>
-                  <input type="text" v-model="addressForm.state" class="checkout-input" :class="{ 'input-error': errors.addrRegion }" :placeholder="$t('checkout.region') + '...'" />
-                  <span v-if="errors.addrRegion" class="field-error">{{ errors.addrRegion }}</span>
-                </div>
+              <!-- Full Name -->
+              <div class="checkout-field">
+                <label class="checkout-label checkout-label--colored">{{ $t('checkout.name') }} <span class="req">*</span></label>
+                <input type="text" v-model="addressFullName" class="checkout-input" :class="{ 'input-error': errors.addrName }" :placeholder="$t('checkout.firstName') + ' ' + $t('checkout.lastName')" />
+                <span v-if="errors.addrName" class="field-error">{{ errors.addrName }}</span>
               </div>
-              <div class="checkout-form-grid">
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.city') }} <span class="req">*</span></label>
-                  <input type="text" v-model="addressForm.city" class="checkout-input" :class="{ 'input-error': errors.addrCity }" />
-                  <span v-if="errors.addrCity" class="field-error">{{ errors.addrCity }}</span>
-                </div>
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.district') }} <span class="req">*</span></label>
-                  <input type="text" v-model="addressForm.district" class="checkout-input" />
-                </div>
+              <!-- Phone Number -->
+              <div class="checkout-field">
+                <label class="checkout-label checkout-label--colored">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
+                <PhoneInput
+                  v-model="addrPhoneNum"
+                  v-model:countryCode="addrPhoneCode"
+                  :error="!!errors.addrPhone"
+                  placeholder="501234567"
+                />
+                <span v-if="errors.addrPhone" class="field-error">{{ errors.addrPhone }}</span>
               </div>
-              <div class="checkout-form-grid">
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.street') }} <span class="req">*</span></label>
-                  <input type="text" v-model="addressForm.street" class="checkout-input" :class="{ 'input-error': errors.addrStreet }" />
-                  <span v-if="errors.addrStreet" class="field-error">{{ errors.addrStreet }}</span>
-                </div>
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.postalCode') }} <span class="req">*</span></label>
-                  <input type="text" v-model="addressForm.postalCode" class="checkout-input" :class="{ 'input-error': errors.addrPostal }" />
-                  <span v-if="errors.addrPostal" class="field-error">{{ errors.addrPostal }}</span>
-                </div>
-              </div>
-              <div class="checkout-form-grid">
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.buildingNo') }}</label>
-                  <input type="text" v-model="addressForm.buildingNo" class="checkout-input" />
-                </div>
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.buildingDesc') }}</label>
-                  <input type="text" v-model="addressForm.buildingDesc" class="checkout-input" :placeholder="$t('checkout.buildingDesc')" />
-                </div>
-              </div>
-              <label class="checkout-checkbox">
-                <input type="checkbox" v-model="deliverToOther" />
-                <span>{{ $t('checkout.deliverToOther') }} <span class="info-icon">ⓘ</span></span>
-              </label>
-              <div v-if="deliverToOther" class="recipient-block">
-                <div class="checkout-field">
-                  <label class="checkout-label checkout-label--colored">{{ $t('checkout.recipientName') }} <span class="req">*</span></label>
-                  <input type="text" v-model="recipientForm.name" class="checkout-input" />
-                </div>
-                <div class="checkout-form-grid">
-                  <div class="checkout-field">
-                    <label class="checkout-label checkout-label--colored">{{ $t('checkout.phoneNumber') }} <span class="req">*</span></label>
-                    <PhoneInput
-                      v-model="recipientForm.phone"
-                      v-model:countryCode="recipientCountryCode"
-                      :error="!!errors.recipientPhone"
-                      placeholder="501234567"
-                    />
-                  </div>
-                  <div class="checkout-field">
-                    <label class="checkout-label checkout-label--colored">{{ $t('checkout.recipientEmail') }} ({{ $t('common.optional') }})</label>
-                    <input type="email" v-model="recipientForm.email" class="checkout-input" />
-                  </div>
-                </div>
-                <label class="checkout-checkbox"><input type="checkbox" v-model="smsUpdates" /><span>{{ $t('checkout.smsUpdates') }}</span></label>
+              <!-- Address -->
+              <div class="checkout-field">
+                <label class="checkout-label checkout-label--colored">{{ $t('checkout.address') }} <span class="req">*</span></label>
+                <input type="text" v-model="addressForm.street" class="checkout-input" :class="{ 'input-error': errors.addrStreet }" :placeholder="$t('checkout.addressPlaceholder')" />
+                <span v-if="errors.addrStreet" class="field-error">{{ errors.addrStreet }}</span>
               </div>
               <p v-if="addressError" class="auth-error-msg">{{ addressError }}</p>
               <button type="submit" class="checkout-btn checkout-btn--dark" :disabled="shippingLoading">{{ shippingLoading ? $t('common.loading') : $t('checkout.save') }}</button>
@@ -432,7 +358,7 @@
           <div v-if="shippingLoading" class="empty-state"><p>{{ $t('common.loading') }}...</p></div>
           <div v-else-if="shippingRatesFetched && shippingOptions.length === 0" class="empty-state">
             <p>{{ $t('checkout.noShippingRates') }}</p>
-            <button class="checkout-btn checkout-btn--dark" @click="currentStep = 4">{{ $t('search.next') || 'Next' }} →</button>
+            <button class="checkout-btn checkout-btn--dark" @click="currentStep = 5; loadPaymentMethods()">{{ $t('search.next') || 'Next' }} →</button>
           </div>
           <div v-else class="shipping-options">
             <label v-for="opt in shippingOptions" :key="opt.id" class="shipping-card" :class="{ selected: selectedShippingId === opt.id }">
@@ -450,33 +376,7 @@
         </div>
       </section>
 
-      <div class="section-divider"></div>
-
-      <!-- ═══ STEP 4: Additional Information ═══ -->
-      <section class="checkout-section" :class="{ locked: currentStep < 4 }">
-        <div class="section-header">
-          <div class="section-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
-          </div>
-          <div class="section-title-wrap">
-            <h2 class="section-title">{{ $t('checkout.additionalInfo') }}</h2>
-          </div>
-          <button v-if="currentStep > 4" class="edit-btn" @click="currentStep = 4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg> {{ $t('checkout.edit') }}</button>
-        </div>
-        <div v-if="currentStep === 4" class="section-content">
-          <div class="checkout-field">
-            <label class="checkout-label checkout-label--colored">{{ $t('checkout.mobileNumber') || 'Mobile Number' }} <span class="req">*</span></label>
-            <PhoneInput
-              v-model="additionalPhone"
-              v-model:countryCode="addrCountryCode"
-              :error="!!errors.additionalPhone"
-              placeholder="501234567"
-            />
-            <span v-if="errors.additionalPhone" class="field-error">{{ errors.additionalPhone }}</span>
-          </div>
-          <button class="checkout-btn checkout-btn--dark" @click="submitAdditionalInfo">{{ $t('checkout.confirmInfo') }}</button>
-        </div>
-      </section>
+<!-- Step 4 removed — phone captured in Step 2 -->
 
       <div class="section-divider"></div>
 
@@ -548,6 +448,7 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, createStripePaymentIntent, confirmStripePayment, cancelStripeOrder, fetchActiveCountries, updateProfile, fetchMyCoupons } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 import PhoneInput from '@/components/common/PhoneInput.vue'
+import { useCountries } from '@/composables/useCountries'
 import AttributeSelector from '@/components/product/AttributeSelector.vue'
 
 const router = useRouter()
@@ -555,6 +456,7 @@ const cart = useCartStore()
 const auth = useAuthStore()
 const settings = useSettingsStore()
 const { t } = useI18n()
+const { countries: countriesList } = useCountries()   // shared — loaded once, used for country lookup
 
 // ── Drawer variant editor state ────────────────────────────────────────────
 const drawerSelections = reactive<Record<number, Record<number, number>>>({})
@@ -625,6 +527,9 @@ const guestCountryCode = ref('+966')
 
 // ── Address ──
 const addressForm = ref({ firstName: '', lastName: '', phone: '', country: '', state: '', city: '', district: '', street: '', postalCode: '', buildingNo: '', buildingDesc: '' })
+const addressFullName   = ref('')        // simple full-name field (split to first/last on submit)
+const addrPhoneNum      = ref('')        // digit-only part of the address phone
+const addrPhoneCode     = ref('+966')    // country dialling code (also drives shipping country)
 const addressError = ref('')
 const shippingLoading = ref(false)
 const shippingRatesFetched = ref(false)
@@ -634,7 +539,7 @@ const recipientCountryCode = ref('+966')
 const smsUpdates = ref(false)
 const addrCountryCode = ref('+966')
 const additionalPhone = ref('')
-const countries = ref<any[]>([])
+
 
 // ── Shipping ──
 const shippingOptions = ref<any[]>([])
@@ -666,15 +571,20 @@ let googleMarker: any = null
 let autocomplete: any = null
 
 // ── Country helpers (kept for backward compat with phone composition) ──
-const selectedGuestCountry = computed(() => countries.value.find((c: any) => c.phone_code === guestCountryCode.value))
-const selectedAddrCountry = computed(() => countries.value.find((c: any) => c.phone_code === addrCountryCode.value))
-const selectedRecipientCountry = computed(() => countries.value.find((c: any) => c.phone_code === recipientCountryCode.value))
+const selectedGuestCountry = computed(() => countriesList.value.find((c: any) => c.phone_code === guestCountryCode.value))
+const selectedAddrCountry = computed(() => countriesList.value.find((c: any) => c.phone_code === addrCountryCode.value))
+const selectedRecipientCountry = computed(() => countriesList.value.find((c: any) => c.phone_code === recipientCountryCode.value))
 
 // ── Computed ──
 const cashbackMessage = computed(() => { return '' })
 const welcomeName = computed(() => { if (auth.isAuthenticated && auth.user) { return auth.user.name } if (authMode.value === 'guest') { return `${guestForm.value.firstName} ${guestForm.value.lastName}` } return '' })
 const welcomePhone = computed(() => { if (auth.isAuthenticated && auth.user) return auth.user.phone || ''; return guestForm.value.phone ? `${guestCountryCode.value}${guestForm.value.phone}` : '' })
-const addressSummary = computed(() => { const a = addressForm.value; return [a.country, a.city, a.street].filter(Boolean).join(' - ') || '' })
+const addressSummary = computed(() => {
+  const name = addressFullName.value || [addressForm.value.firstName, addressForm.value.lastName].filter(Boolean).join(' ')
+  const phone = addrPhoneCode.value + addrPhoneNum.value
+  const addr = addressForm.value.street
+  return [name, phone, addr].filter(Boolean).join(' — ') || ''
+})
 
 // ── Helpers ──
 function clearErrors() { Object.keys(errors).forEach(k => delete errors[k]) }
@@ -872,41 +782,89 @@ function handleGuest() {
   else if (!isEmail(guestForm.value.email)) errors.gEmail = t('checkout.invalidEmail')
   if (!guestForm.value.phone.trim()) errors.gPhone = t('checkout.required')
   if (Object.keys(errors).length) return
+
+  // Prefill the legacy addressForm (used by order payload builder)
   addressForm.value.firstName = guestForm.value.firstName
-  addressForm.value.lastName = guestForm.value.lastName
-  addressForm.value.phone = guestForm.value.phone
-  additionalPhone.value = guestForm.value.phone
+  addressForm.value.lastName  = guestForm.value.lastName
+  addressForm.value.phone     = guestCountryCode.value + guestForm.value.phone
+  additionalPhone.value       = addressForm.value.phone
+
+  // Prefill the new simplified Step 2 form refs
+  addressFullName.value = `${guestForm.value.firstName} ${guestForm.value.lastName}`.trim()
+  addrPhoneNum.value    = guestForm.value.phone
+  addrPhoneCode.value   = guestCountryCode.value
+
   currentStep.value = 2
 }
 
+
 function prefillAddressFromUser() {
   if (auth.user) {
-    const parts = auth.user.name?.split(' ') || []
+    const name = auth.user.name || ''
+    const parts = name.split(' ')
     addressForm.value.firstName = parts[0] || ''
-    addressForm.value.lastName = parts.slice(1).join(' ') || ''
-    addressForm.value.phone = auth.user.phone || ''
-    additionalPhone.value = auth.user.phone || ''
+    addressForm.value.lastName  = parts.slice(1).join(' ') || ''
+    addressFullName.value       = name
+    const rawPhone = auth.user.phone || ''
+    // Try to separate country code from stored phone (e.g. +96650123456)
+    if (rawPhone.startsWith('+')) {
+      // Find matching country code by stripping the + prefix
+      const match = rawPhone.match(/^(\+\d{1,4})(\d+)$/)
+      if (match) {
+        addrPhoneCode.value = match[1]
+        addrPhoneNum.value  = match[2]
+      } else {
+        addrPhoneNum.value = rawPhone
+      }
+    } else {
+      addrPhoneNum.value = rawPhone
+    }
+    addressForm.value.phone = rawPhone
+    additionalPhone.value   = rawPhone
   }
 }
 
 // ── Step 2: Address ──
 async function submitAddress() {
   clearErrors(); addressError.value = ''
-  if (addressMode.value === 'manual') {
-    if (!addressForm.value.country.trim()) errors.addrCountry = t('checkout.required')
-    if (!addressForm.value.city.trim()) errors.addrCity = t('checkout.required')
-    if (!addressForm.value.street.trim()) errors.addrStreet = t('checkout.required')
-    if (Object.keys(errors).length) return
-  } else {
-    // Map mode — ensure geocoding populated the address
-    if (!addressForm.value.country.trim() || !addressForm.value.city.trim()) {
-      addressError.value = t('checkout.selectLocationOnMap') || 'Please select a location on the map or enter the address manually.'
+
+  // ── Validate simplified fields ──
+  if (!addressFullName.value.trim()) { errors.addrName = t('checkout.required') }
+  if (!addrPhoneNum.value.trim())    { errors.addrPhone = t('checkout.required') }
+  if (addressMode.value === 'manual' && !addressForm.value.street.trim()) {
+    errors.addrStreet = t('checkout.required')
+  }
+  if (Object.keys(errors).length) return
+
+  // ── Resolve name parts ──
+  const nameParts = addressFullName.value.trim().split(/\s+/)
+  addressForm.value.firstName = nameParts[0] || addressFullName.value.trim()
+  addressForm.value.lastName  = nameParts.slice(1).join(' ') || '-'
+
+  // ── Resolve phone (full E.164) ──
+  const fullPhone = (addrPhoneCode.value + addrPhoneNum.value.replace(/^0+/, '')).trim()
+  addressForm.value.phone = fullPhone
+  additionalPhone.value   = fullPhone   // used in order payload — no separate Step 4 needed
+
+  // ── Derive country from selected dialling code ──
+  const matchedCountry = countriesList.value.find((c: any) => c.phone_code === addrPhoneCode.value)
+  const derivedCountry = matchedCountry?.name ?? addressForm.value.country ?? ''
+  addressForm.value.country = derivedCountry
+
+  if (addressMode.value === 'map') {
+    // Map mode: ensure geocoding filled in address
+    if (!addressForm.value.street && !addressForm.value.city) {
+      addressError.value = t('checkout.selectLocationOnMap') || 'Please pin your location on the map.'
       return
     }
   }
+
+  // ── Fetch shipping rates ──
   shippingLoading.value = true; shippingRatesFetched.value = false
   try {
-    const rates = await fetchDynamicShippingMethods(addressForm.value.country, addressForm.value.city)
+    const country = addressForm.value.country || ''
+    const city    = addressForm.value.city    || ''
+    const rates   = await fetchDynamicShippingMethods(country, city)
     shippingRatesFetched.value = true
     if (rates?.length) { shippingOptions.value = rates; selectedShippingId.value = rates[0].id } else { shippingOptions.value = [] }
     currentStep.value = 3
@@ -914,8 +872,9 @@ async function submitAddress() {
     shippingRatesFetched.value = true
     console.error('[Checkout] Shipping rates error:', err?.response?.data || err)
     addressError.value = err?.response?.data?.message || t('checkout.shippingRatesError') || 'Could not fetch shipping rates'
+  } finally {
+    shippingLoading.value = false
   }
-  finally { shippingLoading.value = false }
 }
 
 // ── Google Maps ──
@@ -1015,7 +974,9 @@ function getCurrentLocation() {
 function submitShipping() {
   clearErrors()
   if (!selectedShippingId.value) { errors.shipping = t('checkout.required'); return }
-  currentStep.value = 4
+  // Step 4 (additional info phone) is removed — phone captured in Step 2
+  currentStep.value = 5
+  loadPaymentMethods()
 }
 
 // ── Step 4: Additional Info ──
@@ -1200,7 +1161,7 @@ onMounted(async () => {
       loyaltyCoupons.value = (couponsRes?.active || []).slice(0, 5)
     } catch { /* ignore */ }
   }
-  try { countries.value = await fetchActiveCountries() } catch { /* use defaults */ }
+  // countriesList is loaded via useCountries() composable (no separate fetch needed)
   if (currentStep.value === 2) initGoogleMaps()
   // Init drawer variant selections from current cart items
   initDrawerSelections(cart.items)

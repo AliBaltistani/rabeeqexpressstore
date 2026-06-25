@@ -230,10 +230,10 @@ final class OrderLifecycleService
                 'phone'          => $shippingAddr['phone'],
                 'address_line_1' => $shippingAddr['addressLine1'],
                 'address_line_2' => $shippingAddr['addressLine2'] ?? null,
-                'city'           => $shippingAddr['city'],
+                'city'           => $shippingAddr['city'] ?? '',
                 'state'          => $shippingAddr['state'] ?? '',
-                'country'        => $shippingAddr['country'],
-                'postal_code'    => $shippingAddr['postalCode'] ?? '',
+                'country'        => $shippingAddr['country'] ?? '',
+                'postal_code'    => $shippingAddr['postalCode'] ?? ''
             ]);
 
             $billingAddr = $data['billingAddress'] ?? $data['shippingAddress'];
@@ -245,10 +245,10 @@ final class OrderLifecycleService
                 'phone'          => $billingAddr['phone'],
                 'address_line_1' => $billingAddr['addressLine1'],
                 'address_line_2' => $billingAddr['addressLine2'] ?? null,
-                'city'           => $billingAddr['city'],
+                'city'           => $billingAddr['city'] ?? '',
                 'state'          => $billingAddr['state'] ?? '',
-                'country'        => $billingAddr['country'],
-                'postal_code'    => $billingAddr['postalCode'] ?? '',
+                'country'        => $billingAddr['country'] ?? '',
+                'postal_code'    => $billingAddr['postalCode'] ?? ''
             ]);
 
             // ── Initial status history ──

@@ -1,5 +1,5 @@
 <template>
-  <div class="phone-input-wrap" :class="{ 'phone-input-wrap--loading': loading }">
+  <div class="phone-input-wrap" :class="{ 'phone-input-wrap--error': error }">
     <!-- Country Code Selector -->
     <div class="phone-cc-selector" ref="selectorRef">
       <button
@@ -7,7 +7,7 @@
         class="phone-cc-btn"
         :disabled="disabled"
         @click="toggleDropdown"
-        :aria-label="'Country code: ' + selected?.phone_code"
+        :aria-label="'Country code: ' + (selected?.phone_code ?? '+')"
       >
         <!-- Flag -->
         <span v-if="selected?.flag_url" class="phone-cc-flag">
@@ -71,11 +71,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { fetchActiveCountries } from '@/api/services'
+import { useCountries } from '@/composables/useCountries'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 const props = withDefaults(defineProps<{
-  modelValue: string       // phone number (digits only, without country code)
+  modelValue: string       // phone number digits (without country code)
   countryCode: string      // e.g. '+966'
   placeholder?: string
   disabled?: boolean
@@ -94,28 +94,51 @@ const emit = defineEmits<{
   (e: 'enter'): void
 }>()
 
-// ─── State ────────────────────────────────────────────────────────────────────
-const countries = ref<any[]>([])
-const loading = ref(true)
-const open = ref(false)
-const search = ref('')
-const selectorRef = ref<HTMLElement | null>(null)
-const searchRef = ref<HTMLInputElement | null>(null)
+// ─── Shared countries list (no duplicate fetches) ─────────────────────────────
+const { countries } = useCountries()
 
-const selected = computed(() =>
-  countries.value.find(c => c.phone_code === props.countryCode) || countries.value[0]
+// ─── Local state ──────────────────────────────────────────────────────────────
+const open      = ref(false)
+const search    = ref('')
+const selectorRef = ref<HTMLElement | null>(null)
+const searchRef   = ref<HTMLInputElement | null>(null)
+
+// ─── Resolved selection ───────────────────────────────────────────────────────
+// Primary: match by exact phone_code prop
+// Fallback: first country in list (only if no code set yet)
+const selected = computed(() => {
+  if (!countries.value.length) return null
+  return (
+    countries.value.find((c: any) => c.phone_code === props.countryCode) ??
+    countries.value[0] ??
+    null
+  )
+})
+
+// When countries first load and no countryCode prop is set, default to SA
+watch(
+  () => countries.value.length,
+  (len) => {
+    if (len && !props.countryCode) {
+      const sa = countries.value.find((c: any) => c.code === 'SA') ?? countries.value[0]
+      if (sa) emit('update:countryCode', sa.phone_code)
+    }
+  },
 )
 
+// ─── Filtered list ────────────────────────────────────────────────────────────
 const filteredCountries = computed(() => {
   if (!search.value.trim()) return countries.value
   const q = search.value.toLowerCase()
   return countries.value.filter(
-    c => c.name?.toLowerCase().includes(q) || c.phone_code?.includes(q) || c.code?.toLowerCase().includes(q)
+    (c: any) =>
+      c.name?.toLowerCase().includes(q) ||
+      c.phone_code?.includes(q) ||
+      c.code?.toLowerCase().includes(q),
   )
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-/** Render a flag emoji from a 2-letter ISO code (fallback when no image). */
 function flagEmoji(code?: string): string {
   if (!code || code.length !== 2) return '🌐'
   return [...code.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('')
@@ -143,32 +166,7 @@ function onClickOutside(e: MouseEvent) {
 }
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
-onMounted(async () => {
-  document.addEventListener('mousedown', onClickOutside)
-  try {
-    const result = await fetchActiveCountries()
-    countries.value = result || []
-    // Set default to SA if not already set and countries loaded
-    if (!props.countryCode && countries.value.length) {
-      const sa = countries.value.find(c => c.code === 'SA') || countries.value[0]
-      emit('update:countryCode', sa.phone_code)
-    }
-  } catch {
-    // fallback: inline defaults
-    countries.value = [
-      { code: 'SA', name: 'Saudi Arabia', phone_code: '+966', flag_url: null },
-      { code: 'AE', name: 'UAE',          phone_code: '+971', flag_url: null },
-      { code: 'KW', name: 'Kuwait',       phone_code: '+965', flag_url: null },
-      { code: 'QA', name: 'Qatar',        phone_code: '+974', flag_url: null },
-      { code: 'BH', name: 'Bahrain',      phone_code: '+973', flag_url: null },
-      { code: 'OM', name: 'Oman',         phone_code: '+968', flag_url: null },
-      { code: 'EG', name: 'Egypt',        phone_code: '+20',  flag_url: null },
-    ]
-  } finally {
-    loading.value = false
-  }
-})
-
+onMounted(() => document.addEventListener('mousedown', onClickOutside))
 onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
 </script>
 
@@ -187,6 +185,9 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
 .phone-input-wrap:focus-within {
   border-color: var(--color-primary, #888);
   box-shadow: 0 0 0 3px rgba(136,136,136,0.12);
+}
+.phone-input-wrap--error {
+  border-color: #dc2626 !important;
 }
 
 /* ─ Selector button ─ */
@@ -222,12 +223,12 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  z-index: 999;
+  z-index: 9999;
   background: #fff;
   border: 1.5px solid #ddd;
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  width: 240px;
+  width: 260px;
   overflow: hidden;
 }
 
@@ -243,7 +244,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
 }
 .phone-cc-search:focus { border-color: var(--color-primary, #888); }
 
-.phone-cc-list { max-height: 200px; overflow-y: auto; }
+.phone-cc-list { max-height: 220px; overflow-y: auto; }
 .phone-cc-option {
   display: flex;
   align-items: center;
@@ -257,8 +258,8 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
   text-align: left;
   transition: background 0.1s;
 }
-.phone-cc-option:hover, .phone-cc-option.active { background: #f5f5f5; }
-.phone-cc-option.active { font-weight: 600; }
+.phone-cc-option:hover { background: #f5f5f5; }
+.phone-cc-option.active { background: #f0f0f0; font-weight: 600; }
 .phone-cc-option-name { flex: 1; color: #333; }
 .phone-cc-option-code { color: #888; font-size: 0.8rem; white-space: nowrap; }
 .phone-cc-empty { padding: 12px; text-align: center; color: #aaa; font-size: 0.875rem; }
@@ -273,19 +274,21 @@ onUnmounted(() => document.removeEventListener('mousedown', onClickOutside))
   background: transparent;
   min-width: 0;
   border-radius: 0 6px 6px 0;
+  color: #111;
 }
 .phone-cc-number::placeholder { color: #aaa; }
 .phone-cc-number:disabled { opacity: 0.5; }
-
-/* ─ Error state ─ */
-.phone-input-wrap:has(.input-error) { border-color: #dc2626; }
 
 /* ─ Transition ─ */
 .cc-drop-enter-active, .cc-drop-leave-active { transition: opacity 0.15s, transform 0.15s; }
 .cc-drop-enter-from, .cc-drop-leave-to { opacity: 0; transform: translateY(-6px); }
 
 /* ─ RTL ─ */
-html[dir="rtl"] .phone-cc-btn { border-right: none; border-left: 1.5px solid #ddd; border-radius: 0 6px 6px 0; }
+html[dir="rtl"] .phone-cc-btn {
+  border-right: none;
+  border-left: 1.5px solid #ddd;
+  border-radius: 0 6px 6px 0;
+}
 html[dir="rtl"] .phone-cc-number { border-radius: 6px 0 0 6px; }
 html[dir="rtl"] .phone-cc-dropdown { left: auto; right: 0; }
 </style>
