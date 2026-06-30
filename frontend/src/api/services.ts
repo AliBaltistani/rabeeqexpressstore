@@ -317,7 +317,7 @@ export async function placeOrder(data: any) {
 }
 
 export async function createStripePaymentIntent(data: { shippingMethodId?: number | null; couponCode?: string; currency?: string }) {
-  return unwrap<{ clientSecret: string; paymentIntentId: string; amount: number; currency: string }>(
+  return unwrap<{ clientSecret: string; paymentIntentId: string; enabledPaymentMethods: string[]; amount: number; currency: string }>(
     await apiClient.post('/checkout/stripe/create-intent', data)
   )
 }

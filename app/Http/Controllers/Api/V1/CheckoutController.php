@@ -88,10 +88,11 @@ class CheckoutController extends Controller
         }
 
         return $this->success([
-            'clientSecret'    => $result['client_secret'],
-            'paymentIntentId' => $result['payment_intent_id'],
-            'amount'          => $amountCents,
-            'currency'        => $currency,
+            'clientSecret'          => $result['client_secret'],
+            'paymentIntentId'       => $result['payment_intent_id'],
+            'enabledPaymentMethods' => $result['enabled_payment_methods'] ?? ['card', 'link'],
+            'amount'                => $amountCents,
+            'currency'              => $currency,
         ]);
     }
 

@@ -1094,6 +1094,18 @@ async function initStripePaymentElement() {
       currency:         settings.currentCurrencyCode,
     })
     stripeClientSecret = intentData.clientSecret
+    // Store the list of enabled types so the Payment Element order matches the PaymentIntent exactly.
+    // apple_pay and google_pay are sub-channels of 'card' — insert them right after card so Stripe
+    // surfaces them as wallet tabs when the customer's device/browser supports them.
+    const backendTypes: string[] = intentData.enabledPaymentMethods ?? ['card', 'link']
+    const methodOrder: string[] = []
+    for (const t of backendTypes) {
+      methodOrder.push(t)
+      if (t === 'card') {
+        // Wallet types live inside the card payment_method_type; surfaced to separate tabs automatically
+        methodOrder.push('apple_pay', 'google_pay')
+      }
+    }
 
     // 3. Build Elements instance (intent-first — unlocks wallets)
     stripeElements = stripeInstance.elements({
@@ -1105,17 +1117,56 @@ async function initStripePaymentElement() {
     })
 
     // 4. Create and mount the Payment Element
+    //
     // paymentMethodOrder: forces Link to render as a regular tab instead of a dominant
-    // "authenticated wallet" overlay that hides Card / Apple Pay / Google Pay.
-    // Stripe's default behaviour promotes Link to cover the whole element when a user
-    // is logged into Link — explicitly listing it last in the order prevents that.
+    // "authenticated wallet" overlay. When a user is logged in to Link, Stripe promotes
+    // it to a full-screen chip — listing it last prevents that behaviour.
+    //
+    // wallets: explicitly opts in to Apple Pay and Google Pay. Without this hint,
+    // Stripe may suppress wallet stubs in certain test/staging environments.
+    //
+    // layout.defaultCollapsed: false — ensures every payment-method tab is rendered
+    // open and visible on mount (no overflow "More" collapse).
+    //
+    // NOTE: Apple Pay and Google Pay are DEVICE + BROWSER conditional:
+    //   • Google Pay — Chrome + Google account with a saved card
+    //   • Apple Pay  — Safari on Apple device + card in Apple Wallet + HTTPS
+    //   • Both wallets require HTTPS. On http://localhost they will never appear.
+    //   • Both must be enabled in Stripe Dashboard → Settings → Payment Methods.
+    //   • Apple Pay requires your domain registered under Dashboard → Apple Pay Domains.
+    // methodOrder is built from enabledPaymentMethods returned by the backend (which calls
+    // Stripe's PaymentMethodConfigurations API). It matches payment_method_types in the
+    // PaymentIntent exactly — Stripe requires this alignment or it hides unmatched methods.
+    console.info('[Stripe] Element paymentMethodOrder:', methodOrder)
     stripePaymentElement = stripeElements.create('payment', {
-      layout: 'tabs',
-      paymentMethodOrder: ['card', 'apple_pay', 'google_pay', 'link'],
+      layout: { type: 'tabs', defaultCollapsed: false },
+      paymentMethodOrder: methodOrder,
+      wallets: {
+        applePay: 'auto',
+        googlePay: 'auto',
+      },
     })
     const mountEl = document.getElementById('stripe-payment-element')
     if (mountEl) {
       stripePaymentElement.mount('#stripe-payment-element')
+
+      // Debug: log which payment methods Stripe actually resolved once the element is ready.
+      // Open browser DevTools Console to inspect this on each checkout load.
+      stripePaymentElement.on('ready', (e: any) => {
+        const methods = (e as any)?.availablePaymentMethods || {}
+        console.info('[Stripe] Payment Element ready. Resolved methods:', methods)
+        if (!methods.applePay && !methods.googlePay) {
+          console.warn(
+            '[Stripe] Wallets not visible. Possible causes:\n' +
+            '  1. Page is on HTTP — both wallets require HTTPS.\n' +
+            '  2. No card saved in the device wallet (Google / Apple).\n' +
+            '  3. Apple Pay / Google Pay not enabled in Stripe Dashboard → Settings → Payment Methods.\n' +
+            '  4. Apple Pay domain not registered in Stripe Dashboard → Apple Pay Domains.\n' +
+            '  5. Browser/device is incompatible (Google Pay needs Chrome; Apple Pay needs Safari on Apple).'
+          )
+        }
+      })
+
       stripePaymentElement.on('loaderror', (e: any) => { stripeError.value = e.error?.message || 'Failed to load payment form.' })
     }
   } catch (err: any) {

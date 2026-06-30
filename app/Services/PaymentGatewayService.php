@@ -219,7 +219,12 @@ final class PaymentGatewayService
      * Create a raw Stripe PaymentIntent for a given amount (in cents) and currency.
      * Used in the payment-first flow before the order is created.
      *
-     * @return array{success: bool, client_secret: ?string, payment_intent_id: ?string, error: ?string}
+     * Uses explicit payment_method_types (fetched from Dashboard via PaymentMethodConfigurations)
+     * instead of automatic_payment_methods. This is critical: with automatic_payment_methods,
+     * Stripe dynamically filters visible methods — often promoting Link to cover other options.
+     * Explicit types guarantee every listed method appears as its own tab in the Payment Element.
+     *
+     * @return array{success: bool, client_secret: ?string, payment_intent_id: ?string, enabled_payment_methods: string[], error: ?string}
      */
     public function createPaymentIntentForAmount(int $amountCents, string $currency): array
     {
@@ -232,17 +237,22 @@ final class PaymentGatewayService
         try {
             \Stripe\Stripe::setApiKey($stripeSecret);
 
+            // Fetch the complete list of enabled payment method types from the Stripe Dashboard.
+            // We pass these explicitly so every enabled method is shown as a tab.
+            $enabledTypes = $this->getEnabledStripePaymentMethodTypes();
+
             $intent = \Stripe\PaymentIntent::create([
-                'amount'                    => $amountCents,
-                'currency'                  => strtolower($currency),
-                'automatic_payment_methods' => ['enabled' => true],
+                'amount'               => $amountCents,
+                'currency'             => strtolower($currency),
+                'payment_method_types' => $enabledTypes,
             ]);
 
             return [
-                'success'           => true,
-                'client_secret'     => $intent->client_secret,
-                'payment_intent_id' => $intent->id,
-                'error'             => null,
+                'success'                  => true,
+                'client_secret'            => $intent->client_secret,
+                'payment_intent_id'        => $intent->id,
+                'enabled_payment_methods'  => $enabledTypes,
+                'error'                    => null,
             ];
         } catch (\Stripe\Exception\ApiErrorException $e) {
             Log::error('Stripe PaymentIntent (amount-based) creation failed', [
@@ -255,6 +265,67 @@ final class PaymentGatewayService
                 'payment_intent_id' => null,
                 'error'             => $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * Query the Stripe PaymentMethodConfigurations API to discover which payment
+     * method types are actually enabled (available = true) in the Stripe Dashboard.
+     *
+     * Returns an ordered array of payment_method_type strings, e.g.:
+     *   ['card', 'link']
+     *
+     * The Stripe PaymentMethodConfigurations object has individual sub-objects for
+     * each method (card, link, apple_pay, google_pay, klarna, …). Each sub-object
+     * has an `available` boolean that combines capability status + display_preference.
+     *
+     * Note: apple_pay and google_pay are NOT separately controllable via this API —
+     * they are automatically enabled when `card` is enabled and the customer's
+     * device/browser supports them. They should NOT be listed in payment_method_types
+     * as they are sub-methods of `card`.
+     *
+     * Falls back to ['card', 'link'] if the API call fails (always safe for Stripe).
+     *
+     * @return string[]
+     */
+    public function getEnabledStripePaymentMethodTypes(): array
+    {
+        // Ordered by priority in the Payment Element tab strip.
+        // Wallets (apple_pay, google_pay) are NOT separate payment_method_types —
+        // they surface automatically through the `card` type when eligible.
+        $candidateTypes = ['card', 'link', 'klarna', 'afterpay_clearpay', 'affirm', 'ideal', 'sepa_debit', 'bancontact', 'p24', 'giropay'];
+
+        try {
+            $configs = \Stripe\PaymentMethodConfiguration::all(['limit' => 1]);
+
+            if (empty($configs->data)) {
+                Log::warning('[Stripe] PaymentMethodConfigurations returned empty — using safe fallback.');
+                return ['card', 'link'];
+            }
+
+            $config = $configs->data[0];
+            $enabled = [];
+
+            foreach ($candidateTypes as $type) {
+                // The config object exposes each type as a property.
+                if (isset($config->$type) && ($config->$type->available ?? false) === true) {
+                    $enabled[] = $type;
+                }
+            }
+
+            // Always guarantee 'card' — it is the foundation of all wallet methods
+            if (!in_array('card', $enabled, true)) {
+                array_unshift($enabled, 'card');
+            }
+
+            Log::info('[Stripe] Enabled payment method types from Dashboard:', $enabled);
+
+            return $enabled ?: ['card', 'link'];
+        } catch (\Throwable $e) {
+            Log::warning('[Stripe] Could not fetch PaymentMethodConfigurations, using fallback.', [
+                'error' => $e->getMessage(),
+            ]);
+            return ['card', 'link'];
         }
     }
 
