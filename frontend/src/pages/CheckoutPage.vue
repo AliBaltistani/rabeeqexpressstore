@@ -1094,18 +1094,8 @@ async function initStripePaymentElement() {
       currency:         settings.currentCurrencyCode,
     })
     stripeClientSecret = intentData.clientSecret
-    // Store the list of enabled types so the Payment Element order matches the PaymentIntent exactly.
-    // apple_pay and google_pay are sub-channels of 'card' — insert them right after card so Stripe
-    // surfaces them as wallet tabs when the customer's device/browser supports them.
-    const backendTypes: string[] = intentData.enabledPaymentMethods ?? ['card', 'link']
-    const methodOrder: string[] = []
-    for (const t of backendTypes) {
-      methodOrder.push(t)
-      if (t === 'card') {
-        // Wallet types live inside the card payment_method_type; surfaced to separate tabs automatically
-        methodOrder.push('apple_pay', 'google_pay')
-      }
-    }
+    // Stripe will automatically surface the payment methods enabled in the Stripe Dashboard
+    // because we use automatic_payment_methods = true on the PaymentIntent.
 
     // 3. Build Elements instance (intent-first — unlocks wallets)
     stripeElements = stripeInstance.elements({
@@ -1134,13 +1124,9 @@ async function initStripePaymentElement() {
     //   • Both wallets require HTTPS. On http://localhost they will never appear.
     //   • Both must be enabled in Stripe Dashboard → Settings → Payment Methods.
     //   • Apple Pay requires your domain registered under Dashboard → Apple Pay Domains.
-    // methodOrder is built from enabledPaymentMethods returned by the backend (which calls
-    // Stripe's PaymentMethodConfigurations API). It matches payment_method_types in the
-    // PaymentIntent exactly — Stripe requires this alignment or it hides unmatched methods.
-    console.info('[Stripe] Element paymentMethodOrder:', methodOrder)
+    
     stripePaymentElement = stripeElements.create('payment', {
       layout: { type: 'tabs', defaultCollapsed: false },
-      paymentMethodOrder: methodOrder,
       wallets: {
         applePay: 'auto',
         googlePay: 'auto',
