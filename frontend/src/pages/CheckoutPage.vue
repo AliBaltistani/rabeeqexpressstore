@@ -1105,7 +1105,14 @@ async function initStripePaymentElement() {
     })
 
     // 4. Create and mount the Payment Element
-    stripePaymentElement = stripeElements.create('payment', { layout: 'tabs' })
+    // paymentMethodOrder: forces Link to render as a regular tab instead of a dominant
+    // "authenticated wallet" overlay that hides Card / Apple Pay / Google Pay.
+    // Stripe's default behaviour promotes Link to cover the whole element when a user
+    // is logged into Link — explicitly listing it last in the order prevents that.
+    stripePaymentElement = stripeElements.create('payment', {
+      layout: 'tabs',
+      paymentMethodOrder: ['card', 'apple_pay', 'google_pay', 'link'],
+    })
     const mountEl = document.getElementById('stripe-payment-element')
     if (mountEl) {
       stripePaymentElement.mount('#stripe-payment-element')

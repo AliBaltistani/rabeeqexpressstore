@@ -332,7 +332,14 @@
             <button class="pdp-arrow-btn" @click="scrollRelated(1)" aria-label="Next"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
           </div>
         </div>
-        <div class="pdp-related__track" ref="relatedTrackRef">
+        <div
+          class="pdp-related__track"
+          ref="relatedTrackRef"
+          @mouseenter="stopAutoSlide"
+          @mouseleave="startAutoSlide"
+          @touchstart="stopAutoSlide"
+          @touchend="startAutoSlide"
+        >
           <div v-for="rp in relatedProducts" :key="rp.id" class="pdp-related__item">
             <ProductCard :product="rp" />
           </div>
@@ -343,7 +350,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import ProductCard from '@/components/home/ProductCard.vue'
@@ -518,10 +525,39 @@ function handleShare() {
 
 // ─── Related Products ───
 const relatedTrackRef = ref<HTMLElement | null>(null)
+let autoSlideTimer: ReturnType<typeof setInterval> | null = null
+
 function scrollRelated(dir: number) {
   if (!relatedTrackRef.value) return
-  relatedTrackRef.value.scrollBy({ left: dir * 300, behavior: 'smooth' })
+  // Scroll by one card width (first child width + gap)
+  const card = relatedTrackRef.value.firstElementChild as HTMLElement | null
+  const cardWidth = card ? card.offsetWidth + 12 : 220
+  relatedTrackRef.value.scrollBy({ left: dir * cardWidth, behavior: 'smooth' })
 }
+
+function autoSlideStep() {
+  const el = relatedTrackRef.value
+  if (!el) return
+  const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4
+  if (atEnd) {
+    el.scrollTo({ left: 0, behavior: 'smooth' })
+  } else {
+    const card = el.firstElementChild as HTMLElement | null
+    const cardWidth = card ? card.offsetWidth + 12 : 220
+    el.scrollBy({ left: cardWidth, behavior: 'smooth' })
+  }
+}
+
+function startAutoSlide() {
+  stopAutoSlide()
+  if ((relatedProducts.value?.length ?? 0) < 2) return
+  autoSlideTimer = setInterval(autoSlideStep, 3000)
+}
+
+function stopAutoSlide() {
+  if (autoSlideTimer) { clearInterval(autoSlideTimer); autoSlideTimer = null }
+}
+
 const relatedProducts = ref<any[]>([])
 
 // ─── Reviews ───
@@ -660,6 +696,9 @@ async function loadProduct(slug: string) {
             price: p.flashSalePrice?.raw ?? p.price?.raw ?? 0,
             currency: p.currency || 'SAR',
           }))
+        // Start auto-slide after products are loaded
+        await nextTick()
+        startAutoSlide()
       } catch {
         relatedProducts.value = []
       }
@@ -689,6 +728,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleLightboxKey)
   document.body.style.overflow = ''
+  stopAutoSlide()
 })
 
 // Re-fetch when route slug changes (for related product navigation)
