@@ -134,9 +134,10 @@ class EditProduct extends EditRecord
     // -------------------------------------------------------------------
     protected function syncProductImages(array $images): void
     {
+        // Only treat truly numeric IDs as existing DB rows
         $submittedIds = collect($images)
             ->pluck('id')
-            ->filter()
+            ->filter(fn ($id) => is_numeric($id) && (int) $id > 0)
             ->map(fn ($v) => (int) $v)
             ->all();
 
@@ -157,16 +158,20 @@ class EditProduct extends EditRecord
                 continue;
             }
 
+            $existingId = isset($item['id']) && is_numeric($item['id']) && (int) $item['id'] > 0
+                ? (int) $item['id']
+                : null;
+
             if (str_starts_with($rawPath, 'livewire-file:')) {
-                // New upload — move temp file to permanent storage
+                // Edge case: file ref not yet moved — move it now.
                 $tempFile = TemporaryUploadedFile::unserializeFromLivewireRequest($rawPath);
 
                 if (! $tempFile instanceof TemporaryUploadedFile) {
                     continue;
                 }
 
-                $extension    = $tempFile->guessExtension() ?? 'jpg';
-                $filename     = Str::ulid() . '.' . $extension;
+                $extension     = $tempFile->guessExtension() ?? 'jpg';
+                $filename      = Str::ulid() . '.' . $extension;
                 $permanentPath = $tempFile->storeAs('products', $filename, ['disk' => 'public']);
 
                 ProductImage::create([
@@ -176,11 +181,21 @@ class EditProduct extends EditRecord
                     'is_primary' => (bool) ($item['is_primary'] ?? false),
                     'sort_order' => 0,
                 ]);
-            } elseif (!empty($item['id'])) {
-                // Existing image — update metadata only (path unchanged)
-                $this->record->images()->where('id', (int) $item['id'])->update([
+            } elseif ($existingId) {
+                // Existing image — update alt_text / is_primary only (path unchanged)
+                $this->record->images()->where('id', $existingId)->update([
                     'alt_text'   => $item['alt_text'] ?? null,
                     'is_primary' => (bool) ($item['is_primary'] ?? false),
+                ]);
+            } else {
+                // New image already moved to disk by Filament's FileUpload.
+                // File is on disk — just create the missing DB record.
+                ProductImage::create([
+                    'product_id' => $this->record->id,
+                    'image_path' => $rawPath,
+                    'alt_text'   => $item['alt_text'] ?? null,
+                    'is_primary' => (bool) ($item['is_primary'] ?? false),
+                    'sort_order' => 0,
                 ]);
             }
         }
