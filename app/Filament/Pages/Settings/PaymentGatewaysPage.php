@@ -94,9 +94,14 @@ class PaymentGatewaysPage extends Page
                             Forms\Components\TextInput::make('stripe_secret_key')->label('Secret Key')->password()->revealable(),
                         ]),
                         Components\Grid::make(2)->schema([
-                            Forms\Components\TextInput::make('stripe_webhook_secret')->label('Webhook Secret')->password()->revealable(),
+                            Forms\Components\TextInput::make('stripe_webhook_secret')->label('Webhook Secret')->password()->revealable()
+                                ->helperText('Get this from Stripe Dashboard → Developers → Webhooks → your endpoint → Signing secret.'),
                             Forms\Components\Select::make('stripe_mode')->label('Mode')->options(['test' => 'Test', 'live' => 'Live'])->default('test'),
                         ]),
+                        Forms\Components\Placeholder::make('stripe_webhook_url')
+                            ->label('Webhook Endpoint URL')
+                            ->content(fn () => url('/stripe/webhook'))
+                            ->helperText('Copy this URL into Stripe Dashboard → Developers → Webhooks → Add endpoint. Enable events: payment_intent.succeeded, payment_intent.payment_failed, charge.refunded.'),
                     ])->collapsible(),
 
                 // PayPal

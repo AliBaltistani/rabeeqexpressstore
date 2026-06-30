@@ -404,20 +404,14 @@
           </div>
           <span v-if="errors.payment" class="field-error">{{ errors.payment }}</span>
 
-          <!-- Stripe Card Element -->
+          <!-- Stripe Payment Element (handles Cards, Apple Pay, Google Pay, Link) -->
           <div v-if="selectedPayment === 'stripe'" class="card-details-form">
-            <div class="checkout-form-grid">
-              <div class="checkout-field">
-                <label class="checkout-label">{{ $t('checkout.cardDetails') }} <span class="req">*</span></label>
-                <div id="stripe-card-element" class="stripe-mount"></div>
-                <p v-if="stripeError" class="field-error" style="margin-top:0.5rem;">{{ stripeError }}</p>
-              </div>
-              <div class="checkout-field">
-                <label class="checkout-label">{{ $t('checkout.cardHolderName') }} <span class="req">*</span></label>
-                <input type="text" v-model="cardHolderName" class="checkout-input" :placeholder="$t('checkout.cardHolderName')" />
-              </div>
+            <div v-if="stripeElementMounting" class="stripe-element-loading">
+              <div class="stripe-element-spinner"></div>
+              <span>{{ $t('common.loading') }}...</span>
             </div>
-            <label class="checkout-checkbox"><input type="checkbox" v-model="saveCard" /><span>{{ $t('checkout.saveCard') }}</span></label>
+            <div id="stripe-payment-element" class="stripe-payment-mount" :class="{ 'stripe-hidden': stripeElementMounting }"></div>
+            <p v-if="stripeError" class="field-error" style="margin-top:0.5rem;">{{ stripeError }}</p>
           </div>
 
           <!-- Bank Transfer / COD Info -->
@@ -555,13 +549,13 @@ const paymentMethodsLoading = ref(false)
 const agreeTerms = ref(false)
 const orderLoading = ref(false)
 const orderError = ref('')
-const cardHolderName = ref('')
-const saveCard = ref(true)
 let stripeInstance: any = null
-let stripeCard: any = null
+let stripeElements: any = null        // Stripe Elements instance (intent-first)
+let stripePaymentElement: any = null  // The mounted Payment Element
 const stripeError = ref('')
-const stripeReady = ref(false)
+const stripeElementMounting = ref(false)
 const stripePublishableKey = ref('')
+let stripeClientSecret = ''           // Cached PI clientSecret for confirmPayment reuse
 
 // ── Google Maps ──
 const mapContainer = ref<HTMLElement | null>(null)
@@ -1053,31 +1047,82 @@ async function loadPaymentMethods() {
   finally { paymentMethodsLoading.value = false }
 }
 
-watch(selectedPayment, async (val) => { if (val === 'stripe') { await nextTick(); await initStripeElements() } })
+// Pre-mount the Payment Element as soon as the user selects Stripe.
+// This shows the Stripe UI immediately (with wallets) and caches the clientSecret.
+watch(selectedPayment, async (val) => {
+  if (val === 'stripe') {
+    await nextTick()
+    await initStripePaymentElement()
+  } else {
+    // Destroy element if user switches away from Stripe
+    if (stripePaymentElement) { try { stripePaymentElement.destroy() } catch {} stripePaymentElement = null }
+    stripeClientSecret = ''
+  }
+})
 
-async function initStripeElements() {
+async function initStripePaymentElement() {
+  if (stripePaymentElement) return // Already mounted — nothing to do
   stripeError.value = ''
-  const stripeKey = stripePublishableKey.value || (settings.storeSettings as any)?.stripePublishableKey || import.meta.env.VITE_STRIPE_KEY || ''
-  if (!stripeKey) { stripeReady.value = true; return }
-  try {
-    if (!(window as any).Stripe) { await new Promise<void>((resolve, reject) => { const s = document.createElement('script'); s.src = 'https://js.stripe.com/v3/'; s.onload = () => resolve(); s.onerror = () => reject(); document.head.appendChild(s) }) }
-    stripeInstance = (window as any).Stripe(stripeKey)
-    const elements = stripeInstance.elements()
-    stripeCard = elements.create('card', { style: { base: { fontSize: '16px', color: '#32325d', fontFamily: 'inherit', '::placeholder': { color: '#aab7c4' } }, invalid: { color: '#fa755a' } } })
-    const mount = document.getElementById('stripe-card-element')
-    if (mount) { stripeCard.mount('#stripe-card-element'); stripeCard.on('change', (e: any) => { stripeError.value = e.error?.message || '' }); stripeReady.value = true }
-  } catch (e: any) { stripeError.value = 'Failed to initialize payment form' }
-}
+  stripeElementMounting.value = true
 
-async function confirmPayment() {
-  clearErrors(); orderError.value = ''
-  if (!selectedPayment.value) { errors.payment = t('checkout.selectPayment'); return }
-  if (!agreeTerms.value) { errors.terms = t('checkout.agreeTermsRequired'); return }
-  if (selectedPayment.value === 'stripe' && (!stripeInstance || !stripeCard)) {
-    orderError.value = 'Card payment form is not ready. Please refresh and try again.'
+  const stripeKey = stripePublishableKey.value || (settings.storeSettings as any)?.stripePublishableKey || import.meta.env.VITE_STRIPE_KEY || ''
+  if (!stripeKey) {
+    stripeElementMounting.value = false
+    stripeError.value = 'Stripe is not configured. Please contact the store.'
     return
   }
 
+  try {
+    // 1. Load Stripe.js once
+    if (!(window as any).Stripe) {
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script')
+        s.src = 'https://js.stripe.com/v3/'
+        s.onload = () => resolve()
+        s.onerror = () => reject(new Error('Stripe.js failed to load'))
+        document.head.appendChild(s)
+      })
+    }
+    if (!stripeInstance) stripeInstance = (window as any).Stripe(stripeKey)
+
+    // 2. Create PaymentIntent → get clientSecret
+    const selectedOpt = shippingOptions.value.find((s: any) => s.id === selectedShippingId.value)
+    const isNewMethod = selectedOpt?.slug || selectedOpt?.carrier_type
+    const intentData = await createStripePaymentIntent({
+      shippingMethodId: isNewMethod ? (selectedShippingId.value ?? undefined) : undefined,
+      couponCode:       couponCode.value || cart.couponCode || undefined,
+      currency:         settings.currentCurrencyCode,
+    })
+    stripeClientSecret = intentData.clientSecret
+
+    // 3. Build Elements instance (intent-first — unlocks wallets)
+    stripeElements = stripeInstance.elements({
+      clientSecret: stripeClientSecret,
+      appearance: {
+        theme: 'stripe',
+        variables: { colorPrimary: '#4b7bec', fontFamily: 'inherit', borderRadius: '8px' },
+      },
+    })
+
+    // 4. Create and mount the Payment Element
+    stripePaymentElement = stripeElements.create('payment', { layout: 'tabs' })
+    const mountEl = document.getElementById('stripe-payment-element')
+    if (mountEl) {
+      stripePaymentElement.mount('#stripe-payment-element')
+      stripePaymentElement.on('loaderror', (e: any) => { stripeError.value = e.error?.message || 'Failed to load payment form.' })
+    }
+  } catch (err: any) {
+    const msg = err?.response?.data?.message || err?.message || 'Could not initialise payment.'
+    stripeError.value = `Payment initialisation failed: ${msg}`
+  } finally {
+    stripeElementMounting.value = false
+  }
+}
+
+async function confirmPayment() {
+  clearErrors(); orderError.value = ''; stripeError.value = ''
+  if (!selectedPayment.value) { errors.payment = t('checkout.selectPayment'); return }
+  if (!agreeTerms.value) { errors.terms = t('checkout.agreeTermsRequired'); return }
   // ── Build base order payload ──
   const isGuestMode = authMode.value === 'guest' && !auth.isAuthenticated
   const selectedOpt = shippingOptions.value.find((s: any) => s.id === selectedShippingId.value)
@@ -1103,51 +1148,58 @@ async function confirmPayment() {
   try {
     // ════════════════════════════════════════════════════════
     //  STRIPE — Payment-First Flow
-    //  Step 1 → Create PI (no order created yet)
-    //  Step 2 → Confirm card on client (no order created yet)
-    //  Step 3 → Only on success: place order with paymentIntentId
+    //  1 → Element pre-mounted on method select (watch)
+    //  2 → elements.submit() validates payment fields
+    //  3 → stripe.confirmPayment() charges card/wallet in-page
+    //  4 → Attach PI id → place-order (backend re-verifies)
     // ════════════════════════════════════════════════════════
     if (selectedPayment.value === 'stripe') {
 
-      // 1️⃣  Ask backend to create a Stripe PaymentIntent from exact cart total
-      let intentData: any
-      try {
-        intentData = await createStripePaymentIntent({
-          shippingMethodId: isNewMethod ? (selectedShippingId.value ?? undefined) : undefined,
-          couponCode:       couponCode.value || cart.couponCode || undefined,
-          currency:         settings.currentCurrencyCode,
-        })
-      } catch (piErr: any) {
-        const msg = piErr.response?.data?.message || piErr.message || 'Could not initialise payment.'
-        orderError.value = `Payment initialisation failed: ${msg}`
-        orderLoading.value = false
-        return   // ← NO order created
+      // Guard: element must be mounted (initStripePaymentElement runs on method selection)
+      if (!stripeElements || !stripePaymentElement || !stripeClientSecret) {
+        await initStripePaymentElement()
+        if (!stripeElements || !stripePaymentElement) {
+          orderError.value = 'Payment form is not ready. Please wait a moment and try again.'
+          orderLoading.value = false
+          return
+        }
       }
 
-      // 2️⃣  Confirm card on the frontend (Stripe.js handles 3DS / CVV / etc.)
-      const { error: stripeErr, paymentIntent } = await stripeInstance.confirmCardPayment(
-        intentData.clientSecret,
-        { payment_method: { card: stripeCard, billing_details: { name: cardHolderName.value || undefined } } }
-      )
-
-      if (stripeErr) {
-        // Declined, wrong card, testmode error, etc. — NO order created ✅
-        const codeHint = stripeErr.decline_code || stripeErr.code || null
-        orderError.value = `Payment declined: ${stripeErr.message || 'Unknown card error.'}${codeHint ? ` (code: ${codeHint})` : ''}`
+      // 1️⃣ Validate payment fields inside Stripe's element
+      const { error: submitError } = await stripeElements.submit()
+      if (submitError) {
+        stripeError.value = submitError.message || 'Please check your payment details.'
         orderLoading.value = false
-        return   // ← NO order created
+        return
+      }
+
+      // 2️⃣ Confirm — redirect:'if_required' keeps cards/wallets fully in-page
+      const { error: confirmError, paymentIntent } = await stripeInstance.confirmPayment({
+        elements:      stripeElements,
+        clientSecret:  stripeClientSecret,
+        confirmParams: { return_url: window.location.origin + '/checkout/success' },
+        redirect:      'if_required',
+      })
+
+      if (confirmError) {
+        const hint = confirmError.decline_code || confirmError.code || null
+        stripeError.value = `${confirmError.message || 'Payment failed.'}${hint ? ` (${hint})` : ''}`
+        // Reset element so user gets a fresh PaymentIntent on retry
+        stripePaymentElement = null; stripeElements = null; stripeClientSecret = ''
+        await nextTick(); await initStripePaymentElement()
+        orderLoading.value = false
+        return
       }
 
       if (!paymentIntent || paymentIntent.status !== 'succeeded') {
-        // 3DS cancelled / failed — NO order created ✅
-        const status = paymentIntent?.status ?? 'unknown'
-        orderError.value = `Payment not completed. Stripe status: "${status}". Please try again or use a different card.`
+        orderError.value = `Payment not completed (status: ${paymentIntent?.status ?? 'unknown'}). Please try again.`
+        stripePaymentElement = null; stripeElements = null; stripeClientSecret = ''
+        await nextTick(); await initStripePaymentElement()
         orderLoading.value = false
-        return   // ← NO order created
+        return
       }
 
-      // 3️⃣  Card charged! Attach verified paymentIntentId to the order payload
-      //     Backend will re-verify with Stripe before creating the order as paid.
+      // 3️⃣ Attach verified PI id — backend re-verifies with Stripe before creating order
       payload.paymentIntentId = paymentIntent.id
     }
 
@@ -1167,6 +1219,11 @@ async function confirmPayment() {
       orderError.value = allErrors || resp.message || t('common.error')
     } else {
       orderError.value = resp?.message || e.message || t('common.error')
+    }
+    // If this was a Stripe order and the PI was already consumed, reset element for a clean retry
+    if (selectedPayment.value === 'stripe') {
+      stripePaymentElement = null; stripeElements = null; stripeClientSecret = ''
+      nextTick().then(() => initStripePaymentElement())
     }
   }
   finally { orderLoading.value = false }
@@ -1223,7 +1280,10 @@ watch(currentStep, (val) => { if (val === 2) nextTick(() => initGoogleMaps()) })
 
 onUnmounted(() => {
   if (otpCooldownTimer) clearInterval(otpCooldownTimer)
-  if (stripeCard) { try { stripeCard.destroy() } catch {} }
+  if (stripePaymentElement) {
+    try { stripePaymentElement.destroy() } catch {}
+    stripePaymentElement = null
+  }
 })
 </script>
 
@@ -1388,8 +1448,19 @@ html[dir="rtl"] .phone-input { border-radius: 8px 0 0 8px !important; }
 .payment-badge { font-size: 0.625rem; font-weight: 600; background: #fef3c7; color: #d97706; padding: 0.125rem 0.5rem; border-radius: 100px; text-transform: uppercase; }
 .card-details-form { border: 1px solid #eee; border-radius: 12px; padding: 1.25rem; margin-bottom: 0.75rem; }
 .card-note { margin: 0; font-size: 0.875rem; color: #666; }
-.stripe-mount { padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; min-height: 44px; }
-.stripe-mount:focus-within { border-color: #111; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+/* Stripe Payment Element */
+.stripe-payment-mount { min-height: 200px; }
+.stripe-hidden { visibility: hidden; height: 0; overflow: hidden; }
+.stripe-element-loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.75rem; padding: 2rem; color: #888; font-size: 0.875rem;
+}
+.stripe-element-spinner {
+  width: 32px; height: 32px; border: 3px solid #e5e7eb;
+  border-top-color: #4b7bec; border-radius: 50%;
+  animation: stripe-spin 0.8s linear infinite;
+}
+@keyframes stripe-spin { to { transform: rotate(360deg); } }
 
 /* ─ Drawer ─ */
 .drawer-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 9999; display: flex; justify-content: flex-end; }

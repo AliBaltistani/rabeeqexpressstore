@@ -131,10 +131,10 @@ final class PaymentGatewayService
             \Stripe\Stripe::setApiKey($stripeSecret);
 
             $intent = \Stripe\PaymentIntent::create([
-                'amount'               => (int) round((float) $order->total * 100),
-                'currency'             => strtolower($order->currency_code ?? 'sar'),
-                'payment_method_types' => ['card'],
-                'metadata'             => [
+                'amount'                    => (int) round((float) $order->total * 100),
+                'currency'                  => strtolower($order->currency_code ?? 'sar'),
+                'automatic_payment_methods' => ['enabled' => true],
+                'metadata'                  => [
                     'order_number' => $order->order_number,
                     'order_id'     => $order->id,
                 ],
@@ -233,9 +233,9 @@ final class PaymentGatewayService
             \Stripe\Stripe::setApiKey($stripeSecret);
 
             $intent = \Stripe\PaymentIntent::create([
-                'amount'               => $amountCents,
-                'currency'             => strtolower($currency),
-                'payment_method_types' => ['card'],
+                'amount'                    => $amountCents,
+                'currency'                  => strtolower($currency),
+                'automatic_payment_methods' => ['enabled' => true],
             ]);
 
             return [

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\SetupController;
+use App\Http\Controllers\StripeWebhookController;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 
@@ -13,6 +14,15 @@ use Illuminate\Support\Facades\Route;
 | Set SETUP_TOKEN in your .env file.
 |
 */
+
+/*
+|--------------------------------------------------------------------------
+| Stripe Webhook (CSRF-exempt — verified via Stripe-Signature header)
+|--------------------------------------------------------------------------
+*/
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->name('stripe.webhook');
 
 /*
 |--------------------------------------------------------------------------
