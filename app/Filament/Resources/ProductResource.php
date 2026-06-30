@@ -256,7 +256,9 @@ class ProductResource extends Resource
                                                     ->image()
                                                     ->disk('public')
                                                     ->directory('products')
-                                                    ->maxSize(2048)
+                                                    ->maxSize(4096)
+                                                    ->moveFiles()            // move from livewire-tmp → products/ on save
+                                                    ->preserveFilenames(false) // always use UUID-based filenames
                                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
                                                     ->required(),
 
@@ -267,14 +269,16 @@ class ProductResource extends Resource
                                                 Forms\Components\Toggle::make('is_primary')
                                                     ->label('Primary Image')
                                                     ->default(false),
+
+                                                Forms\Components\Hidden::make('sort_order')
+                                                    ->default(0),
                                             ])
                                             ->columns(3)
-                                            ->reorderableWithDragAndDrop(true)
-                                            ->orderColumn('sort_order')
+                                            ->reorderableWithDragAndDrop()
                                             ->collapsible()
                                             ->defaultItems(0)
                                             ->addActionLabel('Add Image')
-                                            ->helperText('Max 2MB each. Accepted: JPG, PNG, WebP, GIF'),
+                                            ->helperText('Max 4MB each. Accepted: JPG, PNG, WebP, GIF'),
                                     ]),
 
                                 // Product Attributes (dynamic from category)

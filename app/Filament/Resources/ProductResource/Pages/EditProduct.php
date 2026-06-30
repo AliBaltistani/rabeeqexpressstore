@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ProductResource\Pages;
 
 use App\Filament\Resources\ProductResource;
+use App\Models\ProductAttributeValue;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Width;
@@ -12,6 +13,14 @@ class EditProduct extends EditRecord
     protected static string $resource = ProductResource::class;
 
     protected Width|string|null $maxContentWidth = Width::Full;
+
+    /**
+     * Store dynamic attributes before they are stripped from $data.
+     * Same rationale as CreateProduct: calling $this->form->getState()
+     * in afterSave() re-invokes the Repeater relationship save in Filament v5,
+     * which overwrites the already-persisted images.
+     */
+    protected array $pendingDynamicAttributes = [];
 
     protected function getHeaderActions(): array
     {
@@ -32,7 +41,7 @@ class EditProduct extends EditRecord
             ];
         }
 
-        // Populate dynamic_attributes from pivot
+        // Populate dynamic_attributes from pivot for pre-filling checkboxes
         $selectedValues = $record->attributeValues()->with('attribute')->get();
         $grouped = [];
         foreach ($selectedValues as $val) {
@@ -45,13 +54,17 @@ class EditProduct extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        // Capture dynamic_attributes BEFORE stripping them.
+        $this->pendingDynamicAttributes = $data['dynamic_attributes'] ?? [];
+
+        // Clean translatable fields
         foreach (['name', 'short_description', 'description'] as $field) {
             if (isset($data[$field]) && is_array($data[$field])) {
                 $data[$field] = array_filter($data[$field]);
             }
         }
 
-        // Remove dynamic_attributes from data (it's not a DB column)
+        // Remove non-DB keys
         unset($data['dynamic_attributes']);
 
         return $data;
@@ -59,16 +72,22 @@ class EditProduct extends EditRecord
 
     protected function afterSave(): void
     {
-        $this->syncDynamicAttributes();
+        // Use the pre-captured property — NOT $this->form->getState()
+        $this->syncDynamicAttributes($this->pendingDynamicAttributes);
     }
 
-    protected function syncDynamicAttributes(): void
+    protected function syncDynamicAttributes(array $dynamicAttributes): void
     {
-        $dynamicAttributes = $this->form->getState()['dynamic_attributes'] ?? [];
-        $rawIds = collect($dynamicAttributes)->flatten()->filter()->map(fn($v) => (int) $v)->unique()->values()->all();
+        $rawIds = collect($dynamicAttributes)
+            ->flatten()
+            ->filter()
+            ->map(fn($v) => (int) $v)
+            ->unique()
+            ->values()
+            ->all();
 
-        // Guard: only sync IDs that actually exist in the DB to prevent FK violations
-        $validIds = \App\Models\ProductAttributeValue::whereIn('id', $rawIds)->pluck('id')->all();
+        // Guard: only sync IDs that actually exist in the DB
+        $validIds = ProductAttributeValue::whereIn('id', $rawIds)->pluck('id')->all();
 
         $this->record->attributeValues()->sync($validIds);
     }
@@ -78,4 +97,3 @@ class EditProduct extends EditRecord
         return $this->getResource()::getUrl('index');
     }
 }
-
