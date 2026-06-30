@@ -126,6 +126,10 @@ class ProductResource extends JsonResource
         $placeholder = asset('storage/dummy/placeholder.jpg');
         if (empty($path)) return $placeholder;
 
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
         if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
             return asset('storage/' . $path);
         }
@@ -155,6 +159,10 @@ class ProductResource extends JsonResource
             $path = $primary->image_path ?? null;
 
             if (empty($path)) return $placeholder;
+
+            if (filter_var($path, FILTER_VALIDATE_URL)) {
+                return $path;
+            }
 
             // Check public disk first
             if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {

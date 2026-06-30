@@ -645,10 +645,10 @@ async function loadProduct(slug: string) {
     // Fetch related products from the same category
     if (data.category?.slug) {
       try {
-        const related = await fetchProducts({ category: data.category.slug, perPage: 6 })
+        const related = await fetchProducts({ category: data.category.slug, perPage: 12 })
         relatedProducts.value = (related.data || [])
           .filter((p: any) => p.id !== data.id)
-          .slice(0, 5)
+          .slice(0, 10)
           .map((p: any) => ({
             id: p.id,
             slug: p.slug,
