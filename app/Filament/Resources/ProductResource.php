@@ -100,7 +100,18 @@ class ProductResource extends Resource
                                                     ->options(fn() => Category::getHierarchicalOptions())
                                                     ->searchable()
                                                     ->required()
-                                                    ->live(),
+                                                    ->live()
+                                                    ->afterStateUpdated(function (Schemas\Components\Utilities\Set $set, $state) {
+                                                        if (!$state) return;
+                                                        $category = Category::withoutGlobalScope('active')->find($state);
+                                                        if (!$category) return;
+                                                        
+                                                        // Explicitly initialize each attribute field as an empty array
+                                                        // to prevent Livewire from treating them as boolean toggles.
+                                                        foreach ($category->attributes()->get() as $attr) {
+                                                            $set("dynamic_attributes_{$attr->id}", []);
+                                                        }
+                                                    }),
 
                                                 Forms\Components\Select::make('brand_id')
                                                     ->label('Brand')
@@ -249,16 +260,20 @@ class ProductResource extends Resource
                                 Schemas\Components\Section::make('Images')
                                     ->schema([
                                         Forms\Components\Repeater::make('images')
-                                            ->relationship()
+                                            // NOTE: NO ->relationship() here — intentional.
+                                            // Filament v5's getState() calls loadStateFromRelationships()
+                                            // which wipes the Repeater state on CREATE (no model yet).
+                                            // Images are saved manually in CreateProduct::afterCreate()
+                                            // and EditProduct::afterSave() instead.
                                             ->schema([
+                                                Forms\Components\Hidden::make('id'),
+
                                                 Forms\Components\FileUpload::make('image_path')
                                                     ->label('Image')
                                                     ->image()
                                                     ->disk('public')
                                                     ->directory('products')
                                                     ->maxSize(4096)
-                                                    ->moveFiles()            // move from livewire-tmp → products/ on save
-                                                    ->preserveFilenames(false) // always use UUID-based filenames
                                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
                                                     ->required(),
 
@@ -269,12 +284,8 @@ class ProductResource extends Resource
                                                 Forms\Components\Toggle::make('is_primary')
                                                     ->label('Primary Image')
                                                     ->default(false),
-
-                                                Forms\Components\Hidden::make('sort_order')
-                                                    ->default(0),
                                             ])
                                             ->columns(3)
-                                            ->reorderableWithDragAndDrop()
                                             ->collapsible()
                                             ->defaultItems(0)
                                             ->addActionLabel('Add Image')
@@ -305,16 +316,17 @@ class ProductResource extends Resource
                                             $attrNameAr = $attr->getTranslation('name', 'ar');
                                             $label = $attrNameAr ? "{$attrNameEn} / {$attrNameAr}" : $attrNameEn;
 
-                                            $fields[] = Forms\Components\CheckboxList::make("dynamic_attributes.{$attr->id}")
+                                            $fields[] = Forms\Components\CheckboxList::make("dynamic_attributes_{$attr->id}")
                                                 ->label($label)
                                                 ->options(
-                                                    $attr->values->mapWithKeys(function (ProductAttributeValue $val) {
+                                                    $attr->values->mapWithKeys(function (\App\Models\ProductAttributeValue $val) {
                                                         $en = $val->getTranslation('value', 'en');
                                                         $ar = $val->getTranslation('value', 'ar');
-                                                        return [$val->id => $ar ? "{$en} / {$ar}" : $en];
+                                                        return ['id_' . $val->id => $ar ? "{$en} / {$ar}" : $en];
                                                     })->toArray()
                                                 )
                                                 ->columns(3)
+                                                ->default([])
                                                 ->bulkToggleable();
                                         }
 
