@@ -267,12 +267,10 @@ class ProductResource extends Resource
                                                 Forms\Components\Toggle::make('is_primary')
                                                     ->label('Primary Image')
                                                     ->default(false),
-
-                                                Forms\Components\Hidden::make('sort_order')
-                                                    ->default(0),
                                             ])
                                             ->columns(3)
-                                            ->reorderable('sort_order')
+                                            ->reorderableWithDragAndDrop(true)
+                                            ->orderColumn('sort_order')
                                             ->collapsible()
                                             ->defaultItems(0)
                                             ->addActionLabel('Add Image')
@@ -398,12 +396,10 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('images.image_path')
+                Tables\Columns\ImageColumn::make('primaryImage.image_path')
                     ->label('Image')
                     ->disk('public')
                     ->circular()
-                    ->stacked()
-                    ->limit(1)
                     ->defaultImageUrl(fn() => 'https://ui-avatars.com/api/?name=P&background=3b82f6&color=fff'),
 
                 Tables\Columns\TextColumn::make('name')

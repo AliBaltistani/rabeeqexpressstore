@@ -86,6 +86,14 @@ class Product extends Model
         return $this->hasMany(ProductImage::class);
     }
 
+    public function primaryImage(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ProductImage::class)
+            ->orderBy('is_primary', 'desc')
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'asc');
+    }
+
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'product_tags');
