@@ -34,7 +34,7 @@
             <p>{{ addr.phone }}</p>
             <p>{{ addr.addressLine1 }}</p>
             <p v-if="addr.addressLine2">{{ addr.addressLine2 }}</p>
-            <p>{{ addr.city }}, {{ addr.state }} {{ addr.postalCode }}</p>
+            <p>{{ addr.city }}<template v-if="addr.city && addr.state">, </template>{{ addr.state }} {{ addr.postalCode }}</p>
             <p>{{ addr.country }}</p>
           </div>
         </div>
@@ -61,7 +61,11 @@
               </div>
               <div class="form-group">
                 <label>{{ $t('checkout.phoneNumber') || 'Phone' }}</label>
-                <input type="text" v-model="formData.phone" required />
+                <PhoneInput
+                  v-model="phoneNumber"
+                  v-model:countryCode="phoneCode"
+                  placeholder="501234567"
+                />
               </div>
               <div class="form-group">
                 <label>{{ $t('checkout.street') || 'Address Line 1' }}</label>
@@ -74,7 +78,7 @@
               <div class="form-row">
                 <div class="form-group">
                   <label>{{ $t('checkout.city') || 'City' }}</label>
-                  <input type="text" v-model="formData.city" required />
+                  <input type="text" v-model="formData.city" />
                 </div>
                 <div class="form-group">
                   <label>{{ $t('checkout.region') || 'State/Region' }}</label>
@@ -88,7 +92,7 @@
                 </div>
                 <div class="form-group">
                   <label>{{ $t('checkout.country') || 'Country' }}</label>
-                  <input type="text" v-model="formData.country" required />
+                  <input type="text" v-model="formData.country" />
                 </div>
               </div>
               <div class="form-group checkbox-group">
@@ -110,14 +114,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { fetchAddresses, addAddress, updateAddress, deleteAddress } from '@/api/services'
+import { useCountries } from '@/composables/useCountries'
+import PhoneInput from '@/components/common/PhoneInput.vue'
 import type { Address } from '@/types'
 
 const auth = useAuthStore()
 const router = useRouter()
+const { findByCode } = useCountries()
 
 const addresses = ref<Address[]>([])
 const isLoading = ref(true)
@@ -125,6 +132,10 @@ const isSaving = ref(false)
 const showModal = ref(false)
 const isEditing = ref(false)
 const currentId = ref<number | null>(null)
+
+// Phone is split into code + number for the PhoneInput component
+const phoneCode = ref('+966')
+const phoneNumber = ref('')
 
 const formData = ref<Partial<Address>>({
   firstName: '',
@@ -135,9 +146,19 @@ const formData = ref<Partial<Address>>({
   city: '',
   state: '',
   postalCode: '',
-  country: 'Saudi Arabia',
-  isDefault: false
+  country: '',
+  isDefault: false,
 })
+
+/**
+ * Split a full E.164 phone ("+966501234567") into { code, number }.
+ */
+function parsePhone(raw: string | undefined | null): { code: string; number: string } {
+  if (!raw) return { code: '+966', number: '' }
+  const m = raw.match(/^(\+\d{1,4})(\d+)$/)
+  if (m) return { code: m[1], number: m[2] }
+  return { code: '+966', number: raw.replace(/^\+/, '') }
+}
 
 async function loadAddresses() {
   if (!auth.isAuthenticated) return
@@ -154,17 +175,19 @@ async function loadAddresses() {
 function openAddForm() {
   isEditing.value = false
   currentId.value = null
+  phoneCode.value = '+966'
+  phoneNumber.value = ''
   formData.value = {
     firstName: auth.user?.name?.split(' ')[0] || '',
     lastName: auth.user?.name?.split(' ').slice(1).join(' ') || '',
-    phone: auth.user?.phone || '',
+    phone: '',
     addressLine1: '',
     addressLine2: '',
     city: '',
     state: '',
     postalCode: '',
-    country: 'Saudi Arabia',
-    isDefault: addresses.value.length === 0
+    country: '',
+    isDefault: addresses.value.length === 0,
   }
   showModal.value = true
 }
@@ -172,17 +195,32 @@ function openAddForm() {
 function openEditForm(addr: Address) {
   isEditing.value = true
   currentId.value = addr.id
-  formData.value = { ...addr }
+  const parsed = parsePhone(addr.phone)
+  phoneCode.value = parsed.code
+  phoneNumber.value = parsed.number
+  formData.value = { ...addr, phone: parsed.number }
   showModal.value = true
 }
 
 async function saveAddress() {
   isSaving.value = true
   try {
+    // Recombine phone code + number
+    const fullPhone = `${phoneCode.value}${phoneNumber.value}`.trim()
+    // Derive country from phone code if left blank
+    const country = formData.value.country?.trim()
+      || (findByCode(phoneCode.value) as any)?.name
+      || ''
+    const payload = {
+      ...formData.value,
+      phone: fullPhone,
+      country,
+    }
+
     if (isEditing.value && currentId.value) {
-      await updateAddress(currentId.value, formData.value)
+      await updateAddress(currentId.value, payload)
     } else {
-      await addAddress(formData.value)
+      await addAddress(payload)
     }
     showModal.value = false
     await loadAddresses()

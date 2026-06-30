@@ -16,6 +16,7 @@
       <!-- Left: Profile Form -->
       <div class="profile-form-section">
         <form @submit.prevent="saveProfile" class="profile-form">
+          <!-- Name -->
           <div class="form-row">
             <div class="form-field">
               <label>{{ $t('account.firstName') }}</label>
@@ -26,6 +27,7 @@
               <input type="text" v-model="form.lastName" :placeholder="$t('account.lastName')" />
             </div>
           </div>
+          <!-- Birth Date + Gender -->
           <div class="form-row">
             <div class="form-field">
               <label>{{ $t('account.birthDate') }}</label>
@@ -41,6 +43,7 @@
               </select>
             </div>
           </div>
+          <!-- Email + Phone -->
           <div class="form-row">
             <div class="form-field">
               <label>{{ $t('account.emailAddress') }}</label>
@@ -48,14 +51,29 @@
             </div>
             <div class="form-field">
               <label>{{ $t('account.mobileNumber') }}</label>
-              <div class="phone-row">
-                <select v-model="phoneCode" class="phone-code-select">
-                  <option v-for="code in countryCodes" :key="code" :value="code">{{ code }}</option>
-                </select>
-                <input type="tel" v-model="form.phone" placeholder="3488092100" />
-              </div>
+              <PhoneInput
+                v-model="form.phone"
+                v-model:countryCode="phoneCode"
+                placeholder="501234567"
+              />
             </div>
           </div>
+          <!-- Address + City (inline, same form) -->
+          <div class="form-row">
+            <div class="form-field">
+              <label>{{ $t('account.addressLine1') }}</label>
+              <input
+                type="text"
+                v-model="form.address"
+                :placeholder="$t('checkout.addressPlaceholder')"
+              />
+            </div>
+            <div class="form-field">
+              <label>{{ $t('checkout.city') }}</label>
+              <input type="text" v-model="form.city" :placeholder="$t('checkout.city')" />
+            </div>
+          </div>
+
           <button type="submit" class="btn-save" :disabled="saving">
             {{ saving ? $t('account.saving') : $t('account.save') }}
           </button>
@@ -129,24 +147,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
-import { fetchProfile, updateProfile, deactivateAccountApi } from '@/api/services'
+import { fetchProfile, updateProfile, deactivateAccountApi, fetchAddresses, addAddress, updateAddress } from '@/api/services'
 import { useI18n } from 'vue-i18n'
+import PhoneInput from '@/components/common/PhoneInput.vue'
+import { useCountries } from '@/composables/useCountries'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const router = useRouter()
+const { countries } = useCountries()
 
 const isLoading = ref(true)
 const saving = ref(false)
 const successMsg = ref('')
 const errorMsg = ref('')
-const countryCodes = ['+966', '+971', '+92', '+20', '+962', '+1', '+44']
 const phoneCode = ref('+966')
+const rawUserPhone = ref('')
 const showDeactivateModal = ref(false)
 const deactivating = ref(false)
+
+// Track the user's existing default address ID for update vs. create
+const defaultAddressId = ref<number | null>(null)
 
 const form = ref({
   firstName: '',
@@ -154,49 +178,75 @@ const form = ref({
   birthDate: '',
   gender: '',
   email: '',
-  phone: '',
+  phone: '',         // number digits only (code in phoneCode ref)
+  address: '',       // addressLine1 from default address
+  city: '',          // city from default address
   promotionalMessages: true,
 })
 
 /**
- * Parse a stored phone string like "+92344..." into { code: '+92', number: '344...' }.
- * Tries longest-match first so "+966" is preferred over "+96" etc.
+ * Parse a full phone string (e.g. "+923488092160") into { code, number }
+ * using the live countries list sorted longest-first.
  */
-function parsePhone(raw: string): { code: string; number: string } {
+function parsePhoneWithCountries(
+  raw: string,
+  countryList: any[]
+): { code: string; number: string } {
   if (!raw) return { code: '+966', number: '' }
-  // Sort codes longest-first so "+966" is matched before "+96"
-  const sorted = [...countryCodes].sort((a, b) => b.length - a.length)
-  for (const code of sorted) {
-    if (raw.startsWith(code)) {
-      return { code, number: raw.slice(code.length) }
+  const sorted = [...countryList].sort((a, b) => b.phone_code.length - a.phone_code.length)
+  for (const c of sorted) {
+    if (raw.startsWith(c.phone_code)) {
+      return { code: c.phone_code, number: raw.slice(c.phone_code.length) }
     }
   }
-  // If no known code matched but starts with '+', try to extract a code of 1-4 digits
   const m = raw.match(/^(\+\d{1,4})(.*)$/)
   if (m) return { code: m[1], number: m[2] }
   return { code: '+966', number: raw }
 }
 
-onMounted(async () => {
-  try {
-    const user = await fetchProfile()
-    // Fallback: split full name if explicit first/last name isn't provided
-    const nameParts = (user.name || '').trim().split(' ')
-    const defaultFirstName = nameParts[0] || ''
-    const defaultLastName = nameParts.slice(1).join(' ') || ''
-
-    form.value.firstName = user.firstName || user.first_name || defaultFirstName
-    form.value.lastName = user.lastName || user.last_name || defaultLastName
-    form.value.birthDate = user.birthDate || user.birth_date || ''
-    form.value.gender = user.gender || ''
-    form.value.email = user.email || ''
-
-    // Parse country code from stored phone number
-    const parsed = parsePhone(user.phone || '')
+// Re-parse phone whenever the countries list loads (async singleton)
+watch(
+  () => countries.value.length,
+  (len) => {
+    if (!len || !rawUserPhone.value) return
+    const parsed = parsePhoneWithCountries(rawUserPhone.value, countries.value)
     phoneCode.value = parsed.code
     form.value.phone = parsed.number
+  }
+)
 
+onMounted(async () => {
+  try {
+    // Load profile and addresses in parallel
+    const [user, addresses] = await Promise.all([
+      fetchProfile(),
+      fetchAddresses().catch(() => []),
+    ])
+
+    // Populate profile fields
+    const nameParts = (user.name || '').trim().split(' ')
+    form.value.firstName = user.firstName || user.first_name || nameParts[0] || ''
+    form.value.lastName  = user.lastName  || user.last_name  || nameParts.slice(1).join(' ') || ''
+    form.value.birthDate = user.birthDate || user.birth_date || ''
+    form.value.gender    = user.gender || ''
+    form.value.email     = user.email  || ''
     form.value.promotionalMessages = user.promotionalMessages ?? user.promotional_messages ?? true
+
+    // Store raw phone; watcher re-parses when countries load
+    rawUserPhone.value = user.phone || ''
+    if (countries.value.length) {
+      const parsed = parsePhoneWithCountries(rawUserPhone.value, countries.value)
+      phoneCode.value  = parsed.code
+      form.value.phone = parsed.number
+    }
+
+    // Populate address fields from default (or first) saved address
+    const def = (addresses as any[]).find((a: any) => a.isDefault) || (addresses as any[])[0] || null
+    if (def) {
+      defaultAddressId.value = def.id
+      form.value.address = def.addressLine1 && def.addressLine1 !== '-' ? def.addressLine1 : ''
+      form.value.city    = def.city    && def.city    !== '-' ? def.city    : ''
+    }
   } catch (e) {
     console.error('Failed to load profile', e)
   } finally {
@@ -207,21 +257,46 @@ onMounted(async () => {
 async function saveProfile() {
   saving.value = true
   successMsg.value = ''
-  errorMsg.value = ''
+  errorMsg.value   = ''
   try {
-    const payload: any = {
-      name: `${form.value.firstName} ${form.value.lastName}`.trim(),
-      firstName: form.value.firstName,
-      lastName: form.value.lastName,
-      birthDate: form.value.birthDate || null,
-      gender: form.value.gender || null,
-      phone: form.value.phone ? `${phoneCode.value}${form.value.phone}` : null,
+    // 1. Save profile info
+    const fullPhone = form.value.phone ? `${phoneCode.value}${form.value.phone}` : null
+    await updateProfile({
+      name:                `${form.value.firstName} ${form.value.lastName}`.trim(),
+      firstName:           form.value.firstName,
+      lastName:            form.value.lastName,
+      birthDate:           form.value.birthDate || null,
+      gender:              form.value.gender    || null,
+      phone:               fullPhone,
       promotionalMessages: form.value.promotionalMessages,
-    }
-    await updateProfile(payload)
-    successMsg.value = t('account.profileSaved')
-    // Refresh auth user
+    } as any)
     await auth.fetchUser()
+
+    // 2. Persist address fields to user_addresses (fire-and-forget style)
+    if (form.value.address.trim()) {
+      const fullName = `${form.value.firstName} ${form.value.lastName}`.trim()
+      const nameParts = fullName.split(' ')
+      const addrPayload = {
+        firstName:    nameParts[0]              || 'Customer',
+        lastName:     nameParts.slice(1).join(' ') || '-',
+        phone:        fullPhone || '',
+        addressLine1: form.value.address.trim(),
+        city:         form.value.city.trim()    || '-',
+        country:      '-',
+        isDefault:    true,
+      } as any
+
+      try {
+        if (defaultAddressId.value) {
+          await updateAddress(defaultAddressId.value, addrPayload)
+        } else {
+          const result: any = await addAddress(addrPayload)
+          defaultAddressId.value = result?.id ?? null
+        }
+      } catch { /* don't block profile save on address error */ }
+    }
+
+    successMsg.value = t('account.profileSaved')
     setTimeout(() => { successMsg.value = '' }, 3000)
   } catch (e: any) {
     errorMsg.value = e?.response?.data?.message || t('common.error')
@@ -236,9 +311,7 @@ async function handleLogout() {
 }
 
 function closeDeactivateModal() {
-  if (!deactivating.value) {
-    showDeactivateModal.value = false
-  }
+  if (!deactivating.value) showDeactivateModal.value = false
 }
 
 async function confirmDeactivate() {
@@ -281,6 +354,7 @@ async function confirmDeactivate() {
 }
 
 /* Form */
+.profile-form-section { display: flex; flex-direction: column; gap: 2rem; }
 .profile-form { display: flex; flex-direction: column; gap: 1.25rem; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .form-field { display: flex; flex-direction: column; gap: 0.375rem; }
@@ -293,17 +367,6 @@ async function confirmDeactivate() {
 .form-field input:focus, .form-field select:focus { outline: none; border-color: #6b7280; }
 .input-disabled { background: #f3f4f6 !important; color: #9ca3af !important; cursor: not-allowed; }
 
-.phone-row { display: flex; gap: 0; }
-.phone-code-select {
-  width: 85px; padding: 0.625rem 0.5rem;
-  border: 1px solid #d1d5db; border-right: none;
-  border-radius: 8px 0 0 8px; background: #f9fafb;
-  font-size: 0.875rem; font-weight: 600; cursor: pointer;
-}
-html[dir="rtl"] .phone-code-select { border-radius: 0 8px 8px 0; border-right: 1px solid #d1d5db; border-left: none; }
-.phone-row input { border-radius: 0 8px 8px 0; flex: 1; }
-html[dir="rtl"] .phone-row input { border-radius: 8px 0 0 8px; }
-
 .btn-save {
   padding: 0.75rem; background: #6b7280; color: white;
   border: none; border-radius: 8px; font-weight: 600;
@@ -313,7 +376,7 @@ html[dir="rtl"] .phone-row input { border-radius: 8px 0 0 8px; }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .msg-success { color: #059669; font-size: 0.875rem; margin: 0; }
-.msg-error { color: #ef4444; font-size: 0.875rem; margin: 0; }
+.msg-error   { color: #ef4444; font-size: 0.875rem; margin: 0; }
 
 /* Settings cards */
 .settings-section { display: flex; flex-direction: column; gap: 1rem; }
@@ -321,9 +384,7 @@ html[dir="rtl"] .phone-row input { border-radius: 8px 0 0 8px; }
   background: white; border: 1px solid #e5e7eb;
   border-radius: 12px; padding: 1.25rem 1.5rem;
 }
-.settings-card-row {
-  display: flex; align-items: center; gap: 1rem;
-}
+.settings-card-row { display: flex; align-items: center; gap: 1rem; }
 .settings-card-icon { color: #6b7280; flex-shrink: 0; }
 .settings-card-info { flex: 1; }
 .settings-card-info strong { display: block; color: #111; font-size: 0.95rem; margin-bottom: 0.25rem; }
@@ -358,79 +419,43 @@ html[dir="rtl"] .phone-row input { border-radius: 8px 0 0 8px; }
 .spinner { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #6b7280; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Deactivate Modal ── */
+/* Modal */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 9999;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 1.5rem;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 1.5rem;
 }
 .modal-container {
   background: white; border-radius: 20px;
   padding: 2.5rem; max-width: 420px; width: 100%;
-  text-align: center;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
 }
 .modal-icon-wrapper {
   width: 72px; height: 72px; margin: 0 auto 1.5rem;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #fef2f2, #fee2e2);
-  color: #ef4444;
+  border-radius: 50%; background: linear-gradient(135deg,#fef2f2,#fee2e2); color: #ef4444;
 }
-.modal-title {
-  font-size: 1.25rem; font-weight: 700; color: #111827;
-  margin: 0 0 0.75rem;
-}
-.modal-description {
-  font-size: 0.875rem; color: #6b7280; line-height: 1.6;
-  margin: 0 0 2rem;
-}
-.modal-actions {
-  display: flex; gap: 0.75rem;
-}
+.modal-title { font-size: 1.25rem; font-weight: 700; color: #111827; margin: 0 0 0.75rem; }
+.modal-description { font-size: 0.875rem; color: #6b7280; line-height: 1.6; margin: 0 0 2rem; }
+.modal-actions { display: flex; gap: 0.75rem; }
 .modal-btn {
   flex: 1; padding: 0.75rem 1.25rem; border-radius: 10px;
-  font-weight: 600; font-size: 0.9rem; cursor: pointer;
-  border: none; transition: all 0.2s ease;
-  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  font-weight: 600; font-size: 0.9rem; cursor: pointer; border: none;
+  transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
 }
 .modal-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.modal-btn--cancel {
-  background: #f3f4f6; color: #374151;
-}
+.modal-btn--cancel { background: #f3f4f6; color: #374151; }
 .modal-btn--cancel:hover:not(:disabled) { background: #e5e7eb; }
-.modal-btn--danger {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
-}
-.modal-btn--danger:hover:not(:disabled) {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.45);
-  transform: translateY(-1px);
-}
+.modal-btn--danger { background: linear-gradient(135deg,#ef4444,#dc2626); color: white; box-shadow: 0 4px 12px rgba(239,68,68,.35); }
+.modal-btn--danger:hover:not(:disabled) { background: linear-gradient(135deg,#dc2626,#b91c1c); box-shadow: 0 6px 16px rgba(239,68,68,.45); transform: translateY(-1px); }
 .btn-spinner { animation: spin 0.8s linear infinite; }
 
-/* Modal transitions */
-.modal-fade-enter-active, .modal-fade-leave-active {
-  transition: opacity 0.25s ease;
-}
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.25s ease; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
-
-.modal-scale-enter-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.modal-scale-leave-active {
-  transition: all 0.2s ease;
-}
-.modal-scale-enter-from {
-  opacity: 0; transform: scale(0.9);
-}
-.modal-scale-leave-to {
-  opacity: 0; transform: scale(0.95);
-}
+.modal-scale-enter-active { transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+.modal-scale-leave-active { transition: all 0.2s ease; }
+.modal-scale-enter-from { opacity: 0; transform: scale(0.9); }
+.modal-scale-leave-to   { opacity: 0; transform: scale(0.95); }
 
 @media (max-width: 768px) {
   .profile-page-grid { grid-template-columns: 1fr; }

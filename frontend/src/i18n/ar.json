@@ -272,7 +272,13 @@
     "confirmDeactivate": "نعم، إلغاء التنشيط",
     "pendingPayments": "المدفوعات المعلقة",
     "myWallet": "محفظتي",
-    "noOrdersInStatus": "لا توجد طلبات بهذه الحالة."
+    "noOrdersInStatus": "لا توجد طلبات بهذه الحالة.",
+    "defaultAddress": "العنوان الافتراضي",
+    "addAddress": "إضافة عنوان",
+    "editAddress": "تعديل العنوان",
+    "addressSaved": "تم حفظ العنوان بنجاح!",
+    "noDefaultAddress": "لا يوجد عنوان افتراضي محفوظ بعد.",
+    "addressLine1": "العنوان الكامل"
   },
   "wishlist": {
     "empty": "قائمة رغباتك فارغة",

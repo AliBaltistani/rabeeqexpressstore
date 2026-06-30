@@ -445,7 +445,7 @@ import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, createStripePaymentIntent, confirmStripePayment, cancelStripeOrder, fetchActiveCountries, updateProfile, fetchMyCoupons } from '@/api/services'
+import { fetchDynamicShippingMethods, placeOrder, fetchPaymentMethods, createStripePaymentIntent, confirmStripePayment, cancelStripeOrder, fetchActiveCountries, updateProfile, fetchMyCoupons, fetchAddresses, addAddress } from '@/api/services'
 import { useI18n } from 'vue-i18n'
 import PhoneInput from '@/components/common/PhoneInput.vue'
 import { useCountries } from '@/composables/useCountries'
@@ -799,29 +799,59 @@ function handleGuest() {
 
 
 function prefillAddressFromUser() {
-  if (auth.user) {
-    const name = auth.user.name || ''
-    const parts = name.split(' ')
-    addressForm.value.firstName = parts[0] || ''
-    addressForm.value.lastName  = parts.slice(1).join(' ') || ''
-    addressFullName.value       = name
-    const rawPhone = auth.user.phone || ''
-    // Try to separate country code from stored phone (e.g. +96650123456)
-    if (rawPhone.startsWith('+')) {
-      // Find matching country code by stripping the + prefix
-      const match = rawPhone.match(/^(\+\d{1,4})(\d+)$/)
-      if (match) {
-        addrPhoneCode.value = match[1]
-        addrPhoneNum.value  = match[2]
-      } else {
-        addrPhoneNum.value = rawPhone
+  if (!auth.user) return
+  const name = auth.user.name || ''
+  const parts = name.split(' ')
+  addressForm.value.firstName = parts[0] || ''
+  addressForm.value.lastName  = parts.slice(1).join(' ') || ''
+  addressFullName.value       = name
+
+  // Parse phone using countries list (longest-first) to avoid greedy-regex bug
+  const rawPhone = auth.user.phone || ''
+  if (rawPhone && countriesList.value.length) {
+    const sorted = [...countriesList.value].sort((a: any, b: any) => b.phone_code.length - a.phone_code.length)
+    let matched = false
+    for (const c of sorted) {
+      if (rawPhone.startsWith(c.phone_code)) {
+        addrPhoneCode.value = c.phone_code
+        addrPhoneNum.value  = rawPhone.slice(c.phone_code.length)
+        matched = true
+        break
       }
-    } else {
-      addrPhoneNum.value = rawPhone
     }
-    addressForm.value.phone = rawPhone
-    additionalPhone.value   = rawPhone
+    if (!matched) addrPhoneNum.value = rawPhone
+  } else {
+    addrPhoneNum.value = rawPhone
   }
+  addressForm.value.phone = rawPhone
+  additionalPhone.value   = rawPhone
+
+  // Load saved default address to pre-fill street + city (vice-versa from profile)
+  fetchAddresses().then((addresses: any[]) => {
+    const def = addresses.find((a: any) => a.isDefault) || addresses[0] || null
+    if (def) {
+      if (def.addressLine1 && def.addressLine1 !== '-') {
+        addressForm.value.street = def.addressLine1
+      }
+      if (def.city && def.city !== '-') {
+        addressForm.value.city = def.city
+      }
+      if (def.country && def.country !== '-') {
+        addressForm.value.country = def.country
+      }
+      // Override phone from saved address if present and profile has no phone
+      if (!rawPhone && def.phone) {
+        const sorted = [...countriesList.value].sort((a: any, b: any) => b.phone_code.length - a.phone_code.length)
+        for (const c of sorted) {
+          if (def.phone.startsWith(c.phone_code)) {
+            addrPhoneCode.value = c.phone_code
+            addrPhoneNum.value  = def.phone.slice(c.phone_code.length)
+            break
+          }
+        }
+      }
+    }
+  }).catch(() => { /* non-blocking */ })
 }
 
 // ── Step 2: Address ──
@@ -868,6 +898,25 @@ async function submitAddress() {
     shippingRatesFetched.value = true
     if (rates?.length) { shippingOptions.value = rates; selectedShippingId.value = rates[0].id } else { shippingOptions.value = [] }
     currentStep.value = 3
+    // ── Silently persist shipping address for authenticated users ──
+    // This auto-populates their profile Default Address after login/register
+    if (auth.isAuthenticated) {
+      try {
+        const existingAddresses = await fetchAddresses()
+        const hasDefault = existingAddresses.some((a: any) => a.isDefault)
+        await addAddress({
+          firstName: addressForm.value.firstName || addressFullName.value.split(' ')[0] || 'Customer',
+          lastName: addressForm.value.lastName || addressFullName.value.split(' ').slice(1).join(' ') || '-',
+          phone: addressForm.value.phone || (addrPhoneCode.value + addrPhoneNum.value),
+          addressLine1: addressForm.value.street || '-',
+          city: addressForm.value.city || '-',
+          country: addressForm.value.country || (countriesList.value.find((c: any) => c.phone_code === addrPhoneCode.value) as any)?.name || '-',
+          state: addressForm.value.state || undefined,
+          postalCode: addressForm.value.postalCode || undefined,
+          isDefault: !hasDefault,
+        } as any)
+      } catch { /* Fire-and-forget — don't block checkout on address save failure */ }
+    }
   } catch (err: any) {
     shippingRatesFetched.value = true
     console.error('[Checkout] Shipping rates error:', err?.response?.data || err)

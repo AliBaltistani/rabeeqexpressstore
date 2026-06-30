@@ -272,7 +272,13 @@
     "confirmDeactivate": "Yes, Deactivate",
     "pendingPayments": "Pending Payments",
     "myWallet": "My Wallet",
-    "noOrdersInStatus": "No orders with this status."
+    "noOrdersInStatus": "No orders with this status.",
+    "defaultAddress": "Default Address",
+    "addAddress": "Add Address",
+    "editAddress": "Edit Address",
+    "addressSaved": "Address saved successfully!",
+    "noDefaultAddress": "No default address saved yet.",
+    "addressLine1": "Full Address"
   },
   "wishlist": {
     "empty": "Your wishlist is empty",

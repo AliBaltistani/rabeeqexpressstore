@@ -146,9 +146,9 @@ class ProfileController extends Controller
             'phone' => ['required', 'string', 'max:20'],
             'addressLine1' => ['required', 'string'],
             'addressLine2' => ['nullable', 'string'],
-            'city' => ['required', 'string'],
+            'city' => ['nullable', 'string'],
             'state' => ['nullable', 'string'],
-            'country' => ['required', 'string'],
+            'country' => ['nullable', 'string'],
             'postalCode' => ['nullable', 'string'],
             'isDefault' => ['nullable', 'boolean'],
         ]);
@@ -159,17 +159,17 @@ class ProfileController extends Controller
         }
 
         $address = $request->user()->addresses()->create([
-            'label' => $validated['label'] ?? null,
-            'first_name' => $validated['firstName'],
-            'last_name' => $validated['lastName'],
-            'phone' => $validated['phone'],
+            'label'          => $validated['label'] ?? 'Home',
+            'first_name'     => $validated['firstName'],
+            'last_name'      => $validated['lastName'],
+            'phone'          => $validated['phone'],
             'address_line_1' => $validated['addressLine1'],
-            'address_line_2' => $validated['addressLine2'] ?? null,
-            'city' => $validated['city'],
-            'state' => $validated['state'] ?? null,
-            'country' => $validated['country'],
-            'postal_code' => $validated['postalCode'] ?? null,
-            'is_default' => $validated['isDefault'] ?? false,
+            'address_line_2' => $validated['addressLine2'] ?? '',
+            'city'           => $validated['city'] ?? '-',
+            'state'          => $validated['state'] ?? '',
+            'country'        => $validated['country'] ?? '-',
+            'postal_code'    => $validated['postalCode'] ?? '',
+            'is_default'     => $validated['isDefault'] ?? false,
         ]);
 
         return $this->success(['id' => $address->id], 'Address added.', 201);
