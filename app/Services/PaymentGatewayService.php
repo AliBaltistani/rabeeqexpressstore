@@ -67,20 +67,24 @@ final class PaymentGatewayService
             ],
             [
                 'id'          => 'tamara',
-                'name'        => 'Tamara — Buy Now Pay Later',
-                'enabled'     => false,
+                'name'        => $locale === 'ar' ? 'تمارا — اشترِ الآن وادفع لاحقًا' : 'Tamara — Buy Now Pay Later',
+                'enabled'     => (bool) setting('payment.tamara_enabled', false),
                 'fee'         => null,
-                'description' => 'Split into 3 interest-free payments.',
+                'description' => $locale === 'ar' ? 'قسّم المبلغ على 3 دفعات بدون فوائد.' : 'Split into 3 interest-free payments.',
             ],
             [
                 'id'          => 'tabby',
-                'name'        => 'Tabby — Pay in 4',
-                'enabled'     => false,
+                'name'        => $locale === 'ar' ? 'تابي — ادفع على 4 دفعات' : 'Tabby — Pay in 4',
+                'enabled'     => (bool) setting('payment.tabby_enabled', false),
                 'fee'         => null,
-                'description' => 'Pay in 4 interest-free installments.',
+                'description' => $locale === 'ar' ? 'ادفع على 4 أقساط بدون فوائد.' : 'Pay in 4 interest-free installments.',
             ],
         ];
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Stripe
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
      * Get the Stripe secret key — prioritize admin settings over config.
@@ -92,7 +96,6 @@ final class PaymentGatewayService
             try {
                 return decrypt($stored);
             } catch (\Throwable) {
-                // Value may not be encrypted (set via config), use as-is
                 return $stored;
             }
         }
@@ -101,7 +104,6 @@ final class PaymentGatewayService
 
     /**
      * Get the Stripe publishable key — prioritize admin settings over config.
-     * Note: publishable keys are NOT encrypted by the admin page.
      */
     public function getStripePublishableKey(): ?string
     {
@@ -111,8 +113,6 @@ final class PaymentGatewayService
 
     /**
      * Create a Stripe PaymentIntent for the given order.
-     *
-     * @return array{success: bool, client_secret: ?string, payment_intent_id: ?string, error: ?string}
      */
     public function createStripeIntent(Order $order): array
     {
@@ -170,8 +170,6 @@ final class PaymentGatewayService
 
     /**
      * Confirm a Stripe PaymentIntent and mark order as paid.
-     *
-     * @return array{success: bool, error: ?string}
      */
     public function confirmStripePayment(Order $order, string $paymentIntentId): array
     {
@@ -187,7 +185,6 @@ final class PaymentGatewayService
 
         try {
             \Stripe\Stripe::setApiKey($stripeSecret);
-
             $intent = \Stripe\PaymentIntent::retrieve($paymentIntentId);
 
             if ($intent->status === 'succeeded') {
@@ -196,7 +193,6 @@ final class PaymentGatewayService
                     'status'          => 'processing',
                     'transaction_id'  => $paymentIntentId,
                 ]);
-
                 return ['success' => true, 'stripeStatus' => 'succeeded', 'error' => null];
             }
 
@@ -210,21 +206,12 @@ final class PaymentGatewayService
                 'order' => $order->order_number,
                 'error' => $e->getMessage(),
             ]);
-
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
     /**
      * Create a raw Stripe PaymentIntent for a given amount (in cents) and currency.
-     * Used in the payment-first flow before the order is created.
-     *
-     * Uses explicit payment_method_types (fetched from Dashboard via PaymentMethodConfigurations)
-     * instead of automatic_payment_methods. This is critical: with automatic_payment_methods,
-     * Stripe dynamically filters visible methods — often promoting Link to cover other options.
-     * Explicit types guarantee every listed method appears as its own tab in the Payment Element.
-     *
-     * @return array{success: bool, client_secret: ?string, payment_intent_id: ?string, enabled_payment_methods: string[], error: ?string}
      */
     public function createPaymentIntentForAmount(int $amountCents, string $currency): array
     {
@@ -266,9 +253,6 @@ final class PaymentGatewayService
 
     /**
      * Verify a Stripe PaymentIntent has status 'succeeded'.
-     * Used in placeOrder to confirm payment before creating the order.
-     *
-     * @return array{success: bool, error: ?string}
      */
     public function verifyStripePaymentIntent(string $paymentIntentId): array
     {
@@ -280,7 +264,6 @@ final class PaymentGatewayService
 
         try {
             \Stripe\Stripe::setApiKey($stripeSecret);
-
             $intent = \Stripe\PaymentIntent::retrieve($paymentIntentId);
 
             if ($intent->status === 'succeeded') {
@@ -293,8 +276,423 @@ final class PaymentGatewayService
             ];
         } catch (\Stripe\Exception\ApiErrorException $e) {
             Log::error('Stripe PI verification failed', ['error' => $e->getMessage()]);
-
             return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Tamara
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Resolve Tamara configuration from admin settings.
+     *
+     * @return array{api_token: string, notification_token: string, base_url: string}
+     */
+    public function getTamaraConfig(): array
+    {
+        $env = setting('payment.tamara_environment', 'sandbox');
+        $baseUrl = $env === 'live'
+            ? 'https://api.tamara.co'
+            : 'https://api-sandbox.tamara.co';
+
+        $apiToken = setting('payment.tamara_api_token');
+        if ($apiToken) {
+            try { $apiToken = decrypt($apiToken); } catch (\Throwable) {}
+        }
+
+        $notificationToken = setting('payment.tamara_notification_token');
+        if ($notificationToken) {
+            try { $notificationToken = decrypt($notificationToken); } catch (\Throwable) {}
+        }
+
+        return [
+            'api_token'          => $apiToken ?? '',
+            'notification_token' => $notificationToken ?? '',
+            'base_url'           => $baseUrl,
+        ];
+    }
+
+    /**
+     * Create a Tamara checkout session for the given order.
+     *
+     * @return array{success: bool, checkout_url: ?string, tamara_order_id: ?string, error: ?string}
+     */
+    public function createTamaraSession(Order $order): array
+    {
+        $config = $this->getTamaraConfig();
+
+        if (empty($config['api_token'])) {
+            throw new \RuntimeException('Tamara is not configured. Please contact the store administrator.');
+        }
+
+        $order->load(['items.product', 'shippingAddress', 'billingAddress', 'user']);
+
+        $currency  = strtoupper($order->currency_code ?? 'SAR');
+        $total     = (float) $order->total;
+        $shipping  = (float) $order->shipping_amount;
+        $discount  = (float) $order->discount_amount;
+        $tax       = (float) $order->tax_amount;
+
+        // Build items array
+        $items = [];
+        foreach ($order->items as $item) {
+            $items[] = [
+                'name'         => $item->product_name ?? 'Product',
+                'type'         => 'physical',
+                'reference_id' => (string) $item->product_id,
+                'sku'          => $item->product_sku ?? (string) $item->product_id,
+                'quantity'     => $item->quantity,
+                'unit_price'   => ['amount' => number_format((float) $item->unit_price, 2, '.', ''), 'currency' => $currency],
+                'total_amount' => ['amount' => number_format((float) $item->total, 2, '.', ''), 'currency' => $currency],
+            ];
+        }
+
+        // Consumer info
+        $addr    = $order->shippingAddress;
+        $user    = $order->user;
+        $phone   = $addr?->phone ?? $order->guest_phone ?? $user?->phone ?? '';
+        $email   = $user?->email ?? $order->guest_email ?? '';
+        $firstName = $addr?->first_name ?? $order->guest_name ?? 'Customer';
+        $lastName  = $addr?->last_name ?? '';
+
+        $callbackBase = url('/api/v1/checkout');
+
+        $payload = [
+            'total_amount'       => ['amount' => number_format($total, 2, '.', ''), 'currency' => $currency],
+            'shipping_amount'    => ['amount' => number_format($shipping, 2, '.', ''), 'currency' => $currency],
+            'tax_amount'         => ['amount' => number_format($tax, 2, '.', ''), 'currency' => $currency],
+            'discount'           => ['amount' => ['amount' => number_format($discount, 2, '.', ''), 'currency' => $currency], 'name' => 'Discount'],
+            'order_reference_id' => $order->order_number,
+            'order_number'       => $order->order_number,
+            'items'              => $items,
+            'consumer'           => [
+                'first_name'   => $firstName,
+                'last_name'    => $lastName ?: '-',
+                'phone_number' => $phone,
+                'email'        => $email,
+            ],
+            'country_code'       => 'SA',
+            'locale'             => app()->getLocale() === 'ar' ? 'ar_SA' : 'en_US',
+            'merchant_url'       => [
+                'success'      => $callbackBase . '/tamara/callback?status=success&order=' . $order->order_number,
+                'failure'      => $callbackBase . '/tamara/callback?status=failure&order=' . $order->order_number,
+                'cancel'       => $callbackBase . '/tamara/callback?status=cancel&order=' . $order->order_number,
+                'notification' => url('/webhooks/tamara'),
+            ],
+            'shipping_address'   => [
+                'first_name'  => $firstName,
+                'last_name'   => $lastName ?: '-',
+                'line1'       => $addr?->address_line_1 ?? '-',
+                'city'        => $addr?->city ?? '-',
+                'country_code'=> 'SA',
+                'phone_number'=> $phone,
+            ],
+        ];
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($config['api_token'])
+                ->timeout(30)
+                ->post($config['base_url'] . '/checkout', $payload);
+
+            if (!$response->successful()) {
+                $body = $response->json();
+                Log::error('[Tamara] Session creation failed', [
+                    'order'  => $order->order_number,
+                    'status' => $response->status(),
+                    'body'   => $body,
+                ]);
+                return [
+                    'success'         => false,
+                    'checkout_url'    => null,
+                    'tamara_order_id' => null,
+                    'error'           => $body['message'] ?? ('Tamara API error: ' . $response->status()),
+                ];
+            }
+
+            $data = $response->json();
+
+            return [
+                'success'         => true,
+                'checkout_url'    => $data['checkout_url'] ?? null,
+                'tamara_order_id' => $data['order_id'] ?? null,
+                'checkout_id'     => $data['checkout_id'] ?? null,
+                'error'           => null,
+            ];
+        } catch (\Throwable $e) {
+            Log::error('[Tamara] Session creation exception', [
+                'order' => $order->order_number,
+                'error' => $e->getMessage(),
+            ]);
+            return [
+                'success'         => false,
+                'checkout_url'    => null,
+                'tamara_order_id' => null,
+                'error'           => 'Tamara payment initialization failed: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Authorise a Tamara order after it has been approved.
+     * This is the commonly-missed step — order is NOT finalized without it.
+     */
+    public function authoriseTamaraOrder(string $tamaraOrderId): array
+    {
+        $config = $this->getTamaraConfig();
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($config['api_token'])
+                ->timeout(30)
+                ->post($config['base_url'] . "/orders/{$tamaraOrderId}/authorise");
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json(), 'error' => null];
+            }
+
+            $body = $response->json();
+            Log::error('[Tamara] Authorise failed', [
+                'tamara_order_id' => $tamaraOrderId,
+                'status'          => $response->status(),
+                'body'            => $body,
+            ]);
+            return ['success' => false, 'data' => null, 'error' => $body['message'] ?? 'Authorise failed'];
+        } catch (\Throwable $e) {
+            Log::error('[Tamara] Authorise exception', ['error' => $e->getMessage()]);
+            return ['success' => false, 'data' => null, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get Tamara order details (for manual status sync).
+     */
+    public function getTamaraOrder(string $tamaraOrderId): array
+    {
+        $config = $this->getTamaraConfig();
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($config['api_token'])
+                ->timeout(30)
+                ->get($config['base_url'] . "/orders/{$tamaraOrderId}");
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json(), 'error' => null];
+            }
+
+            return ['success' => false, 'data' => null, 'error' => 'Tamara API error: ' . $response->status()];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'data' => null, 'error' => $e->getMessage()];
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Tabby
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Resolve Tabby configuration from admin settings.
+     */
+    public function getTabbyConfig(): array
+    {
+        $env = setting('payment.tabby_environment', 'sandbox');
+        $baseUrl = 'https://api.tabby.ai';
+
+        $publicKey = setting('payment.tabby_public_key');
+        if ($publicKey) {
+            try { $publicKey = decrypt($publicKey); } catch (\Throwable) {}
+        }
+
+        $secretKey = setting('payment.tabby_secret_key');
+        if ($secretKey) {
+            try { $secretKey = decrypt($secretKey); } catch (\Throwable) {}
+        }
+
+        $webhookHeaderValue = setting('payment.tabby_webhook_header_value');
+        if ($webhookHeaderValue) {
+            try { $webhookHeaderValue = decrypt($webhookHeaderValue); } catch (\Throwable) {}
+        }
+
+        return [
+            'public_key'           => $publicKey ?? '',
+            'secret_key'           => $secretKey ?? '',
+            'merchant_code'        => setting('payment.tabby_merchant_code') ?? '',
+            'base_url'             => $baseUrl,
+            'environment'          => $env,
+            'webhook_header_name'  => setting('payment.tabby_webhook_header_name') ?? '',
+            'webhook_header_value' => $webhookHeaderValue ?? '',
+        ];
+    }
+
+    /**
+     * Create a Tabby checkout session for the given order.
+     *
+     * @return array{success: bool, checkout_url: ?string, payment_id: ?string, error: ?string}
+     */
+    public function createTabbySession(Order $order): array
+    {
+        $config = $this->getTabbyConfig();
+
+        if (empty($config['public_key'])) {
+            throw new \RuntimeException('Tabby is not configured. Please contact the store administrator.');
+        }
+
+        $order->load(['items.product', 'shippingAddress', 'billingAddress', 'user']);
+
+        $currency  = strtoupper($order->currency_code ?? 'SAR');
+        $total     = number_format((float) $order->total, 2, '.', '');
+        $tax       = number_format((float) $order->tax_amount, 2, '.', '');
+        $shipping  = number_format((float) $order->shipping_amount, 2, '.', '');
+        $discount  = number_format((float) $order->discount_amount, 2, '.', '');
+
+        $addr    = $order->shippingAddress;
+        $user    = $order->user;
+        $phone   = $addr?->phone ?? $order->guest_phone ?? $user?->phone ?? '';
+        $email   = $user?->email ?? $order->guest_email ?? '';
+        $name    = ($addr?->first_name ?? $order->guest_name ?? 'Customer')
+                   . ' ' . ($addr?->last_name ?? '');
+
+        // Build items array
+        $items = [];
+        foreach ($order->items as $item) {
+            $items[] = [
+                'title'        => $item->product_name ?? 'Product',
+                'quantity'     => $item->quantity,
+                'unit_price'   => number_format((float) $item->unit_price, 2, '.', ''),
+                'category'     => 'general',
+                'reference_id' => (string) $item->product_id,
+                'sku'          => $item->product_sku ?? (string) $item->product_id,
+            ];
+        }
+
+        $callbackBase = url('/api/v1/checkout');
+
+        $payload = [
+            'payment'       => [
+                'amount'   => $total,
+                'currency' => $currency,
+                'buyer'    => [
+                    'phone' => $phone,
+                    'email' => $email,
+                    'name'  => trim($name),
+                ],
+                'order'    => [
+                    'reference_id' => $order->order_number,
+                    'items'        => $items,
+                    'tax_amount'   => $tax,
+                    'shipping_amount' => $shipping,
+                    'discount_amount' => $discount,
+                ],
+                'shipping_address' => [
+                    'city'    => $addr?->city ?? '-',
+                    'address' => $addr?->address_line_1 ?? '-',
+                    'zip'     => $addr?->postal_code ?? '00000',
+                ],
+            ],
+            'lang'          => app()->getLocale() === 'ar' ? 'ar' : 'en',
+            'merchant_code' => $config['merchant_code'],
+            'merchant_urls' => [
+                'success' => $callbackBase . '/tabby/callback?status=success&order=' . $order->order_number,
+                'cancel'  => $callbackBase . '/tabby/callback?status=cancel&order=' . $order->order_number,
+                'failure' => $callbackBase . '/tabby/callback?status=failure&order=' . $order->order_number,
+            ],
+        ];
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($config['public_key'])
+                ->timeout(30)
+                ->post($config['base_url'] . '/api/v2/checkout', $payload);
+
+            if (!$response->successful()) {
+                $body = $response->json();
+                Log::error('[Tabby] Session creation failed', [
+                    'order'  => $order->order_number,
+                    'status' => $response->status(),
+                    'body'   => $body,
+                ]);
+                return [
+                    'success'      => false,
+                    'checkout_url' => null,
+                    'payment_id'   => null,
+                    'error'        => $body['error'] ?? $body['message'] ?? ('Tabby API error: ' . $response->status()),
+                ];
+            }
+
+            $data = $response->json();
+
+            // Extract checkout URL from configuration.available_products.installments[0].web_url
+            $checkoutUrl = $data['configuration']['available_products']['installments'][0]['web_url'] ?? null;
+            $paymentId   = $data['id'] ?? $data['payment']['id'] ?? null;
+
+            return [
+                'success'      => true,
+                'checkout_url' => $checkoutUrl,
+                'payment_id'   => $paymentId,
+                'error'        => null,
+            ];
+        } catch (\Throwable $e) {
+            Log::error('[Tabby] Session creation exception', [
+                'order' => $order->order_number,
+                'error' => $e->getMessage(),
+            ]);
+            return [
+                'success'      => false,
+                'checkout_url' => null,
+                'payment_id'   => null,
+                'error'        => 'Tabby payment initialization failed: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get Tabby payment details (for manual status sync).
+     */
+    public function getTabbyPayment(string $paymentId): array
+    {
+        $config = $this->getTabbyConfig();
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($config['secret_key'])
+                ->timeout(30)
+                ->get($config['base_url'] . "/api/v2/payments/{$paymentId}");
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json(), 'error' => null];
+            }
+
+            return ['success' => false, 'data' => null, 'error' => 'Tabby API error: ' . $response->status()];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'data' => null, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Capture a Tabby payment (required after authorization).
+     */
+    public function captureTabbyPayment(string $paymentId, float $amount, string $currency = 'SAR'): array
+    {
+        $config = $this->getTabbyConfig();
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($config['secret_key'])
+                ->timeout(30)
+                ->post($config['base_url'] . "/api/v2/payments/{$paymentId}/captures", [
+                    'amount'   => number_format($amount, 2, '.', ''),
+                    'currency' => $currency,
+                ]);
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json(), 'error' => null];
+            }
+
+            $body = $response->json();
+            Log::error('[Tabby] Capture failed', [
+                'payment_id' => $paymentId,
+                'body'       => $body,
+            ]);
+            return ['success' => false, 'data' => null, 'error' => $body['message'] ?? 'Capture failed'];
+        } catch (\Throwable $e) {
+            Log::error('[Tabby] Capture exception', ['error' => $e->getMessage()]);
+            return ['success' => false, 'data' => null, 'error' => $e->getMessage()];
         }
     }
 }

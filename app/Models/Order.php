@@ -27,6 +27,9 @@ class Order extends Model
         'payment_method',
         'payment_gateway',
         'payment_intent_id',
+        'gateway_order_id',
+        'gateway_status',
+        'gateway_payload',
         'shipping_rate_id',
         'shipping_method',
         'shipping_status',
@@ -56,6 +59,7 @@ class Order extends Model
         'total' => 'decimal:2',
         'currency_rate' => 'decimal:6',
         'free_shipping_applied' => 'boolean',
+        'gateway_payload' => 'json',
         'loyalty_points_earned' => 'integer',
         'loyalty_points_redeemed' => 'integer',
     ];
