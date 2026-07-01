@@ -112,6 +112,8 @@ Route::prefix('v1')->middleware([SetApiLocale::class])->group(function () {
         Route::post('stripe/confirm', [CheckoutController::class, 'confirmStripe']);
         Route::post('stripe/cancel', [CheckoutController::class, 'cancelStripeOrder']);
         Route::get('order-success/{orderNumber}', [CheckoutController::class, 'orderSuccess']);
+        Route::any('tamara/callback', [CheckoutController::class, 'tamaraCallback']);
+        Route::any('tabby/callback', [CheckoutController::class, 'tabbyCallback']);
     });
 
     // ═══ AUTHENTICATED (Customer) ═══

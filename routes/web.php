@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\TamaraWebhookController;
+use App\Http\Controllers\TabbyWebhookController;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +25,24 @@ use Illuminate\Support\Facades\Route;
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])
     ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
     ->name('stripe.webhook');
+
+/*
+|--------------------------------------------------------------------------
+| Tamara Webhook (CSRF-exempt — verified via Bearer notification token)
+|--------------------------------------------------------------------------
+*/
+Route::post('/webhooks/tamara', [TamaraWebhookController::class, 'handle'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->name('webhooks.tamara');
+
+/*
+|--------------------------------------------------------------------------
+| Tabby Webhook (CSRF-exempt — verified via custom header)
+|--------------------------------------------------------------------------
+*/
+Route::post('/webhooks/tabby', [TabbyWebhookController::class, 'handle'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->name('webhooks.tabby');
 
 /*
 |--------------------------------------------------------------------------

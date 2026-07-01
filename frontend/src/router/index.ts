@@ -173,6 +173,14 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/pages/OrderSuccessPage.vue'),
     meta: { title: 'Order Success - Raqeeb Express Store ' },
   },
+  {
+    // BNPL (Tamara / Tabby) redirect return page
+    // Gateway → Laravel callback → redirects here with ?gateway=tamara&status=success&order=ORD-XX
+    path: '/checkout/return',
+    name: 'checkout-return',
+    component: () => import('@/pages/CheckoutReturn.vue'),
+    meta: { title: 'Payment Return - Raqeeb Express Store ' },
+  },
 ]
 
 const router = createRouter({

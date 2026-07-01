@@ -120,6 +120,52 @@ class ViewOrder extends ViewRecord
                     $this->refreshFormData(['status']);
                 }),
 
+            // Sync Gateway Status (Tamara / Tabby only)
+            Actions\Action::make('sync_gateway_status')
+                ->label('Sync Gateway Status')
+                ->icon('heroicon-o-arrow-path')
+                ->color('gray')
+                ->visible(fn() => in_array($this->getRecord()->payment_gateway, ['tamara', 'tabby']))
+                ->requiresConfirmation()
+                ->modalHeading('Sync Status from Gateway')
+                ->modalDescription('This will fetch the latest payment status from Tamara/Tabby API and update the order record.')
+                ->action(function (): void {
+                    $record  = $this->getRecord();
+                    $gateway = app(\App\Services\PaymentGatewayService::class);
+
+                    if (!$record->gateway_order_id) {
+                        Notification::make()->title('No Gateway ID')->body('This order has no gateway_order_id — cannot sync.')->warning()->send();
+                        return;
+                    }
+
+                    try {
+                        if ($record->payment_gateway === 'tamara') {
+                            $result = $gateway->getTamaraOrder($record->gateway_order_id);
+                            $rawStatus = $result['data']['status'] ?? null;
+                        } else {
+                            $result = $gateway->getTabbyPayment($record->gateway_order_id);
+                            $rawStatus = $result['data']['status'] ?? null;
+                        }
+
+                        if (!$result['success']) {
+                            Notification::make()->title('Sync Failed')->body($result['error'] ?? 'Unknown error')->danger()->send();
+                            return;
+                        }
+
+                        $record->update(['gateway_status' => $rawStatus]);
+
+                        Notification::make()
+                            ->title('Status Synced')
+                            ->body("Gateway status: {$rawStatus}")
+                            ->success()
+                            ->send();
+
+                        $this->refreshFormData(['gateway_status']);
+                    } catch (\Throwable $e) {
+                        Notification::make()->title('Error')->body($e->getMessage())->danger()->send();
+                    }
+                }),
+
             // Book SMSA Shipment
             Actions\Action::make('book_smsa_shipment')
                 ->label('Book SMSA Shipment')
@@ -372,6 +418,15 @@ class ViewOrder extends ViewRecord
                                             ->label('Payment Intent')
                                             ->content(fn(): string => $this->getRecord()->payment_intent_id ?? '—'),
 
+                                        Forms\Components\Placeholder::make('gateway_order_id_display')
+                                            ->label('Gateway Order / Payment ID')
+                                            ->content(fn(): string => $this->getRecord()->gateway_order_id ?? '—')
+                                            ->visible(fn(): bool => !empty($this->getRecord()->gateway_order_id)),
+
+                                        Forms\Components\Placeholder::make('gateway_status_display')
+                                            ->label('Gateway Status')
+                                            ->content(fn(): string => $this->getRecord()->gateway_status ?? '—')
+                                            ->visible(fn(): bool => !empty($this->getRecord()->gateway_status)),
                                         Forms\Components\Placeholder::make('ip_display')
                                             ->label('IP Address')
                                             ->content(fn(): string => $this->getRecord()->ip_address ?? '—'),
@@ -400,6 +455,21 @@ class ViewOrder extends ViewRecord
                                             ->label('Phone')
                                             ->content(fn(): string => $this->getRecord()->user?->phone ?? $this->getRecord()->guest_phone ?? '—'),
                                     ]),
+
+                                // Gateway Payload (debug — collapsible, only shown if data exists)
+                                Schemas\Components\Section::make('BNPL Gateway Payload (last webhook)')
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('gateway_payload_display')
+                                            ->label('')
+                                            ->content(fn(): string =>
+                                                $this->getRecord()->gateway_payload
+                                                    ? json_encode($this->getRecord()->gateway_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                                                    : 'No payload received yet.'
+                                            ),
+                                    ])
+                                    ->collapsible()
+                                    ->collapsed()
+                                    ->visible(fn(): bool => in_array($this->getRecord()->payment_gateway, ['tamara', 'tabby'])),
                             ])
                             ->columnSpan(1),
                     ]),

@@ -46,6 +46,17 @@ class PaymentGatewaysPage extends Page
             'cod_enabled', 'cod_label_en', 'cod_label_ar', 'cod_description_en', 'cod_description_ar', 'cod_extra_fee',
             // Bank Transfer
             'bank_enabled', 'bank_label_en', 'bank_label_ar', 'bank_name', 'bank_account_name', 'bank_iban', 'bank_swift', 'bank_instructions_en', 'bank_instructions_ar',
+            // Tamara
+            'tamara_enabled', 'tamara_environment', 'tamara_api_token', 'tamara_notification_token',
+            // Tabby
+            'tabby_enabled', 'tabby_environment', 'tabby_public_key', 'tabby_secret_key', 'tabby_merchant_code',
+            'tabby_webhook_header_name', 'tabby_webhook_header_value',
+        ];
+
+        $encryptedFields = [
+            'stripe_secret_key', 'stripe_webhook_secret', 'paypal_client_secret',
+            'tamara_api_token', 'tamara_notification_token',
+            'tabby_public_key', 'tabby_secret_key', 'tabby_webhook_header_value',
         ];
 
         // Shipping fields (stored under 'shipping.' prefix)
@@ -56,8 +67,8 @@ class PaymentGatewaysPage extends Page
 
         foreach ($fields as $key) {
             $value = Setting::get("payment.{$key}");
-            if (in_array($key, ['stripe_secret_key', 'stripe_webhook_secret', 'paypal_client_secret'])) {
-                $this->data[$key] = $value ? decrypt($value) : null;
+            if (in_array($key, $encryptedFields)) {
+                try { $this->data[$key] = $value ? decrypt($value) : null; } catch (\Throwable) { $this->data[$key] = $value; }
             } else {
                 $this->data[$key] = $value;
             }
@@ -155,9 +166,84 @@ class PaymentGatewaysPage extends Page
                         ]),
                     ])->collapsible(),
 
+                // Tamara (Buy Now Pay Later)
+                Components\Section::make('Tamara — Buy Now Pay Later')
+                    ->icon('heroicon-o-banknotes')
+                    ->schema([
+                        Components\Grid::make(2)->schema([
+                            Forms\Components\Toggle::make('tamara_enabled')
+                                ->label('Enable Tamara')
+                                ->helperText('Show Tamara as a payment option at checkout'),
+                            Forms\Components\Select::make('tamara_environment')
+                                ->label('Environment')
+                                ->options(['sandbox' => 'Sandbox (Testing)', 'live' => 'Live (Production)'])
+                                ->default('sandbox'),
+                        ]),
+                        Components\Grid::make(2)->schema([
+                            Forms\Components\TextInput::make('tamara_api_token')
+                                ->label('API Token')
+                                ->password()
+                                ->revealable()
+                                ->helperText('From Tamara Merchant Portal → Settings → API Token'),
+                            Forms\Components\TextInput::make('tamara_notification_token')
+                                ->label('Notification Token')
+                                ->password()
+                                ->revealable()
+                                ->helperText('From Tamara Merchant Portal → Settings → Notification Token'),
+                        ]),
+                        Forms\Components\Placeholder::make('tamara_webhook_url')
+                            ->label('Webhook URL (enter in Tamara Merchant Portal)')
+                            ->content(fn () => url('/webhooks/tamara')),
+                    ])->collapsible(),
+
+                // Tabby (Pay in 4)
+                Components\Section::make('Tabby — Pay in 4')
+                    ->icon('heroicon-o-squares-2x2')
+                    ->schema([
+                        Components\Grid::make(2)->schema([
+                            Forms\Components\Toggle::make('tabby_enabled')
+                                ->label('Enable Tabby')
+                                ->helperText('Show Tabby as a payment option at checkout'),
+                            Forms\Components\Select::make('tabby_environment')
+                                ->label('Environment')
+                                ->options(['sandbox' => 'Sandbox (Testing)', 'live' => 'Live (Production)'])
+                                ->default('sandbox'),
+                        ]),
+                        Components\Grid::make(2)->schema([
+                            Forms\Components\TextInput::make('tabby_public_key')
+                                ->label('Public Key')
+                                ->password()
+                                ->revealable()
+                                ->helperText('From Tabby Merchant Dashboard → Integration'),
+                            Forms\Components\TextInput::make('tabby_secret_key')
+                                ->label('Secret Key')
+                                ->password()
+                                ->revealable()
+                                ->helperText('From Tabby Merchant Dashboard → Integration'),
+                        ]),
+                        Components\Grid::make(2)->schema([
+                            Forms\Components\TextInput::make('tabby_merchant_code')
+                                ->label('Merchant Code')
+                                ->helperText('Your Tabby merchant code'),
+                            Forms\Components\TextInput::make('tabby_webhook_header_name')
+                                ->label('Webhook Header Name')
+                                ->placeholder('X-Tabby-Webhook-Token')
+                                ->helperText('The custom header name Tabby sends on webhooks'),
+                        ]),
+                        Forms\Components\TextInput::make('tabby_webhook_header_value')
+                            ->label('Webhook Header Value')
+                            ->password()
+                            ->revealable()
+                            ->helperText('The value of the custom header (used to verify webhook authenticity)'),
+                        Forms\Components\Placeholder::make('tabby_webhook_url')
+                            ->label('Webhook URL (enter in Tabby Merchant Dashboard)')
+                            ->content(fn () => url('/webhooks/tabby')),
+                    ])->collapsible(),
+
                 // ═══════════════════════════════════════
                 // SHIPPING CONFIGURATION
                 // ═══════════════════════════════════════
+
 
                 Components\Section::make('Shipping Configuration')
                     ->icon('heroicon-o-globe-alt')
@@ -212,7 +298,11 @@ class PaymentGatewaysPage extends Page
     public function save(): void
     {
         $data = $this->form->getState();
-        $encrypted = ['stripe_secret_key', 'stripe_webhook_secret', 'paypal_client_secret'];
+        $encrypted = [
+            'stripe_secret_key', 'stripe_webhook_secret', 'paypal_client_secret',
+            'tamara_api_token', 'tamara_notification_token',
+            'tabby_public_key', 'tabby_secret_key', 'tabby_webhook_header_value',
+        ];
 
         // Shipping fields use 'shipping.' prefix
         $shippingKeys = ['shipping_smsa_enabled', 'shipping_smsa_pass_key', 'shipping_smsa_wsdl_url', 'shipping_default_method', 'shipping_free_shipping_threshold'];

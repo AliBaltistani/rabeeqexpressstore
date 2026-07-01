@@ -1247,8 +1247,22 @@ async function confirmPayment() {
       payload.paymentIntentId = paymentIntent.id
     }
 
+    // ══════════════════════════════════════════════════════
+    //  BNPL — Tamara / Tabby Redirect Flow
+    //  1 → placeOrder() creates the order + Tamara/Tabby session server-side
+    //  2 → Response includes checkoutUrl from gateway
+    //  3 → Browser redirects to gateway checkout page
+    //  4 → Gateway redirects back to /checkout/return (via Laravel callback)
+    // ══════════════════════════════════════════════════════
     // ── Place the order (for Stripe: backend verifies PI → creates order as paid) ──
     const response = await placeOrder(payload)
+
+    // ── BNPL redirect ──
+    if (response.checkoutUrl && ['tamara', 'tabby'].includes(selectedPayment.value)) {
+      // Redirect user to the BNPL gateway checkout (cart was already cleared server-side)
+      window.location.href = response.checkoutUrl
+      return
+    }
 
     // ── Success ──
     await cart.loadCart()

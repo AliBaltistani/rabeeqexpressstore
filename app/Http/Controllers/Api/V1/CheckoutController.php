@@ -175,6 +175,8 @@ class CheckoutController extends Controller
                 $response['requiresAction']  = $payment['requires_action'] ?? false;
             } elseif ($validated['paymentMethod'] === 'paypal') {
                 $response['redirectUrl'] = url('/api/v1/checkout/paypal/' . $order->order_number);
+            } elseif (in_array($validated['paymentMethod'], ['tamara', 'tabby'])) {
+                $response['checkoutUrl'] = $payment['checkout_url'] ?? null;
             }
 
             return $this->success($response, 'Order placed successfully.', 201);
@@ -184,6 +186,36 @@ class CheckoutController extends Controller
         } catch (\Throwable $e) {
             return $this->error('Failed to place order: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * GET|POST /api/v1/checkout/tamara/callback
+     * Browser redirect return from Tamara.
+     * Tamara sends: status (success|failure|cancel) + order_reference_id in query params.
+     */
+    public function tamaraCallback(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $status      = $request->query('status', 'failure');
+        $orderNumber = $request->query('order', $request->query('order_reference_id', ''));
+
+        $frontendBase = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173')), '/');
+
+        return redirect($frontendBase . '/checkout/return?gateway=tamara&status=' . $status . '&order=' . $orderNumber);
+    }
+
+    /**
+     * GET|POST /api/v1/checkout/tabby/callback
+     * Browser redirect return from Tabby.
+     * Tabby sends: status (success|failure|cancel) as query param.
+     */
+    public function tabbyCallback(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $status      = $request->query('status', 'failure');
+        $orderNumber = $request->query('order', '');
+
+        $frontendBase = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173')), '/');
+
+        return redirect($frontendBase . '/checkout/return?gateway=tabby&status=' . $status . '&order=' . $orderNumber);
     }
 
     /**

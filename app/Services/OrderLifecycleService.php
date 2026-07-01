@@ -161,6 +161,9 @@ final class OrderLifecycleService
                 $stripeIntentId = $intentId;
             }
 
+            // ── Tamara / Tabby: no pre-verification needed — order created first, then redirect ──
+            $isBnpl = in_array($data['paymentMethod'] ?? '', ['tamara', 'tabby']);
+
             // ── Wallet payment ──
             $paymentStatus = 'unpaid';
             if (($data['paymentMethod'] ?? '') === 'wallet') {
@@ -184,6 +187,9 @@ final class OrderLifecycleService
                 $paymentStatus = 'paid';
             }
 
+            // BNPL (Tamara/Tabby): order starts unpaid; gateway confirms via webhook
+            // $paymentStatus remains 'unpaid' for BNPL — no change needed here
+
             // ── Create order ──
             $order = Order::create([
                 'order_number'      => 'ORD-' . strtoupper(Str::random(8)),
@@ -195,7 +201,12 @@ final class OrderLifecycleService
                 'status'            => $paymentStatus === 'paid' ? 'processing' : 'pending',
                 'payment_status'    => $paymentStatus,
                 'payment_method'    => $data['paymentMethod'],
-                'payment_gateway'   => $data['paymentMethod'] === 'stripe' ? 'stripe' : null,
+                'payment_gateway'   => match ($data['paymentMethod']) {
+                    'stripe' => 'stripe',
+                    'tamara' => 'tamara',
+                    'tabby'  => 'tabby',
+                    default  => null,
+                },
                 'payment_intent_id' => $stripeIntentId,
                 'transaction_id'    => $stripeIntentId,
                 'shipping_rate_id'  => null,
@@ -273,13 +284,42 @@ final class OrderLifecycleService
             $paymentResult = ['success' => true, 'error' => null];
 
             if ($data['paymentMethod'] === 'stripe') {
-                // PI was already verified above; cart is cleared here since payment is confirmed.
+                // PI was already verified above; cart cleared since payment confirmed.
                 $this->clearCartForUser($user, $request);
-            } elseif ($data['paymentMethod'] === 'cod') {
-                // COD: clear cart immediately — payment happens at delivery.
+            } elseif (in_array($data['paymentMethod'], ['tamara', 'tabby'])) {
+                // BNPL: create gateway session AFTER order is persisted (we need order_number + items).
+                // Cart cleared immediately — order exists, payment pending on gateway side.
+                try {
+                    if ($data['paymentMethod'] === 'tamara') {
+                        $session = $this->paymentGateway->createTamaraSession($order);
+                    } else {
+                        $session = $this->paymentGateway->createTabbySession($order);
+                    }
+
+                    if (!$session['success']) {
+                        // Roll back is handled by DB::transaction — but we need to re-throw
+                        throw new \RuntimeException($session['error'] ?? 'Could not create BNPL payment session. Please try a different payment method.');
+                    }
+
+                    // Store the gateway order/payment ID for webhook matching
+                    $gatewayOrderId = $data['paymentMethod'] === 'tamara'
+                        ? ($session['tamara_order_id'] ?? null)
+                        : ($session['payment_id'] ?? null);
+
+                    $order->update(['gateway_order_id' => $gatewayOrderId]);
+
+                    $paymentResult = [
+                        'success'      => true,
+                        'checkout_url' => $session['checkout_url'] ?? null,
+                        'error'        => null,
+                    ];
+                } catch (\RuntimeException $e) {
+                    throw $e; // bubble up — DB::transaction will roll back
+                }
+
                 $this->clearCartForUser($user, $request);
             } else {
-                // Bank transfer / wallet / other — clear cart immediately.
+                // COD / Bank transfer / wallet / other — clear cart immediately.
                 $this->clearCartForUser($user, $request);
             }
 
