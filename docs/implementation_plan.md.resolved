@@ -1,0 +1,209 @@
+# Tamara + Tabby BNPL Integration
+
+Add Tamara (Buy Now Pay Later) and Tabby (Pay in 4) as payment gateways to the Rabeq Express Store, fully integrated with the existing payment infrastructure.
+
+## §0 Mismatch Report
+
+> [!IMPORTANT]
+> The integration guide (§0/§1) assumes a `PaymentGatewayInterface`, a `PaymentGatewayFactory`, and a polymorphic driver pattern. **None of these exist.** Here's what the codebase actually has:
+
+| Guide assumption | Reality | Decision |
+|---|---|---|
+| `PaymentGatewayInterface` contract | Monolithic [PaymentGatewayService](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/PaymentGatewayService.php#10-301) class with Stripe-specific methods | **Extend the existing class** — add Tamara/Tabby methods alongside Stripe methods. Creating an interface now would require refactoring all existing Stripe code and the controllers that depend on it, violating the "no changes to existing business logic" rule. |
+| `PaymentGatewayFactory` resolver | No factory — `OrderLifecycleService.placeOrder()` has inline `if (paymentMethod === 'stripe')` branching | **Add `tamara`/`tabby` branches** at the same level. |
+| `verifyWebhook()` on interface | Stripe uses `Stripe\Webhook::constructEvent()` in [StripeWebhookController](file:///c:/wamp64/www/Laravel/eseven-store/app/Http/Controllers/StripeWebhookController.php#13-187) — no shared interface | **Each webhook controller self-verifies** (Tamara: notification token, Tabby: custom header). No shared method needed. |
+| PayPal webhook controller | PayPal integration is incomplete — no webhook controller, `paypal_enabled` setting exists but no PayPal checkout flow | No impact on this work. |
+| `gateway_order_id`, `gateway_status`, `gateway_payload` on Order | Only `payment_gateway` and `payment_intent_id` exist | **Add via migration.** |
+| Separate `PaymentGatewaySettings` Filament page | Existing [PaymentGatewaysPage](file:///c:/wamp64/www/Laravel/eseven-store/app/Filament/Pages/Settings/PaymentGatewaysPage.php#15-243) handles Stripe/PayPal/COD/Bank/Shipping | **Add Tamara/Tabby sections to the existing page** — same pattern, same `payment.*` key prefix. |
+
+---
+
+## Proposed Changes
+
+### Database Migration
+
+#### [NEW] [add_bnpl_fields_to_orders_table.php](file:///c:/wamp64/www/Laravel/eseven-store/database/migrations/2026_07_01_000001_add_bnpl_fields_to_orders_table.php)
+Add three columns to `orders`:
+- `gateway_order_id` (string, nullable) — Tamara's `order_id` or Tabby's `payment.id`
+- `gateway_status` (string, nullable) — raw status from gateway (`approved`, `AUTHORIZED`, etc.)
+- `gateway_payload` (json, nullable) — last webhook payload for debugging
+
+---
+
+### Order Model
+
+#### [MODIFY] [Order.php](file:///c:/wamp64/www/Laravel/eseven-store/app/Models/Order.php)
+- Add `gateway_order_id`, `gateway_status`, `gateway_payload` to `$fillable`
+- Add `'gateway_payload' => 'json'` to `$casts`
+
+---
+
+### Payment Gateway Service
+
+#### [MODIFY] [PaymentGatewayService.php](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/PaymentGatewayService.php)
+Add new methods (alongside existing Stripe methods):
+- `createTamaraSession(Order $order): array` — POST to Tamara API, returns `checkout_url` + `order_id`
+- `authoriseTamaraOrder(string $tamaraOrderId): array` — critical post-approval step
+- `createTabbySession(Order $order): array` — POST to Tabby API, returns `checkout_url` + session [id](file:///c:/wamp64/www/Laravel/eseven-store/app/Models/Order.php#123-127)
+- `captureTabbyPayment(string $paymentId, float $amount): array`
+- `getTabbyPayment(string $paymentId): array` — GET payment status
+- Helper: `getTamaraConfig(): array`, `getTabbyConfig(): array` — reads from `Setting::get()` with decrypt
+- Update [getAvailableGateways()](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/PaymentGatewayService.php#12-84) — wire `tamara_enabled`/`tabby_enabled` from settings (replacing hardcoded `false`)
+
+---
+
+### Order Lifecycle Service
+
+#### [MODIFY] [OrderLifecycleService.php](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/OrderLifecycleService.php)
+In [placeOrder()](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/OrderLifecycleService.php#26-292), after the existing Stripe/Wallet/COD branching (~line 148–284):
+- Add `tamara`/`tabby` cases:
+  1. Create the order with `payment_status: 'unpaid'`, `status: 'pending'`, `payment_gateway: 'tamara'|'tabby'`
+  2. Call `PaymentGatewayService::createTamaraSession()` or `createTabbySession()`
+  3. Store `gateway_order_id` on the order
+  4. Return `checkout_url` in payment result (frontend redirects)
+  5. Clear cart immediately (order is created, payment pending — same as bank_transfer pattern)
+
+---
+
+### Checkout Controller
+
+#### [MODIFY] [CheckoutController.php](file:///c:/wamp64/www/Laravel/eseven-store/app/Http/Controllers/Api/V1/CheckoutController.php)
+- In [placeOrder()](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/OrderLifecycleService.php#26-292) response builder: add `checkoutUrl` for tamara/tabby, similar to existing PayPal `redirectUrl` pattern
+- Add `tamaraCallback(Request $request)` — handles browser redirect back from Tamara (GET/POST, reads status from query params, redirects to frontend success/failure page)
+- Add `tabbyCallback(Request $request)` — same pattern for Tabby
+
+---
+
+### Webhook Controllers
+
+#### [NEW] [TamaraWebhookController.php](file:///c:/wamp64/www/Laravel/eseven-store/app/Http/Controllers/TamaraWebhookController.php)
+- Verify notification token from request against stored `payment.tamara_notification_token`
+- Handle events: `order_approved` → call `authoriseTamaraOrder()` → mark order paid; `order_declined` → cancel order
+- **Idempotent**: check `payment_status` before updating
+- Store raw payload in `gateway_payload`, update `gateway_status`
+- Record `last webhook received at` in settings
+
+#### [NEW] [TabbyWebhookController.php](file:///c:/wamp64/www/Laravel/eseven-store/app/Http/Controllers/TabbyWebhookController.php)
+- Verify custom header matches stored `payment.tabby_webhook_header_name` / `payment.tabby_webhook_header_value`
+- Handle events: `authorized` → call `captureTabbyPayment()` → mark order paid; `rejected`/`expired` → cancel order
+- Same idempotency and payload-storage pattern
+
+---
+
+### Routes
+
+#### [MODIFY] [web.php](file:///c:/wamp64/www/Laravel/eseven-store/routes/web.php)
+Add webhook routes alongside existing Stripe webhook (CSRF-exempt):
+```php
+Route::post('/webhooks/tamara', [TamaraWebhookController::class, 'handle'])
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('webhooks.tamara');
+
+Route::post('/webhooks/tabby', [TabbyWebhookController::class, 'handle'])
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('webhooks.tabby');
+```
+
+#### [MODIFY] [api.php](file:///c:/wamp64/www/Laravel/eseven-store/routes/api.php)
+Add callback routes inside the checkout group:
+```php
+Route::any('tamara/callback', [CheckoutController::class, 'tamaraCallback']);
+Route::any('tabby/callback', [CheckoutController::class, 'tabbyCallback']);
+```
+
+---
+
+### Filament Settings
+
+#### [MODIFY] [PaymentGatewaysPage.php](file:///c:/wamp64/www/Laravel/eseven-store/app/Filament/Pages/Settings/PaymentGatewaysPage.php)
+Add two collapsible sections (after Bank Transfer, before Shipping):
+
+**Tamara section:**
+- `tamara_enabled` toggle
+- `tamara_environment` select (sandbox/live)
+- `tamara_api_token` password field (encrypted at rest)
+- `tamara_notification_token` password field (encrypted at rest)
+- `tamara_last_webhook_at` read-only placeholder
+- Webhook URL placeholder showing `url('/webhooks/tamara')`
+
+**Tabby section:**
+- `tabby_enabled` toggle
+- `tabby_environment` select (sandbox/live)
+- `tabby_public_key` password field (encrypted at rest)
+- `tabby_secret_key` password field (encrypted at rest)
+- `tabby_merchant_code` text field
+- `tabby_webhook_header_name` text field
+- `tabby_webhook_header_value` password field (encrypted at rest)
+- `tabby_last_webhook_at` read-only placeholder
+- Webhook URL placeholder showing `url('/webhooks/tabby')`
+
+Update [mount()](file:///c:/wamp64/www/Laravel/eseven-store/app/Filament/Pages/Settings/PaymentGatewaysPage.php#38-78) to load + decrypt, [save()](file:///c:/wamp64/www/Laravel/eseven-store/app/Filament/Pages/Settings/GeneralSettings.php#246-260) to encrypt these fields.
+
+---
+
+### Filament Order View
+
+#### [MODIFY] [ViewOrder.php](file:///c:/wamp64/www/Laravel/eseven-store/app/Filament/Resources/OrderResource/Pages/ViewOrder.php)
+In the "Order Info" sidebar section:
+- Add `gateway_order_id` placeholder
+- Add `gateway_status` badge (color-coded)
+- Add "Sync Status" header action — calls Tamara GET `/orders/{id}` or Tabby GET `/payments/{id}`, updates `gateway_status`
+- Add `gateway_payload` JSON viewer (collapsible, `KeyValue` or code block)
+
+---
+
+### Frontend
+
+#### [MODIFY] [services.ts](file:///c:/wamp64/www/Laravel/eseven-store/frontend/src/api/services.ts)
+Add `createBnplSession` function — POST to [placeOrder](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/OrderLifecycleService.php#26-292) with tamara/tabby payment method; the existing [placeOrder](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/OrderLifecycleService.php#26-292) function is sufficient since the response will include `checkoutUrl`.
+
+#### [MODIFY] [CheckoutPage.vue](file:///c:/wamp64/www/Laravel/eseven-store/frontend/src/pages/CheckoutPage.vue)
+In [confirmPayment()](file:///c:/wamp64/www/Laravel/eseven-store/frontend/src/pages/CheckoutPage.vue#1166-1276), after the Stripe special case and before the generic [placeOrder](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/OrderLifecycleService.php#26-292) call:
+- For `tamara`/`tabby`: after [placeOrder()](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/OrderLifecycleService.php#26-292) returns, check for `response.checkoutUrl` → `window.location.href = response.checkoutUrl`
+- Add info notes below the payment selection cards for Tamara ("Split into 3 payments") and Tabby ("Pay in 4 installments")
+
+#### [NEW] [CheckoutReturn.vue](file:///c:/wamp64/www/Laravel/eseven-store/frontend/src/pages/CheckoutReturn.vue)
+Generic gateway return page — reads `?status=...&order_number=...` from query params, shows success/failure, links to order details. Registered at `/checkout/return`.
+
+#### [MODIFY] [router](file:///c:/wamp64/www/Laravel/eseven-store/frontend/src/router/index.ts)
+Add route `/checkout/return` → `CheckoutReturn.vue`
+
+---
+
+## Verification Plan
+
+### Automated — Migration & Model
+```bash
+cd c:\wamp64\www\Laravel\eseven-store
+php artisan migrate
+```
+Verify columns exist:
+```bash
+php artisan tinker --execute="Schema::hasColumns('orders', ['gateway_order_id','gateway_status','gateway_payload'])"
+```
+
+### Manual — Existing Flow Regression (§5 Hard Requirement)
+1. Start servers: `php artisan serve` + `npm run dev` (in `/frontend`)
+2. Open frontend checkout in browser
+3. **COD flow**: Select COD payment → place order → verify order created with `status: pending`, `payment_status: unpaid` in Filament admin
+4. **Bank Transfer flow**: Select Bank Transfer → place order → verify same
+5. **Stripe flow**: Select Stripe → enter test card `4242424242424242` → verify Payment Element appears → confirm → verify order `status: processing`, `payment_status: paid`
+6. Verify each flow reaches the order success page and the order appears in Filament
+7. **Admin settings**: Go to Filament → Settings → Payment & Shipping → verify Stripe/COD/Bank sections still work, save, reload, values persist
+
+### Manual — Tamara/Tabby Flows
+> [!WARNING]
+> Full end-to-end testing of Tamara/Tabby requires **sandbox API keys** which the user must provide. Without keys, we can only verify structural correctness.
+
+1. Enter Tamara/Tabby sandbox credentials in Filament → Payment & Shipping settings
+2. Verify the enabled toggles show Tamara/Tabby as checkout options on the frontend
+3. Select Tamara → place order → verify redirect to Tamara sandbox → complete → verify redirect back to store with success
+4. Verify webhook delivery (use ngrok for local): order transitions to `paid`/`processing`
+5. Repeat for Tabby
+6. In Filament: verify `gateway_order_id`, `gateway_status`, `gateway_payload` show on order view
+7. Test "Sync Status" action — verify it fetches latest status from gateway API
+
+### Manual — Webhook Idempotency
+1. After a successful Tamara/Tabby order, manually POST the same webhook payload again
+2. Verify order status doesn't change (no double-fulfill)
+3. Verify no errors in `storage/logs/laravel.log`

@@ -1,0 +1,37 @@
+# Tamara + Tabby BNPL Integration
+
+## Phase 1: Backend — Gateway Services & Migration
+- [ ] Create migration: add `gateway_order_id`, `gateway_status`, `gateway_payload` columns to `orders`
+- [ ] Update [Order](file:///c:/wamp64/www/Laravel/eseven-store/app/Models/Order.php#15-173) model: add new columns to `$fillable` and `$casts`
+- [ ] Add Tamara methods to [PaymentGatewayService](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/PaymentGatewayService.php#10-301) (createSession, verifyWebhook, handleWebhook, authorise)
+- [ ] Add Tabby methods to [PaymentGatewayService](file:///c:/wamp64/www/Laravel/eseven-store/app/Services/PaymentGatewayService.php#10-301) (createSession, retrievePayment, capturePayment)
+- [ ] Wire Tamara/Tabby enabled toggles in `PaymentGatewayService::getAvailableGateways()`
+
+## Phase 2: Backend — Order Flow & Checkout
+- [ ] Update `OrderLifecycleService::placeOrder()` — Tamara/Tabby branching (create session → return checkout_url)
+- [ ] Update `CheckoutController::placeOrder()` — return `checkoutUrl` for redirect-based gateways
+- [ ] Add `POST /api/v1/checkout/tamara/callback` and `POST /api/v1/checkout/tabby/callback` API routes for browser redirect handling
+
+## Phase 3: Backend — Webhook Controllers
+- [ ] Create `TamaraWebhookController` — signature verification + idempotent order status sync + authorise step
+- [ ] Create `TabbyWebhookController` — custom header verification + idempotent order status sync + capture step
+- [ ] Add webhook routes in [web.php](file:///c:/wamp64/www/Laravel/eseven-store/routes/web.php) with CSRF-exempt middleware (matching Stripe convention)
+
+## Phase 4: Filament Admin — Settings & Order View
+- [ ] Add Tamara section to [PaymentGatewaysPage](file:///c:/wamp64/www/Laravel/eseven-store/app/Filament/Pages/Settings/PaymentGatewaysPage.php#15-243) (env toggle, API token, notification token, enabled toggle)
+- [ ] Add Tabby section to [PaymentGatewaysPage](file:///c:/wamp64/www/Laravel/eseven-store/app/Filament/Pages/Settings/PaymentGatewaysPage.php#15-243) (env toggle, public key, secret key, merchant code, webhook header name/value, enabled toggle)
+- [ ] Encrypt secret fields at rest (matching Stripe pattern)
+- [ ] Add "last webhook received at" + raw payload viewer per gateway
+- [ ] Update [ViewOrder.php](file:///c:/wamp64/www/Laravel/eseven-store/app/Filament/Resources/OrderResource/Pages/ViewOrder.php) — gateway order/payment ID, status badge, manual "Sync Status" action, raw `gateway_payload` JSON viewer
+
+## Phase 5: Frontend — Checkout Flow
+- [ ] Add `createBnplSession` API service function
+- [ ] Update [CheckoutPage.vue](file:///c:/wamp64/www/Laravel/eseven-store/frontend/src/pages/CheckoutPage.vue) → [confirmPayment()](file:///c:/wamp64/www/Laravel/eseven-store/frontend/src/pages/CheckoutPage.vue#1166-1276) to handle Tamara/Tabby redirect flow
+- [ ] Add `/checkout/tamara/result` and `/checkout/tabby/result` return pages (success/failure)
+
+## Phase 6: Verification & Regression
+- [ ] Run existing dev servers and verify Stripe/COD/Bank Transfer checkout end-to-end (no regression)
+- [ ] Verify Tamara flow end-to-end in sandbox
+- [ ] Verify Tabby flow end-to-end in sandbox
+- [ ] Verify Filament settings save/load/encrypt correctly
+- [ ] Verify webhook idempotency
