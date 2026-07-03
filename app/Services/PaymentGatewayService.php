@@ -363,6 +363,16 @@ final class PaymentGatewayService
 
         $callbackBase = url('/api/v1/checkout');
 
+        $mappedCountry = match($targetCurrency) {
+            'AED' => 'AE',
+            'SAR' => 'SA',
+            'KWD' => 'KW',
+            'BHD' => 'BH',
+            'QAR' => 'QA',
+            'OMR' => 'OM',
+            default => 'SA'
+        };
+
         $payload = [
             'total_amount'       => ['amount' => number_format($total, 2, '.', ''), 'currency' => $targetCurrency],
             'shipping_amount'    => ['amount' => number_format($shipping, 2, '.', ''), 'currency' => $targetCurrency],
@@ -377,8 +387,8 @@ final class PaymentGatewayService
                 'phone_number' => $phone,
                 'email'        => $email,
             ],
-            'country_code'       => 'SA',
-            'locale'             => app()->getLocale() === 'ar' ? 'ar_SA' : 'en_US',
+            'country_code'       => $mappedCountry,
+            'locale'             => app()->getLocale() === 'ar' ? 'ar_' . $mappedCountry : 'en_' . ($mappedCountry === 'AE' ? 'US' : 'US'),
             'merchant_url'       => [
                 'success'      => $callbackBase . '/tamara/callback?status=success&order=' . $order->order_number,
                 'failure'      => $callbackBase . '/tamara/callback?status=failure&order=' . $order->order_number,
@@ -390,7 +400,7 @@ final class PaymentGatewayService
                 'last_name'   => $lastName ?: '-',
                 'line1'       => $addr?->address_line_1 ?? '-',
                 'city'        => $addr?->city ?? '-',
-                'country_code'=> 'SA',
+                'country_code'=> $mappedCountry,
                 'phone_number'=> $phone,
             ],
         ];
