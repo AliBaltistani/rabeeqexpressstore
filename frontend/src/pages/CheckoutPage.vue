@@ -398,7 +398,21 @@
           <div v-else class="payment-methods-grid">
             <label v-for="pm in activePaymentMethods" :key="pm.id" class="payment-card" :class="{ selected: selectedPayment === pm.id }">
               <input type="radio" name="payment" :value="pm.id" v-model="selectedPayment" class="checkout-radio" />
-              <img v-if="pm.icon || pm.logo" :src="pm.icon || pm.logo" class="payment-logo" :alt="pm.name" />
+              
+              <!-- Payment Icons -->
+              <div class="payment-svg-icon" :class="pm.id">
+                <!-- COD -->
+                <svg v-if="pm.id === 'cod'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a60.091 60.091 0 00-16.5 0M9 7.5h6m-6 3h6m-6 3h6m-6 3h6"/></svg>
+                <!-- Credit/Debit (Stripe) -->
+                <svg v-else-if="pm.id === 'stripe'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"/></svg>
+                <!-- Bank Transfer -->
+                <svg v-else-if="pm.id === 'bank_transfer'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z"/></svg>
+                <!-- Tamara -->
+                <svg v-else-if="pm.id === 'tamara'" viewBox="0 0 100 30" fill="none"><rect width="100" height="30" rx="4" fill="#FFE5B4"/><text x="50" y="20" font-family="Arial" font-size="16" font-weight="bold" fill="#F8674F" text-anchor="middle">Tamara</text></svg>
+                <!-- Tabby -->
+                <svg v-else-if="pm.id === 'tabby'" viewBox="0 0 100 30" fill="none"><rect width="100" height="30" rx="4" fill="#3DFFBE"/><text x="50" y="20" font-family="Arial" font-size="16" font-weight="bold" fill="#000000" text-anchor="middle">Tabby</text></svg>
+              </div>
+
               <span class="payment-name-text">{{ pm.name }}</span>
             </label>
           </div>
@@ -1777,5 +1791,32 @@ html[dir="rtl"] .country-code-dropdown { border-radius: 0 10px 10px 0; border-ri
   }
   .checkout-section { padding: 0.875rem 0.75rem; }
   .payment-methods-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ─ Payment SVG Icons ─ */
+.payment-svg-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  margin-right: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
+.payment-svg-icon.tamara, .payment-svg-icon.tabby {
+  width: 60px;
+  height: auto;
+}
+
+[dir="rtl"] .payment-svg-icon {
+  margin-right: 0;
+  margin-left: 0.75rem;
+}
+
+.payment-svg-icon svg {
+  width: 100%;
+  height: 100%;
 }
 </style>
