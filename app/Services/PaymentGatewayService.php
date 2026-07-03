@@ -310,6 +310,7 @@ final class PaymentGatewayService
             'api_token'          => $apiToken ?? '',
             'notification_token' => $notificationToken ?? '',
             'base_url'           => $baseUrl,
+            'merchant_currency'  => strtoupper((string) setting('payment.tamara_merchant_currency', 'AED')),
         ];
     }
 
@@ -328,23 +329,27 @@ final class PaymentGatewayService
 
         $order->load(['items.product', 'shippingAddress', 'billingAddress', 'user']);
 
-        $currency  = strtoupper($order->currency_code ?? 'SAR');
-        $total     = (float) $order->total;
-        $shipping  = (float) $order->shipping_amount;
-        $discount  = (float) $order->discount_amount;
-        $tax       = (float) $order->tax_amount;
+        $orderCurrency = strtoupper($order->currency_code ?? 'SAR');
+        $targetCurrency = trim($config['merchant_currency'] ?: '') ?: 'AED';
+        
+        $total     = \App\Models\Currency::convert((float) $order->total, $orderCurrency, $targetCurrency);
+        $shipping  = \App\Models\Currency::convert((float) $order->shipping_amount, $orderCurrency, $targetCurrency);
+        $discount  = \App\Models\Currency::convert((float) $order->discount_amount, $orderCurrency, $targetCurrency);
+        $tax       = \App\Models\Currency::convert((float) $order->tax_amount, $orderCurrency, $targetCurrency);
 
         // Build items array
         $items = [];
         foreach ($order->items as $item) {
+            $unitPrice = \App\Models\Currency::convert((float) $item->unit_price, $orderCurrency, $targetCurrency);
+            $itemTotal = \App\Models\Currency::convert((float) $item->total, $orderCurrency, $targetCurrency);
             $items[] = [
                 'name'         => $item->product_name ?? 'Product',
                 'type'         => 'physical',
                 'reference_id' => (string) $item->product_id,
                 'sku'          => $item->product_sku ?? (string) $item->product_id,
                 'quantity'     => $item->quantity,
-                'unit_price'   => ['amount' => number_format((float) $item->unit_price, 2, '.', ''), 'currency' => $currency],
-                'total_amount' => ['amount' => number_format((float) $item->total, 2, '.', ''), 'currency' => $currency],
+                'unit_price'   => ['amount' => number_format($unitPrice, 2, '.', ''), 'currency' => $targetCurrency],
+                'total_amount' => ['amount' => number_format($itemTotal, 2, '.', ''), 'currency' => $targetCurrency],
             ];
         }
 
@@ -359,12 +364,12 @@ final class PaymentGatewayService
         $callbackBase = url('/api/v1/checkout');
 
         $payload = [
-            'total_amount'       => ['amount' => number_format($total, 2, '.', ''), 'currency' => $currency],
-            'shipping_amount'    => ['amount' => number_format($shipping, 2, '.', ''), 'currency' => $currency],
-            'tax_amount'         => ['amount' => number_format($tax, 2, '.', ''), 'currency' => $currency],
-            'discount'           => ['amount' => ['amount' => number_format($discount, 2, '.', ''), 'currency' => $currency], 'name' => 'Discount'],
-            'order_reference_id' => $order->order_number,
-            'order_number'       => $order->order_number,
+            'total_amount'       => ['amount' => number_format($total, 2, '.', ''), 'currency' => $targetCurrency],
+            'shipping_amount'    => ['amount' => number_format($shipping, 2, '.', ''), 'currency' => $targetCurrency],
+            'tax_amount'         => ['amount' => number_format($tax, 2, '.', ''), 'currency' => $targetCurrency],
+            'discount'           => ['amount' => ['amount' => number_format($discount, 2, '.', ''), 'currency' => $targetCurrency], 'name' => 'Discount'],
+            'order_reference_id' => (string) $order->order_number,
+            'order_number'       => (string) $order->order_number,
             'items'              => $items,
             'consumer'           => [
                 'first_name'   => $firstName,
@@ -520,6 +525,7 @@ final class PaymentGatewayService
             'environment'          => $env,
             'webhook_header_name'  => setting('payment.tabby_webhook_header_name') ?? '',
             'webhook_header_value' => $webhookHeaderValue ?? '',
+            'merchant_currency'    => strtoupper((string) setting('payment.tabby_merchant_currency', 'AED')),
         ];
     }
 
@@ -538,11 +544,13 @@ final class PaymentGatewayService
 
         $order->load(['items.product', 'shippingAddress', 'billingAddress', 'user']);
 
-        $currency  = strtoupper($order->currency_code ?? 'SAR');
-        $total     = number_format((float) $order->total, 2, '.', '');
-        $tax       = number_format((float) $order->tax_amount, 2, '.', '');
-        $shipping  = number_format((float) $order->shipping_amount, 2, '.', '');
-        $discount  = number_format((float) $order->discount_amount, 2, '.', '');
+        $orderCurrency = strtoupper($order->currency_code ?? 'SAR');
+        $targetCurrency = trim($config['merchant_currency'] ?: '') ?: 'AED';
+        
+        $total     = \App\Models\Currency::convert((float) $order->total, $orderCurrency, $targetCurrency);
+        $taxAmount = \App\Models\Currency::convert((float) $order->tax_amount, $orderCurrency, $targetCurrency);
+        $discountAmount = \App\Models\Currency::convert((float) $order->discount_amount, $orderCurrency, $targetCurrency);
+        $shippingAmount = \App\Models\Currency::convert((float) $order->shipping_amount, $orderCurrency, $targetCurrency);
 
         $addr    = $order->shippingAddress;
         $user    = $order->user;
@@ -554,10 +562,11 @@ final class PaymentGatewayService
         // Build items array
         $items = [];
         foreach ($order->items as $item) {
+            $unitPrice = \App\Models\Currency::convert((float) $item->unit_price, $orderCurrency, $targetCurrency);
             $items[] = [
                 'title'        => $item->product_name ?? 'Product',
                 'quantity'     => $item->quantity,
-                'unit_price'   => number_format((float) $item->unit_price, 2, '.', ''),
+                'unit_price'   => number_format($unitPrice, 2, '.', ''),
                 'category'     => 'general',
                 'reference_id' => (string) $item->product_id,
                 'sku'          => $item->product_sku ?? (string) $item->product_id,
@@ -568,19 +577,19 @@ final class PaymentGatewayService
 
         $payload = [
             'payment'       => [
-                'amount'   => $total,
-                'currency' => $currency,
+                'amount'   => number_format($total, 2, '.', ''),
+                'currency' => $targetCurrency,
                 'buyer'    => [
                     'phone' => $phone,
                     'email' => $email,
                     'name'  => trim($name),
                 ],
                 'order'    => [
-                    'reference_id' => $order->order_number,
+                    'reference_id' => (string) $order->order_number,
                     'items'        => $items,
-                    'tax_amount'   => $tax,
-                    'shipping_amount' => $shipping,
-                    'discount_amount' => $discount,
+                    'tax_amount'   => number_format($taxAmount, 2, '.', ''),
+                    'shipping_amount' => number_format($shippingAmount, 2, '.', ''),
+                    'discount_amount' => number_format($discountAmount, 2, '.', ''),
                 ],
                 'shipping_address' => [
                     'city'    => $addr?->city ?? '-',

@@ -47,10 +47,10 @@ class PaymentGatewaysPage extends Page
             // Bank Transfer
             'bank_enabled', 'bank_label_en', 'bank_label_ar', 'bank_name', 'bank_account_name', 'bank_iban', 'bank_swift', 'bank_instructions_en', 'bank_instructions_ar',
             // Tamara
-            'tamara_enabled', 'tamara_environment', 'tamara_api_token', 'tamara_notification_token',
+            'tamara_enabled', 'tamara_environment', 'tamara_api_token', 'tamara_notification_token', 'tamara_merchant_currency',
             // Tabby
             'tabby_enabled', 'tabby_environment', 'tabby_public_key', 'tabby_secret_key', 'tabby_merchant_code',
-            'tabby_webhook_header_name', 'tabby_webhook_header_value',
+            'tabby_webhook_header_name', 'tabby_webhook_header_value', 'tabby_merchant_currency',
         ];
 
         $encryptedFields = [
@@ -170,14 +170,18 @@ class PaymentGatewaysPage extends Page
                 Components\Section::make('Tamara — Buy Now Pay Later')
                     ->icon('heroicon-o-banknotes')
                     ->schema([
-                        Components\Grid::make(2)->schema([
+                        Components\Grid::make(3)->schema([
                             Forms\Components\Toggle::make('tamara_enabled')
                                 ->label('Enable Tamara')
-                                ->helperText('Show Tamara as a payment option at checkout'),
+                                ->helperText('Show Tamara as a payment option'),
                             Forms\Components\Select::make('tamara_environment')
                                 ->label('Environment')
                                 ->options(['sandbox' => 'Sandbox (Testing)', 'live' => 'Live (Production)'])
                                 ->default('sandbox'),
+                            Forms\Components\TextInput::make('tamara_merchant_currency')
+                                ->label('Merchant Account Currency')
+                                ->default('AED')
+                                ->helperText('The currency supported by your Tamara account (e.g., AED, SAR)'),
                         ]),
                         Components\Grid::make(2)->schema([
                             Forms\Components\TextInput::make('tamara_api_token')
@@ -200,14 +204,18 @@ class PaymentGatewaysPage extends Page
                 Components\Section::make('Tabby — Pay in 4')
                     ->icon('heroicon-o-squares-2x2')
                     ->schema([
-                        Components\Grid::make(2)->schema([
+                        Components\Grid::make(3)->schema([
                             Forms\Components\Toggle::make('tabby_enabled')
                                 ->label('Enable Tabby')
-                                ->helperText('Show Tabby as a payment option at checkout'),
+                                ->helperText('Show Tabby as a payment option'),
                             Forms\Components\Select::make('tabby_environment')
                                 ->label('Environment')
                                 ->options(['sandbox' => 'Sandbox (Testing)', 'live' => 'Live (Production)'])
                                 ->default('sandbox'),
+                            Forms\Components\TextInput::make('tabby_merchant_currency')
+                                ->label('Merchant Account Currency')
+                                ->default('AED')
+                                ->helperText('The currency supported by your Tabby account (e.g., AED, SAR)'),
                         ]),
                         Components\Grid::make(2)->schema([
                             Forms\Components\TextInput::make('tabby_public_key')

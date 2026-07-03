@@ -169,7 +169,15 @@
     "cancelled": "ملغي",
     "yourCoupons": "كوبوناتك",
     "freeShippingApplied": "تم تطبيق كوبون الشحن المجاني!",
-    "selectLocationOnMap": "يرجى تحديد موقع على الخريطة أو إدخال العنوان يدوياً."
+    "selectLocationOnMap": "يرجى تحديد موقع على الخريطة أو إدخال العنوان يدوياً.",
+    "paymentCancelled": "تم إلغاء الدفع",
+    "bnplCancelled": "لقد قمت بإلغاء الدفع. تم حجز طلبك ولكن لم يتم دفعه.",
+    "tryAgain": "حاول مرة أخرى",
+    "poweredBy": "مدعوم من",
+    "paymentSuccess": "تم تأكيد الدفع!",
+    "bnplSuccess": "تمت الموافقة على الدفع الخاص بك. جاري معالجة طلبك.",
+    "paymentFailed": "فشل الدفع",
+    "bnplFailed": "لم تتم الموافقة على الدفع الخاص بك. يرجى محاولة طريقة دفع مختلفة."
   },
   "category": {
     "sortBy": "ترتيب حسب",
@@ -214,7 +222,8 @@
     "searchPlaceholder": "ابحث عن منتجات...",
     "searching": "جاري البحث...",
     "viewAllResults": "عرض جميع النتائج",
-    "noResults": "لم يتم العثور على منتجات"
+    "noResults": "لم يتم العثور على منتجات",
+    "continueShopping": "متابعة التسوق"
   },
   "auth": {
     "login": "تسجيل الدخول",

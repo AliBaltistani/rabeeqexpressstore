@@ -169,7 +169,15 @@
     "cancelled": "Cancelled",
     "yourCoupons": "Your coupons",
     "freeShippingApplied": "Free shipping coupon applied!",
-    "selectLocationOnMap": "Please select a location on the map or enter the address manually."
+    "selectLocationOnMap": "Please select a location on the map or enter the address manually.",
+    "paymentCancelled": "Payment Cancelled",
+    "bnplCancelled": "You cancelled the payment. Your order has been reserved but not paid.",
+    "tryAgain": "Try Again",
+    "poweredBy": "Powered by",
+    "paymentSuccess": "Payment Confirmed!",
+    "bnplSuccess": "Your BNPL payment was approved. Your order is being processed.",
+    "paymentFailed": "Payment Failed",
+    "bnplFailed": "Your payment was not approved. Please try a different payment method."
   },
   "category": {
     "sortBy": "Sort By",
@@ -214,7 +222,8 @@
     "searchPlaceholder": "Search for products...",
     "searching": "Searching...",
     "viewAllResults": "View all results",
-    "noResults": "No products found"
+    "noResults": "No products found",
+    "continueShopping": "Continue Shopping"
   },
   "auth": {
     "login": "Login",
