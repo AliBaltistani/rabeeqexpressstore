@@ -384,7 +384,7 @@ final class PaymentGatewayService
             'consumer'           => [
                 'first_name'   => $firstName,
                 'last_name'    => $lastName ?: '-',
-                'phone_number' => $phone,
+                'phone_number' => $this->stripCountryCode($phone),
                 'email'        => $email,
             ],
             'country_code'       => $mappedCountry,
@@ -401,7 +401,7 @@ final class PaymentGatewayService
                 'line1'       => $addr?->address_line_1 ?? '-',
                 'city'        => $addr?->city ?? '-',
                 'country_code'=> $mappedCountry,
-                'phone_number'=> $phone,
+                'phone_number'=> $this->stripCountryCode($phone),
             ],
         ];
 
@@ -590,7 +590,7 @@ final class PaymentGatewayService
                 'amount'   => number_format($total, 2, '.', ''),
                 'currency' => $targetCurrency,
                 'buyer'    => [
-                    'phone' => $phone,
+                    'phone' => $this->stripCountryCode($phone),
                     'email' => $email,
                     'name'  => trim($name),
                 ],
@@ -713,5 +713,47 @@ final class PaymentGatewayService
             Log::error('[Tabby] Capture exception', ['error' => $e->getMessage()]);
             return ['success' => false, 'data' => null, 'error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Remove the active country dial code from a phone block if present.
+     */
+    private function stripCountryCode(string $phone): string
+    {
+        if (empty($phone)) {
+            return '';
+        }
+
+        try {
+            $countryCodes = \Illuminate\Support\Facades\Cache::remember('bnpl_country_phone_codes', 3600, function () {
+                if (class_exists(\App\Models\Country::class)) {
+                    return \App\Models\Country::whereNotNull('phone_code')->pluck('phone_code')->toArray();
+                }
+                return ['+966', '+971', '+965', '+973', '+974', '+968'];
+            });
+
+            // Sort descending by length so longer codes match before shorter nested ones
+            usort($countryCodes, fn($a, $b) => strlen((string) $b) <=> strlen((string) $a));
+
+            foreach ($countryCodes as $code) {
+                // Ensure the database code is cast to string and prefix with '+' if it misses it
+                $code = (string) $code;
+                $codeStr = str_starts_with($code, '+') ? $code : '+' . $code;
+                $codeNoPlus = ltrim($codeStr, '+');
+
+                if (str_starts_with($phone, $codeStr)) {
+                    return substr($phone, strlen($codeStr));
+                }
+
+                if (str_starts_with($phone, $codeNoPlus)) {
+                    return substr($phone, strlen($codeNoPlus));
+                }
+            }
+        } catch (\Throwable $e) {
+            // Failsafe string parsing
+            return preg_replace('/^\+?(966|971|965|973|974|968)/', '', $phone);
+        }
+
+        return $phone;
     }
 }
