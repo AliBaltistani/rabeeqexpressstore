@@ -198,6 +198,14 @@ class CheckoutController extends Controller
         $status      = $request->query('status', 'failure');
         $orderNumber = $request->query('order', $request->query('order_reference_id', ''));
 
+        if ($status === 'cancel' || $status === 'failure') {
+            $order = \App\Models\Order::withoutGlobalScopes()->where('order_number', $orderNumber)->first();
+            if ($order && $order->status !== 'cancelled' && $order->payment_status === 'unpaid') {
+                $this->orderLifecycle->cancelOrder($order);
+                \Illuminate\Support\Facades\Log::info("[Tamara] Order {$orderNumber} cancelled by user on gateway.");
+            }
+        }
+
         $frontendBase = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173')), '/');
 
         return redirect($frontendBase . '/checkout/return?gateway=tamara&status=' . $status . '&order=' . $orderNumber);
@@ -211,7 +219,17 @@ class CheckoutController extends Controller
     public function tabbyCallback(Request $request): \Illuminate\Http\RedirectResponse
     {
         $status      = $request->query('status', 'failure');
-        $orderNumber = $request->query('order', '');
+        $orderNumber = $request->query('order', $request->query('payment_id', ''));
+
+        if ($status === 'cancel' || $status === 'failure') {
+            // Tabby might only provide payment_id? Wait, in my payload I passed: `?status=cancel&order=` + order_number?
+            // Yes, I passed `merchant_urls => ['cancel' => $callbackBase . '?status=cancel&order=' . $order->order_number]`
+            $order = \App\Models\Order::withoutGlobalScopes()->where('order_number', $orderNumber)->first();
+            if ($order && $order->status !== 'cancelled' && $order->payment_status === 'unpaid') {
+                $this->orderLifecycle->cancelOrder($order);
+                \Illuminate\Support\Facades\Log::info("[Tabby] Order {$orderNumber} cancelled by user on gateway.");
+            }
+        }
 
         $frontendBase = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173')), '/');
 
