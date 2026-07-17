@@ -92,7 +92,9 @@ const selectedLanguage = ref(settings.currentLanguageCode)
 const selectedCurrency = ref(settings.currentCurrencyCode)
 const isLoading = ref(false)
 
-// Reset selections when modal opens
+// Reset selections when modal opens — always read from the store which is seeded
+// from the API default (via settingsStore.initialize), so this correctly reflects
+// whatever the admin has set as default currency/language.
 watch(() => props.isOpen, (val) => {
   if (val) {
     selectedLanguage.value = settings.currentLanguageCode

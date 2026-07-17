@@ -24,36 +24,28 @@ if (!function_exists('currency_symbol')) {
     /**
      * Return the default currency symbol from the currencies table.
      * Falls back to the code from settings, then to 'SAR'.
+     * NOTE: No static cache — the admin can change the default currency at any time
+     * and we must always reflect the current DB value.
      */
     function currency_symbol(): string
     {
-        static $symbol = null;
-
-        if ($symbol === null) {
-            $defaultCurrency = \App\Models\Currency::getDefault();
-            $symbol = $defaultCurrency?->symbol
-                ?? setting('general.default_currency', 'SAR');
-        }
-
-        return $symbol;
+        $defaultCurrency = \App\Models\Currency::getDefault();
+        return $defaultCurrency?->symbol
+            ?? setting('general.default_currency', 'SAR');
     }
 }
 
 if (!function_exists('currency_code')) {
     /**
      * Return the default currency code.
+     * NOTE: No static cache — the admin can change the default currency at any time
+     * and we must always reflect the current DB value.
      */
     function currency_code(): string
     {
-        static $code = null;
-
-        if ($code === null) {
-            $defaultCurrency = \App\Models\Currency::getDefault();
-            $code = $defaultCurrency?->code
-                ?? setting('general.default_currency', 'SAR');
-        }
-
-        return $code;
+        $defaultCurrency = \App\Models\Currency::getDefault();
+        return $defaultCurrency?->code
+            ?? setting('general.default_currency', 'SAR');
     }
 }
 

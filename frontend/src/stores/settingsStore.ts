@@ -281,11 +281,23 @@ export const useSettingsStore = defineStore('settings', () => {
           document.head.appendChild(link)
         }
 
-        // Set default currency/language if no user preference saved
-        if (!localStorage.getItem('currency') && data.defaultCurrency) {
-          setCurrency(data.defaultCurrency)
+        // Currency resolution:
+        // 1. If user has a stored preference AND it still exists in the active list → keep it.
+        // 2. If user has a stored preference BUT it no longer exists (admin deactivated it) → clear & apply admin default.
+        // 3. If no preference stored (first visit) → apply admin default.
+        const storedCurrency = localStorage.getItem('currency')
+        if (storedCurrency && currencies.value[storedCurrency]) {
+          // Valid stored preference — keep it
+          currentCurrencyCode.value = storedCurrency
+        } else {
+          // Stored currency gone or first visit — apply admin default
+          const adminDefault = data.defaultCurrency ?? 'SAR'
+          setCurrency(adminDefault)
         }
-        if (!localStorage.getItem('language') && data.defaultLanguage) {
+
+        // Language resolution (same pattern)
+        const storedLanguage = localStorage.getItem('language')
+        if (!storedLanguage && data.defaultLanguage) {
           setLanguage(data.defaultLanguage)
         }
       }

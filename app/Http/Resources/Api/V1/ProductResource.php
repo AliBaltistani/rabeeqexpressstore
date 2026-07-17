@@ -45,9 +45,10 @@ class ProductResource extends JsonResource
             $discountPercent = round((($comparePrice - $effectivePrice) / $comparePrice) * 100);
         }
 
-        // Currency symbol
+        // Currency symbol & decimal places
         $currencyObj = Currency::where('code', $currency)->first();
         $symbol = $currencyObj?->symbol ?? $currency;
+        $decimals = $currencyObj?->decimal_places ?? 2;
 
         // Reviews
         $reviewsLoaded = $this->relationLoaded('reviews');
@@ -60,16 +61,16 @@ class ProductResource extends JsonResource
             'slug' => $this->slug,
             'sku' => $this->sku,
             'price' => [
-                'raw' => round($price, 2),
-                'formatted' => $symbol . ' ' . number_format($price, 2),
+                'raw' => round($price, $decimals),
+                'formatted' => $symbol . ' ' . number_format($price, $decimals),
             ],
             'comparePrice' => $comparePrice ? [
-                'raw' => round($comparePrice, 2),
-                'formatted' => $symbol . ' ' . number_format($comparePrice, 2),
+                'raw' => round($comparePrice, $decimals),
+                'formatted' => $symbol . ' ' . number_format($comparePrice, $decimals),
             ] : null,
             'flashSalePrice' => $flashSalePrice ? [
-                'raw' => round($flashSalePrice, 2),
-                'formatted' => $symbol . ' ' . number_format($flashSalePrice, 2),
+                'raw' => round($flashSalePrice, $decimals),
+                'formatted' => $symbol . ' ' . number_format($flashSalePrice, $decimals),
             ] : null,
             'discountPercent' => $discountPercent,
             'currency' => $currency,
