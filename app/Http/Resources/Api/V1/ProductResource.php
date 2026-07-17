@@ -11,8 +11,11 @@ class ProductResource extends JsonResource
     public function toArray(Request $request): array
     {
         $locale = app()->getLocale();
+        // $currency = the currency the user wants to see prices in (from ?currency= query param)
+        // $defaultCode = the currency prices are STORED in the DB (store base currency)
+        // These are independent — changing the display default does NOT change storage currency.
         $currency = $request->query('currency', currency_code());
-        $defaultCode = currency_code();
+        $defaultCode = store_currency_code();
 
         $price = (float) $this->price;
         $comparePrice = $this->compare_price ? (float) $this->compare_price : null;

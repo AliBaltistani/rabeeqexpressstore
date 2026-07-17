@@ -12,7 +12,7 @@ class ProductDetailResource extends ProductResource
         $base = parent::toArray($request);
         $locale = app()->getLocale();
         $currency = $request->query('currency', currency_code());
-        $defaultCode = currency_code();
+        $defaultCode = store_currency_code(); // prices stored in store base currency
         $currencyObj = Currency::where('code', $currency)->first();
         $symbol = $currencyObj?->symbol ?? $currency;
 

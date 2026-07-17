@@ -43,7 +43,7 @@ class CheckoutController extends Controller
             'wallet' => [
                 'enabled'  => $walletEnabled,
                 'balance'  => $walletBalance,
-                'currency' => currency_code(),
+                'currency' => store_currency_code(), // wallet balances stored in store currency
             ],
         ]);
     }

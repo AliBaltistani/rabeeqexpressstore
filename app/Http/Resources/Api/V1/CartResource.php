@@ -17,8 +17,10 @@ class CartResource extends JsonResource
         $code = $request->query('currency', currency_code());
         $currencyObj = Currency::where('code', $code)->first();
         $symbol = $currencyObj?->symbol ?? $code;
+        $decimals = $currencyObj?->decimal_places ?? 2;
         $locale = app()->getLocale();
-        $defaultCode = currency_code();
+        // defaultCode = the currency prices are STORED in, not the display default
+        $defaultCode = store_currency_code();
 
         $items = collect($this->items ?? []);
 
@@ -62,12 +64,12 @@ class CartResource extends JsonResource
                 'image' => $this->getProductImage($product),
                 'quantity' => $item->quantity,
                 'unitPrice' => [
-                    'raw' => round($price, 2),
-                    'formatted' => $symbol . ' ' . number_format($price, 2),
+                    'raw' => round($price, $decimals),
+                    'formatted' => $symbol . ' ' . number_format($price, $decimals),
                 ],
                 'lineTotal' => [
-                    'raw' => round($lineTotal, 2),
-                    'formatted' => $symbol . ' ' . number_format($lineTotal, 2),
+                    'raw' => round($lineTotal, $decimals),
+                    'formatted' => $symbol . ' ' . number_format($lineTotal, $decimals),
                 ],
                 'inStock' => !$product?->track_stock || ($product?->stock_quantity ?? 0) > 0,
                 'attributes' => $attributes,
@@ -93,21 +95,21 @@ class CartResource extends JsonResource
             'items' => $mappedItems,
             'itemCount' => $items->sum('quantity'),
             'subtotal' => [
-                'raw' => round($subtotal, 2),
-                'formatted' => $symbol . ' ' . number_format($subtotal, 2),
+                'raw' => round($subtotal, $decimals),
+                'formatted' => $symbol . ' ' . number_format($subtotal, $decimals),
             ],
             'discountAmount' => [
-                'raw' => round($discount, 2),
-                'formatted' => $symbol . ' ' . number_format($discount, 2),
+                'raw' => round($discount, $decimals),
+                'formatted' => $symbol . ' ' . number_format($discount, $decimals),
             ],
             'couponCode' => $this->couponCode ?? null,
             'shippingAmount' => [
-                'raw' => round($shipping, 2),
-                'formatted' => $symbol . ' ' . number_format($shipping, 2),
+                'raw' => round($shipping, $decimals),
+                'formatted' => $symbol . ' ' . number_format($shipping, $decimals),
             ],
             'total' => [
-                'raw' => round($total, 2),
-                'formatted' => $symbol . ' ' . number_format($total, 2),
+                'raw' => round($total, $decimals),
+                'formatted' => $symbol . ' ' . number_format($total, $decimals),
             ],
             'currency' => $code,
         ];

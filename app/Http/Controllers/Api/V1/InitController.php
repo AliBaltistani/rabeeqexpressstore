@@ -60,7 +60,10 @@ class InitController extends Controller
             'storeAddress' => setting('general.store_address_' . $locale),
             'currencies' => $currencies,
             'languages' => $languages,
-            'defaultCurrency' => $defaultCurrency['code'] ?? 'SAR',
+            // storeCurrency: the currency prices are STORED IN (never changes without re-pricing)
+            'storeCurrency' => store_currency_code(),
+            // defaultCurrency: the display default for new visitors (admin-controlled)
+            'defaultCurrency' => $defaultCurrency['code'] ?? store_currency_code(),
             'defaultLanguage' => $defaultLanguage['code'] ?? 'en',
             'paymentMethods' => $this->getPaymentMethods(),
             'features' => [

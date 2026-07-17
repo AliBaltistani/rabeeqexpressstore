@@ -37,15 +37,32 @@ if (!function_exists('currency_symbol')) {
 
 if (!function_exists('currency_code')) {
     /**
-     * Return the default currency code.
-     * NOTE: No static cache — the admin can change the default currency at any time
-     * and we must always reflect the current DB value.
+     * Return the DEFAULT DISPLAY currency code.
+     * This is the currency shown first to new visitors (admin-controlled via is_default).
+     * ⚠️  Do NOT use this for price conversion math — use store_currency_code() instead.
      */
     function currency_code(): string
     {
         $defaultCurrency = \App\Models\Currency::getDefault();
         return $defaultCurrency?->code
             ?? setting('general.default_currency', 'SAR');
+    }
+}
+
+if (!function_exists('store_currency_code')) {
+    /**
+     * Return the STORE/BASE currency code — the currency in which all product
+     * prices are physically stored in the database.
+     *
+     * This is INDEPENDENT of which currency is set as the display default.
+     * All currency conversion math must convert FROM this value.
+     *
+     * Default: 'SAR' (set via Admin → Currencies → Store Currency).
+     * Only change this if you also re-enter all product prices in the new currency.
+     */
+    function store_currency_code(): string
+    {
+        return setting('general.store_currency', 'SAR');
     }
 }
 
