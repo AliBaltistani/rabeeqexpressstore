@@ -24,7 +24,7 @@ class CartResource extends JsonResource
 
         $items = collect($this->items ?? []);
 
-        $mappedItems = $items->map(function ($item) use ($locale, $code, $defaultCode, $symbol) {
+        $mappedItems = $items->map(function ($item) use ($locale, $code, $defaultCode, $symbol, $decimals) {
             $product = $item->product;
             $price = (float) ($item->product?->getActiveFlashSalePrice($item->variant_id) ?? $item->variant?->price ?? $product?->price ?? 0);
 
