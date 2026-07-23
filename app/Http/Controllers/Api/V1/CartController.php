@@ -39,7 +39,7 @@ class CartController extends Controller
         ]);
 
         $userId = $request->user('sanctum')?->id;
-        $sessionId = $userId ? null : $request->session()->getId();
+        $guestCartId = $userId ? null : $this->getGuestCartId($request);
         $attributeValues = $validated['attributeValues'] ?? null;
 
         // Sort for consistent matching
@@ -51,7 +51,7 @@ class CartController extends Controller
         $query = CartItem::where('product_id', $validated['productId'])
             ->where('variant_id', $validated['variantId'] ?? null)
             ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId));
+            ->when($guestCartId, fn($q) => $q->where('session_id', $guestCartId));
 
         // Match by attribute values
         if ($attributeValues) {
@@ -68,7 +68,7 @@ class CartController extends Controller
         } else {
             CartItem::create([
                 'user_id' => $userId,
-                'session_id' => $sessionId,
+                'session_id' => $guestCartId,
                 'product_id' => $validated['productId'],
                 'variant_id' => $validated['variantId'] ?? null,
                 'selected_attribute_values' => $attributeValues,
@@ -122,13 +122,14 @@ class CartController extends Controller
     public function clear(Request $request): JsonResponse
     {
         $userId = $request->user('sanctum')?->id;
-        $sessionId = $userId ? null : $request->session()->getId();
+        $guestCartId = $userId ? null : $this->getGuestCartId($request);
 
         CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
+            ->when($guestCartId, fn($q) => $q->where('session_id', $guestCartId))
             ->delete();
 
-        return $this->success(null, 'Cart cleared.');
+        $items = $this->getCartItems($request);
+        return $this->success(new CartResource($this->buildCartData($items, $request)), 'Cart cleared.');
     }
 
     /**
@@ -210,25 +211,31 @@ class CartController extends Controller
 
     // ── Helpers ──
 
+    protected function getGuestCartId(Request $request): ?string
+    {
+        $id = $request->header('X-Guest-Cart-ID');
+        return ($id && strlen($id) >= 8) ? $id : null;
+    }
+
     protected function getCartItems(Request $request)
     {
         $userId = $request->user('sanctum')?->id;
-        $sessionId = $userId ? null : $request->session()->getId();
+        $guestCartId = $userId ? null : $this->getGuestCartId($request);
 
         return CartItem::with(['product' => fn($q) => $q->withoutGlobalScopes(), 'product.images', 'product.attributeValues.attribute', 'variant'])
             ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
+            ->when($guestCartId, fn($q) => $q->where('session_id', $guestCartId))
             ->get();
     }
 
     protected function findCartItem(Request $request, int $id): ?CartItem
     {
         $userId = $request->user('sanctum')?->id;
-        $sessionId = $userId ? null : $request->session()->getId();
+        $guestCartId = $userId ? null : $this->getGuestCartId($request);
 
         return CartItem::where('id', $id)
             ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
+            ->when($guestCartId, fn($q) => $q->where('session_id', $guestCartId))
             ->first();
     }
 

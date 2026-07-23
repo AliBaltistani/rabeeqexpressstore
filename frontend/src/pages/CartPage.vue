@@ -272,7 +272,13 @@ function scrollRelated(dir: number) {
 const relatedProducts = ref<any[]>([])
 
 onMounted(async () => {
-  // Init variant selections from existing cart items
+  // Always fetch fresh cart data from the API when visiting the cart page.
+  // This ensures the page is correct even after a hard refresh or direct navigation.
+  try {
+    await cart.loadCart()
+  } catch {}
+
+  // Init variant selections from the (now fresh) cart items
   initItemSelections(cart.items)
 
   try {
