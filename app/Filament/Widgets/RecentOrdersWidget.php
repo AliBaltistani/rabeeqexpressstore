@@ -21,7 +21,7 @@ class RecentOrdersWidget extends BaseWidget
     public function table(Table $table): Table
     {
         $dateFormat = admin_date_format(withTime: true);
-        $defaultCurrency = currency_symbol();
+        $defaultCurrency = store_currency_symbol();
 
         return $table
             ->query(

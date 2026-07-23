@@ -140,7 +140,7 @@ class PaymentGatewaysPage extends Page
                             Forms\Components\Textarea::make('cod_description_en')->label('Description (English)')->rows(2),
                             Forms\Components\Textarea::make('cod_description_ar')->label('Description (Arabic)')->rows(2)->extraInputAttributes(['dir' => 'rtl']),
                         ]),
-                        Forms\Components\TextInput::make('cod_extra_fee')->label('Extra Fee (' . currency_symbol() . ')')->numeric()->default(0)->helperText('0 = no extra fee'),
+                        Forms\Components\TextInput::make('cod_extra_fee')->label('Extra Fee (' . store_currency_symbol() . ')')->numeric()->default(0)->helperText('0 = no extra fee'),
                     ])->collapsible(),
 
                 // Bank Transfer
@@ -271,7 +271,7 @@ class PaymentGatewaysPage extends Page
                                 ->searchable()
                                 ->placeholder('Select a shipping method'),
                             Forms\Components\TextInput::make('shipping_free_shipping_threshold')
-                                ->label('Free Shipping Threshold (' . currency_symbol() . ')')
+                                ->label('Free Shipping Threshold (' . store_currency_symbol() . ')')
                                 ->numeric()
                                 ->default(0)
                                 ->helperText('Minimum order total for free shipping (0 = disabled)'),

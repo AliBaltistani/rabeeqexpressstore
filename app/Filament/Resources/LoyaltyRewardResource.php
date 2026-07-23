@@ -136,7 +136,7 @@ class LoyaltyRewardResource extends Resource
                                                     ->label('Discount Type')
                                                     ->options([
                                                         'percentage' => 'Percentage (%)',
-                                                        'fixed'      => 'Fixed Amount (' . currency_symbol() . ')',
+                                                        'fixed'      => 'Fixed Amount (' . store_currency_symbol() . ')',
                                                     ])
                                                     ->default('percentage')
                                                     ->visible(fn(Schemas\Components\Utilities\Get $get): bool => $get('type') === 'discount'),
@@ -146,7 +146,7 @@ class LoyaltyRewardResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0.01)
                                                     ->step(0.01)
-                                                    ->prefix(fn(Schemas\Components\Utilities\Get $get) => $get('discount_type') === 'percentage' ? '%' : currency_symbol())
+                                                    ->prefix(fn(Schemas\Components\Utilities\Get $get) => $get('discount_type') === 'percentage' ? '%' : store_currency_symbol())
                                                     ->helperText('The amount or percentage off')
                                                     ->visible(fn(Schemas\Components\Utilities\Get $get): bool => $get('type') === 'discount')
                                                     ->rules([
@@ -171,7 +171,7 @@ class LoyaltyRewardResource extends Resource
                                             ->options(fn() => ShippingMethod::active()
                                                 ->get()
                                                 ->mapWithKeys(fn($m) => [
-                                                    $m->id => $m->getTranslation('name', 'en') . ' (' . ucfirst($m->carrier_type) . ' — ' . currency_symbol() . ' ' . number_format((float)$m->base_cost, 2) . ')',
+                                                    $m->id => $m->getTranslation('name', 'en') . ' (' . ucfirst($m->carrier_type) . ' — ' . store_currency_symbol() . ' ' . number_format((float)$m->base_cost, 2) . ')',
                                                 ])
                                                 ->all()
                                             )
@@ -217,7 +217,7 @@ class LoyaltyRewardResource extends Resource
                                             ->content(fn(?LoyaltyReward $record): string => $record && $record->discount_value
                                                 ? ($record->discount_type === 'percentage'
                                                     ? $record->discount_value . '%'
-                                                    : currency_symbol() . ' ' . number_format((float) $record->discount_value, 2))
+                                                    : store_currency_symbol() . ' ' . number_format((float) $record->discount_value, 2))
                                                 : '—'),
 
                                         Forms\Components\Placeholder::make('created_at_display')
@@ -275,7 +275,7 @@ class LoyaltyRewardResource extends Resource
                         if (!$record->discount_value) return '—';
                         return $record->discount_type === 'percentage'
                             ? $record->discount_value . '% OFF'
-                            : currency_symbol() . ' ' . number_format((float) $record->discount_value, 2) . ' OFF';
+                            : store_currency_symbol() . ' ' . number_format((float) $record->discount_value, 2) . ' OFF';
                     })
                     ->badge()
                     ->color('success'),

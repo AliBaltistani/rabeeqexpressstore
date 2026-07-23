@@ -81,7 +81,7 @@ class LoyaltyWalletSettingsPage extends Page
 
                         Components\Grid::make(3)->schema([
                             Forms\Components\TextInput::make('loyalty_earn_rate')
-                                ->label('Earn Rate (points per ' . currency_symbol() . ')')
+                                ->label('Earn Rate (points per ' . store_currency_symbol() . ')')
                                 ->numeric()
                                 ->minValue(0)
                                 ->step(0.1)
@@ -89,7 +89,7 @@ class LoyaltyWalletSettingsPage extends Page
                                 ->helperText('e.g. 1 = earn 1 point for every 1 ' . currency_code() . ' spent'),
 
                             Forms\Components\TextInput::make('loyalty_redeem_rate')
-                                ->label('Redeem Rate (points per ' . currency_symbol() . ')')
+                                ->label('Redeem Rate (points per ' . store_currency_symbol() . ')')
                                 ->numeric()
                                 ->minValue(1)
                                 ->default(100)

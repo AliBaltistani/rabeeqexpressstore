@@ -42,6 +42,20 @@ final class OrderLifecycleService
 
             $currencyCode = $data['currency'] ?? currency_code();
 
+            // ── Currency exchange rate (base → display currency) ──
+            // All cart prices are stored in the store base currency. If the user checked
+            // out in a different display currency, we must convert all amounts.
+            $storeCurrency = store_currency_code();
+            $exchangeRate  = 1.0;
+            if ($currencyCode !== $storeCurrency) {
+                $selectedCurrency = \App\Models\Currency::where('code', $currencyCode)->first();
+                $baseCurrency     = \App\Models\Currency::where('code', $storeCurrency)->first();
+                if ($selectedCurrency && $baseCurrency && (float) $baseCurrency->exchange_rate > 0) {
+                    // exchange_rate is stored as "units of this currency per 1 base unit"
+                    $exchangeRate = (float) $selectedCurrency->exchange_rate / (float) $baseCurrency->exchange_rate;
+                }
+            }
+
             // ── Calculate line totals ──
             $subtotal = 0;
             $orderItemsData = [];
@@ -74,8 +88,8 @@ final class OrderLifecycleService
                     'product_sku'              => $cartItem->variant?->sku ?? $product->sku,
                     'product_image'            => $product->images->where('is_primary', true)->first()?->image_path ?? $product->images->first()?->image_path ?? null,
                     'quantity'                 => $qty,
-                    'unit_price'               => $price,
-                    'total'                    => $lineTotal,
+                    'unit_price'               => round($price     * $exchangeRate, 2),
+                    'total'                    => round($lineTotal  * $exchangeRate, 2),
                 ];
 
                 // Decrement stock atomically
@@ -139,7 +153,14 @@ final class OrderLifecycleService
                 $codFee = (float) setting('payment.cod_extra_fee', 0);
             }
 
+
+            // ── Convert all monetary amounts to the display currency ──
+            $codFee       = round($codFee * $exchangeRate, 2);
+            $subtotal     = round($subtotal * $exchangeRate, 2);
+            $discount     = round($discount * $exchangeRate, 2);
+            $shippingAmount = round($shippingAmount * $exchangeRate, 2);
             $total = $subtotal - $discount + $shippingAmount + $codFee;
+
 
             // ── Stripe: verify PaymentIntent BEFORE creating the order ──
             // Payment-first flow: frontend confirms card, then sends paymentIntentId with the order.
@@ -219,7 +240,7 @@ final class OrderLifecycleService
                 'tax_amount'            => 0,
                 'total'                 => $total,
                 'currency_code'         => $currencyCode,
-                'currency_rate'         => 1,
+                'currency_rate'         => $exchangeRate,
                 'coupon_id'             => $couponId,
                 'coupon_code'           => $couponCode,
                 'notes'                 => $data['notes'] ?? null,
@@ -386,6 +407,22 @@ final class OrderLifecycleService
             }
         }
 
+        // ── Apply exchange rate so Stripe charges in the user's selected currency ──
+        $currencyCode  = $data['currency'] ?? currency_code();
+        $storeCurrency = store_currency_code();
+        $exchangeRate  = 1.0;
+        if ($currencyCode !== $storeCurrency) {
+            $selectedCurrency = \App\Models\Currency::where('code', $currencyCode)->first();
+            $baseCurrency     = \App\Models\Currency::where('code', $storeCurrency)->first();
+            if ($selectedCurrency && $baseCurrency && (float) $baseCurrency->exchange_rate > 0) {
+                $exchangeRate = (float) $selectedCurrency->exchange_rate / (float) $baseCurrency->exchange_rate;
+            }
+        }
+
+        $subtotal       = round($subtotal       * $exchangeRate, 2);
+        $discount       = round($discount       * $exchangeRate, 2);
+        $shippingAmount = round($shippingAmount * $exchangeRate, 2);
+
         return [
             'subtotal'            => $subtotal,
             'discount'            => $discount,
@@ -401,11 +438,11 @@ final class OrderLifecycleService
      */
     public function clearCartForUser(?User $user, Request $request): void
     {
-        $userId    = $user?->id;
-        $sessionId = $userId ? null : $request->session()->getId();
+        $userId      = $user?->id;
+        $guestCartId = $userId ? null : $this->getGuestCartId($request);
 
-        CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
+        CartItem::when($userId,      fn($q) => $q->where('user_id',   $userId))
+            ->when($guestCartId, fn($q) => $q->where('session_id', $guestCartId))
             ->delete();
 
         session()->forget(['cart_coupon', 'cart_discount']);
@@ -493,16 +530,26 @@ final class OrderLifecycleService
     }
 
     /**
-     * Get cart items for a user or session.
+     * Get cart items for a user or guest (identified by X-Guest-Cart-ID header).
      */
     private function getCartItems(?User $user, Request $request): Collection
     {
-        $userId    = $user?->id;
-        $sessionId = $userId ? null : $request->session()->getId();
+        $userId      = $user?->id;
+        $guestCartId = $userId ? null : $this->getGuestCartId($request);
 
         return CartItem::with(['product' => fn($q) => $q->withoutGlobalScopes(), 'variant'])
-            ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($sessionId, fn($q) => $q->where('session_id', $sessionId))
+            ->when($userId,      fn($q) => $q->where('user_id',   $userId))
+            ->when($guestCartId, fn($q) => $q->where('session_id', $guestCartId))
             ->get();
+    }
+
+    /**
+     * Extract the guest cart UUID from the X-Guest-Cart-ID header.
+     * Returns null if not present or too short (falls back to logged-in user flow).
+     */
+    private function getGuestCartId(Request $request): ?string
+    {
+        $id = $request->header('X-Guest-Cart-ID');
+        return ($id && strlen($id) >= 8) ? $id : null;
     }
 }

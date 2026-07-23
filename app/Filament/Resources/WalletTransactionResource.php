@@ -60,12 +60,12 @@ class WalletTransactionResource extends Resource
 
                 Tables\Columns\TextColumn::make('amount')
                     ->label(__('admin.wallet.amount'))
-                    ->formatStateUsing(fn(WalletTransaction $record) => number_format((float) $record->amount, 2) . ' ' . currency_symbol())
+                    ->formatStateUsing(fn(WalletTransaction $record) => number_format((float) $record->amount, 2) . ' ' . store_currency_symbol())
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('balance_after')
                     ->label(__('admin.wallet.balance_after'))
-                    ->formatStateUsing(fn(WalletTransaction $record) => number_format((float) $record->balance_after, 2) . ' ' . currency_symbol()),
+                    ->formatStateUsing(fn(WalletTransaction $record) => number_format((float) $record->balance_after, 2) . ' ' . store_currency_symbol()),
 
                 Tables\Columns\TextColumn::make('description')
                     ->label(__('admin.wallet.description'))
@@ -105,7 +105,7 @@ class WalletTransactionResource extends Resource
                             ->required()
                             ->minValue(0.01)
                             ->step(0.01)
-                            ->prefix(currency_symbol()),
+                            ->prefix(store_currency_symbol()),
 
                         Forms\Components\TextInput::make('description_en')
                             ->label(__('admin.wallet.description') . ' (EN)')
@@ -143,7 +143,7 @@ class WalletTransactionResource extends Resource
                             ->required()
                             ->minValue(0.01)
                             ->step(0.01)
-                            ->prefix(currency_symbol()),
+                            ->prefix(store_currency_symbol()),
 
                         Forms\Components\TextInput::make('description_en')
                             ->label(__('admin.wallet.description') . ' (EN)')

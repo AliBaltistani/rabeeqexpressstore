@@ -54,11 +54,11 @@ class RatesRelationManager extends RelationManager
                 Components\TextInput::make('price')
                     ->required()
                     ->numeric()
-                    ->prefix(currency_symbol())
+                    ->prefix(store_currency_symbol())
                     ->default(0.00),
                 Components\TextInput::make('min_order_for_free')
                     ->numeric()
-                    ->prefix(currency_symbol())
+                    ->prefix(store_currency_symbol())
                     ->label('Min. Order for Free Shipping (Leave empty if none)'),
                 Components\TextInput::make('min_weight')
                     ->numeric()

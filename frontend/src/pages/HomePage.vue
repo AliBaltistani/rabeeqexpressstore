@@ -88,8 +88,10 @@ import BannerGrid from '@/components/home/BannerGrid.vue'
 import ProductsSection from '@/components/home/ProductsSection.vue'
 import TestimonialsSlider from '@/components/home/TestimonialsSlider.vue'
 import { fetchHomeSections } from '@/api/services'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 const { locale } = useI18n()
+const settings = useSettingsStore()
 
 // ─── State ───
 const sections = ref<any[]>([])
@@ -135,6 +137,19 @@ onMounted(async () => {
     sections.value = data || []
   } catch (e) {
     console.error('Failed to fetch homepage sections:', e)
+  } finally {
+    loading.value = false
+  }
+})
+
+// Re-fetch when currency changes so product prices update immediately
+watch(() => settings.currentCurrencyCode, async () => {
+  try {
+    loading.value = true
+    const data = await fetchHomeSections()
+    sections.value = data || []
+  } catch (e) {
+    console.error('Failed to reload homepage sections on currency change:', e)
   } finally {
     loading.value = false
   }

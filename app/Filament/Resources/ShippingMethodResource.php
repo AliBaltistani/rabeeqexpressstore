@@ -109,14 +109,14 @@ class ShippingMethodResource extends Resource
                                 Forms\Components\TextInput::make('base_cost')
                                     ->required()
                                     ->numeric()
-                                    ->prefix(currency_symbol())
+                                    ->prefix(store_currency_symbol())
                                     ->default(0.00)
                                     ->step(0.01)
                                     ->label('Base Cost'),
 
                                 Forms\Components\TextInput::make('min_order_for_free')
                                     ->numeric()
-                                    ->prefix(currency_symbol())
+                                    ->prefix(store_currency_symbol())
                                     ->step(0.01)
                                     ->label('Free Shipping Above')
                                     ->helperText('Min order total for free shipping. Leave empty if never free.')

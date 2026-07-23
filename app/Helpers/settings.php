@@ -49,6 +49,22 @@ if (!function_exists('currency_code')) {
     }
 }
 
+if (!function_exists('store_currency_symbol')) {
+    /**
+     * Return the SYMBOL of the store/base currency — the currency in which all
+     * product prices are physically stored in the database.
+     *
+     * Use this in admin price fields and anywhere you need to label an entered
+     * price, to avoid confusion when the display default differs from the base.
+     */
+    function store_currency_symbol(): string
+    {
+        $code = store_currency_code();
+        $currency = \App\Models\Currency::where('code', $code)->first();
+        return $currency?->symbol ?? $code;
+    }
+}
+
 if (!function_exists('store_currency_code')) {
     /**
      * Return the STORE/BASE currency code — the currency in which all product

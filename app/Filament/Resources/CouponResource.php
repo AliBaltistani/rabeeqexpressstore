@@ -103,7 +103,7 @@ class CouponResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0.01)
                                                     ->step(0.01)
-                                                    ->prefix(fn(Schemas\Components\Utilities\Get $get) => $get('type') === 'percentage' ? '%' : currency_symbol())
+                                                    ->prefix(fn(Schemas\Components\Utilities\Get $get) => $get('type') === 'percentage' ? '%' : store_currency_symbol())
                                                     ->rules([
                                                         fn(Schemas\Components\Utilities\Get $get) => function (string $attribute, $value, $fail) use ($get) {
                                                             if ($get('type') === 'percentage' && $value > 100) {
@@ -118,7 +118,7 @@ class CouponResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->step(0.01)
-                                                    ->prefix(currency_symbol())
+                                                    ->prefix(store_currency_symbol())
                                                     ->placeholder('No limit')
                                                     ->visible(fn(Schemas\Components\Utilities\Get $get): bool => $get('type') === 'percentage'),
                                             ]),
@@ -130,7 +130,7 @@ class CouponResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->step(0.01)
-                                                    ->prefix(currency_symbol())
+                                                    ->prefix(store_currency_symbol())
                                                     ->placeholder('No minimum')
                                                     ->default(0),
 
@@ -250,7 +250,7 @@ class CouponResource extends Resource
                     ->getStateUsing(function (Coupon $record): string {
                         return match ($record->type) {
                             'percentage' => number_format($record->value, 2) . '% OFF',
-                            'fixed' => number_format($record->value, 2) . ' ' . currency_symbol() . ' OFF',
+                            'fixed' => number_format($record->value, 2) . ' ' . store_currency_symbol() . ' OFF',
                             'free_shipping' => 'Free Shipping',
                             default => $record->type,
                         };

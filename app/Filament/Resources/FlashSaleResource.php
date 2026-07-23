@@ -117,7 +117,7 @@ class FlashSaleResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0.01)
                                                     ->step(0.01)
-                                                    ->prefix(currency_symbol()),
+                                                    ->prefix(store_currency_symbol()),
 
                                                 Forms\Components\TextInput::make('original_price')
                                                     ->label('Original Price')
@@ -125,7 +125,7 @@ class FlashSaleResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0.01)
                                                     ->step(0.01)
-                                                    ->prefix(currency_symbol()),
+                                                    ->prefix(store_currency_symbol()),
 
                                                 Forms\Components\TextInput::make('quantity_limit')
                                                     ->label('Qty Limit')

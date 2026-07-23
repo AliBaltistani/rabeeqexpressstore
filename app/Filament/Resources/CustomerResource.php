@@ -98,7 +98,7 @@ class CustomerResource extends Resource
                     ->label('Total Spent')
                     ->getStateUsing(function (User $record): string {
                         $total = $record->orders()->where('payment_status', 'paid')->sum('total');
-                        return number_format($total, 2) . ' ' . currency_symbol();
+                        return number_format($total, 2) . ' ' . store_currency_symbol();
                     })
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query->withSum(['orders' => fn($q) => $q->where('payment_status', 'paid')], 'total')
@@ -107,7 +107,7 @@ class CustomerResource extends Resource
 
                 Tables\Columns\TextColumn::make('wallet_balance')
                     ->label(__('admin.wallet.balance'))
-                    ->formatStateUsing(fn(User $record) => number_format((float) $record->wallet_balance, 2) . ' ' . currency_symbol())
+                    ->formatStateUsing(fn(User $record) => number_format((float) $record->wallet_balance, 2) . ' ' . store_currency_symbol())
                     ->sortable()
                     ->badge()
                     ->color('success'),

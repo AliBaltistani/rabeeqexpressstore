@@ -189,18 +189,18 @@ class ProductResource extends Resource
                                     ->schema([
                                         Schemas\Components\Grid::make(3)
                                             ->schema([
-                                                Forms\Components\TextInput::make('price')
+                                                 Forms\Components\TextInput::make('price')
                                                     ->label('Price')
                                                     ->required()
                                                     ->numeric()
-                                                    ->prefix(currency_symbol())
+                                                    ->prefix(store_currency_symbol())
                                                     ->minValue(0)
                                                     ->step(0.01),
 
                                                 Forms\Components\TextInput::make('compare_price')
                                                     ->label('Compare Price')
                                                     ->numeric()
-                                                    ->prefix(currency_symbol())
+                                                    ->prefix(store_currency_symbol())
                                                     ->minValue(0)
                                                     ->step(0.01)
                                                     ->helperText('Shown as strikethrough on frontend'),
@@ -208,7 +208,7 @@ class ProductResource extends Resource
                                                 Forms\Components\TextInput::make('cost_price')
                                                     ->label('Cost Price')
                                                     ->numeric()
-                                                    ->prefix(currency_symbol())
+                                                    ->prefix(store_currency_symbol())
                                                     ->minValue(0)
                                                     ->step(0.01)
                                                     ->helperText('Internal only — not visible to customers'),
@@ -451,7 +451,7 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('price')
                     ->label('Price')
                     ->formatStateUsing(function (Product $record) {
-                        $symbol = currency_symbol();
+                        $symbol = store_currency_symbol();
                         $price = number_format((float) ($record->price ?? 0), 2) . ' ' . $symbol;
                         if ($record->compare_price && $record->compare_price > $record->price) {
                             $price .= ' <span style="text-decoration:line-through;color:#9ca3af;font-size:12px;">' . number_format((float) $record->compare_price, 2) . '</span>';
