@@ -16,13 +16,13 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        env('FRONTEND_URL', 'http://localhost:3000'),
+    'allowed_origins' => array_filter([
+        env('FRONTEND_URL'),                   // Production domain (set in .env)
         env('APP_URL', 'http://127.0.0.1:8000'),
         'http://localhost:8000',
-        'http://localhost:5173', // Vite dev server
+        'http://localhost:5173',              // Vite dev server
         'http://127.0.0.1:5173',
-    ],
+    ]),
 
     'allowed_origins_patterns' => [],
 
