@@ -3,7 +3,10 @@
 namespace App\Providers;
 
 use App\Models\Setting;
+use App\Policies\ImportPolicy;
+use Filament\Actions\Imports\Models\Import;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -35,6 +38,11 @@ class AppServiceProvider extends ServiceProvider
 
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);
         \App\Models\Review::observe(\App\Observers\ReviewObserver::class);
+
+        // Allow admin users to download Filament import/export files.
+        // Without this, Filament falls back to a strict user->is() identity
+        // check on the imports morph which fails with a 403.
+        Gate::policy(Import::class, ImportPolicy::class);
     }
 
     /**
