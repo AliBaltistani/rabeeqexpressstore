@@ -12,7 +12,6 @@ use Filament\Actions\Imports\Models\Import;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -27,28 +26,28 @@ class ProductImporter extends Importer
                 ->label('SKU')
                 ->requiredMapping()
                 ->rules(['required', 'max:100'])
-                ->example('PRD-ABC12345'),
+                ->example('PRD-NK001'),
 
             ImportColumn::make('name_en')
                 ->label('Name (EN)')
                 ->requiredMapping()
                 ->rules(['required', 'max:255'])
-                ->example('Premium Wireless Headphones'),
+                ->example('Nike Air Max 270'),
 
             ImportColumn::make('name_ar')
                 ->label('Name (AR)')
                 ->rules(['nullable', 'max:255'])
-                ->example('سماعات لاسلكية'),
+                ->example('نايك اير ماكس'),
 
             ImportColumn::make('category_name')
-                ->label('Category (EN name)')
+                ->label('Category (exact EN name)')
                 ->rules(['nullable', 'max:255'])
-                ->example('Electronics'),
+                ->example('Unisex shoes'),
 
             ImportColumn::make('brand_name')
-                ->label('Brand (EN name)')
+                ->label('Brand (exact name)')
                 ->rules(['nullable', 'max:255'])
-                ->example('Sony'),
+                ->example('Nike'),
 
             ImportColumn::make('product_type')
                 ->label('Product Type')
@@ -99,7 +98,7 @@ class ProductImporter extends Importer
                 ->example('No'),
 
             ImportColumn::make('weight')
-                ->label('Weight')
+                ->label('Weight (kg)')
                 ->numeric()
                 ->rules(['nullable', 'numeric', 'min:0'])
                 ->example('0.35'),
@@ -131,37 +130,37 @@ class ProductImporter extends Importer
             ImportColumn::make('short_description_en')
                 ->label('Short Description (EN)')
                 ->rules(['nullable', 'max:500'])
-                ->example('High-quality wireless headphones'),
+                ->example('Lightweight running shoes with Max Air unit.'),
 
             ImportColumn::make('short_description_ar')
                 ->label('Short Description (AR)')
                 ->rules(['nullable', 'max:500'])
-                ->example('سماعات لاسلكية عالية الجودة'),
+                ->example('أحذية خفيفة الوزن مع وحدة Max Air.'),
 
             ImportColumn::make('description_en')
                 ->label('Description (EN)')
                 ->rules(['nullable'])
-                ->example('Full product description in English'),
+                ->example('Full product description in English.'),
 
             ImportColumn::make('description_ar')
                 ->label('Description (AR)')
                 ->rules(['nullable'])
-                ->example('وصف كامل للمنتج بالعربية'),
+                ->example('وصف كامل للمنتج بالعربية.'),
 
             ImportColumn::make('meta_title')
                 ->label('Meta Title')
                 ->rules(['nullable', 'max:60'])
-                ->example('Buy Premium Headphones'),
+                ->example('Buy Nike Air Max 270'),
 
             ImportColumn::make('meta_description')
                 ->label('Meta Description')
                 ->rules(['nullable', 'max:160'])
-                ->example('Shop the best wireless headphones'),
+                ->example('Shop Nike Air Max 270 with free shipping.'),
 
             ImportColumn::make('meta_keywords')
                 ->label('Meta Keywords')
                 ->rules(['nullable', 'max:255'])
-                ->example('headphones, wireless, audio'),
+                ->example('nike, air max, running shoes'),
 
             ImportColumn::make('image_urls')
                 ->label('Image URLs (pipe-separated)')
@@ -169,57 +168,69 @@ class ProductImporter extends Importer
                 ->example('https://example.com/image1.jpg|https://example.com/image2.jpg'),
 
             ImportColumn::make('replace_images')
-                ->label('Replace Existing Images?')
+                ->label('Replace Existing Images (Yes/No)')
                 ->boolean()
                 ->rules(['nullable'])
                 ->example('No'),
         ];
     }
 
+    // ─── Record Resolution ────────────────────────────────────────────────────
+
     public function resolveRecord(): ?Product
     {
-        $sku = $this->data['sku'] ?? null;
+        $sku = trim($this->data['sku'] ?? '');
 
-        if (!$sku) {
+        if ($sku === '') {
             return null;
         }
 
-        // Update existing or create new by SKU
-        return Product::withoutGlobalScope('active')
-            ->firstOrNew(['sku' => $sku]);
+        // Update existing or create new, bypassing active scope
+        return Product::withoutGlobalScopes()->firstOrNew(['sku' => $sku]);
     }
 
-    /**
-     * Resolve category/brand names → IDs AFTER Laravel validation has passed.
-     * If a name is provided but doesn't match any record, throw ValidationException
-     * so this row lands in Filament's downloadable failure CSV with a clear reason.
-     */
+    // ─── Validation (runs after Laravel field validation) ─────────────────────
+
     public function afterValidate(): void
     {
         $errors = [];
 
-        // ── Category resolution ────────────────────────────────────────────
+        // ── Duplicate SKU guard ────────────────────────────────────────────
+        // If the record already exists in the DB, reject this row.
+        // This prevents silent overwrites when the same CSV is uploaded again.
+        if ($this->record->exists) {
+            throw ValidationException::withMessages([
+                'sku' => [
+                    "Product with SKU \"{$this->record->sku}\" already exists (ID: {$this->record->id}). "
+                    . 'Remove this row from the CSV, or edit the product directly in the admin panel.',
+                ],
+            ]);
+        }
+
+        // Resolve category by English name (Category.name is translatable JSON)
         $categoryName = trim($this->data['category_name'] ?? '');
         if ($categoryName !== '') {
-            $category = $this->findCategoryByName($categoryName);
+            $category = $this->resolveCategoryByName($categoryName);
             if ($category) {
-                $this->data['_resolved_category_id'] = $category->id;
+                $this->data['_category_id'] = $category->id;
             } else {
                 $errors['category_name'] = [
-                    "Category '{$categoryName}' not found. Check spelling or create it first.",
+                    "Category \"{$categoryName}\" not found. "
+                    . "Check the exact English name or leave blank.",
                 ];
             }
         }
 
-        // ── Brand resolution ───────────────────────────────────────────────
+        // Resolve brand by name (Brand.name is a plain string — NOT translatable JSON)
         $brandName = trim($this->data['brand_name'] ?? '');
         if ($brandName !== '') {
-            $brand = $this->findBrandByName($brandName);
+            $brand = $this->resolveBrandByName($brandName);
             if ($brand) {
-                $this->data['_resolved_brand_id'] = $brand->id;
+                $this->data['_brand_id'] = $brand->id;
             } else {
                 $errors['brand_name'] = [
-                    "Brand '{$brandName}' not found. Check spelling or create it first.",
+                    "Brand \"{$brandName}\" not found. "
+                    . "Check the exact brand name or leave blank.",
                 ];
             }
         }
@@ -229,124 +240,76 @@ class ProductImporter extends Importer
         }
     }
 
-    /**
-     * Find a category by English name — case-insensitive, trims whitespace.
-     */
-    protected function findCategoryByName(string $name): ?Category
-    {
-        // Try exact JSON match first (most common)
-        $escaped = addslashes($name);
-        $category = Category::withoutGlobalScope('active')
-            ->where('name', 'like', '%"en":"' . $escaped . '"%')
-            ->orWhere('name', 'like', '%"en": "' . $escaped . '"%')
-            ->first();
-
-        if ($category) {
-            return $category;
-        }
-
-        // Fallback: case-insensitive search through all categories
-        return Category::withoutGlobalScope('active')
-            ->get()
-            ->first(
-                fn(Category $cat) =>
-                mb_strtolower($cat->getTranslation('name', 'en', false) ?? '') === mb_strtolower($name)
-            );
-    }
-
-    /**
-     * Find a brand by name — Brand.name is a plain string (not translatable JSON).
-     * Matches case-insensitively.
-     */
-    protected function findBrandByName(string $name): ?Brand
-    {
-        // Direct case-insensitive match — Brand.name is a plain string
-        return Brand::whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
-            ->orWhereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($name) . '%'])
-            ->first();
-    }
-
     public function getValidationMessages(): array
     {
         return [
-            'sku.required' => 'SKU is required and cannot be empty.',
-            'sku.max' => 'SKU must not exceed 100 characters.',
+            'sku.required' => 'SKU is required.',
+            'sku.max' => 'SKU must be 100 characters or fewer.',
             'name_en.required' => 'English name is required.',
-            'name_en.max' => 'English name must not exceed 255 characters.',
+            'name_en.max' => 'English name must be 255 characters or fewer.',
             'price.required' => 'Price is required.',
-            'price.numeric' => 'Price must be a valid number (e.g. 99.99).',
+            'price.numeric' => 'Price must be a number (e.g. 99.99).',
             'price.min' => 'Price cannot be negative.',
-            'compare_price.numeric' => 'Compare price must be a valid number.',
-            'compare_price.min' => 'Compare price cannot be negative.',
-            'cost_price.numeric' => 'Cost price must be a valid number.',
+            'compare_price.numeric' => 'Compare price must be a number.',
+            'cost_price.numeric' => 'Cost price must be a number.',
             'stock_quantity.integer' => 'Stock quantity must be a whole number.',
             'stock_quantity.min' => 'Stock quantity cannot be negative.',
-            'weight.numeric' => 'Weight must be a valid number.',
-            'product_type.in' => 'Product type must be either "simple" or "variable".',
-            'meta_title.max' => 'Meta title must not exceed 60 characters.',
-            'meta_description.max' => 'Meta description must not exceed 160 characters.',
+            'weight.numeric' => 'Weight must be a number.',
+            'product_type.in' => 'Product type must be "simple" or "variable".',
+            'meta_title.max' => 'Meta title must be 60 characters or fewer.',
+            'meta_description.max' => 'Meta description must be 160 characters or fewer.',
         ];
     }
 
+    // ─── Fill Fields ──────────────────────────────────────────────────────────
+
     public function fillRecord(): void
     {
-        $record = $this->record;
+        $r = $this->record;
+        $d = $this->data;
 
-        // Standard scalar fields
-        $record->sku = $this->data['sku'];
-        $record->price = $this->data['price'] ?? $record->price;
-        $record->compare_price = $this->data['compare_price'] ?? $record->compare_price;
-        $record->cost_price = $this->data['cost_price'] ?? $record->cost_price;
-        $record->stock_quantity = $this->data['stock_quantity'] ?? $record->stock_quantity ?? 0;
-        $record->low_stock_threshold = $this->data['low_stock_threshold'] ?? $record->low_stock_threshold ?? 5;
-        $record->weight = $this->data['weight'] ?? $record->weight;
-        $record->sort_order = $this->data['sort_order'] ?? $record->sort_order ?? 0;
-        $record->product_type = $this->data['product_type'] ?? $record->product_type ?? 'simple';
-        $record->meta_title = $this->data['meta_title'] ?? $record->meta_title;
-        $record->meta_description = $this->data['meta_description'] ?? $record->meta_description;
-        $record->meta_keywords = $this->data['meta_keywords'] ?? $record->meta_keywords;
+        // ── Scalar fields ──────────────────────────────────────────────────
+        $r->sku = trim($d['sku']);
+        $r->price = $d['price'] ?? $r->price;
+        $r->compare_price = isset($d['compare_price']) && $d['compare_price'] !== '' ? $d['compare_price'] : $r->compare_price;
+        $r->cost_price = isset($d['cost_price']) && $d['cost_price'] !== '' ? $d['cost_price'] : $r->cost_price;
+        $r->stock_quantity = $d['stock_quantity'] ?? $r->stock_quantity ?? 0;
+        $r->low_stock_threshold = $d['low_stock_threshold'] ?? $r->low_stock_threshold ?? 5;
+        $r->weight = isset($d['weight']) && $d['weight'] !== '' ? $d['weight'] : $r->weight;
+        $r->sort_order = $d['sort_order'] ?? $r->sort_order ?? 0;
+        $r->product_type = $d['product_type'] ?? $r->product_type ?? 'simple';
+        $r->meta_title = $d['meta_title'] ?? $r->meta_title;
+        $r->meta_description = $d['meta_description'] ?? $r->meta_description;
+        $r->meta_keywords = $d['meta_keywords'] ?? $r->meta_keywords;
 
-        // Category & Brand — read pre-resolved IDs set in afterValidate()
-        if (isset($this->data['_resolved_category_id'])) {
-            $record->category_id = $this->data['_resolved_category_id'];
+        // ── Relationships (pre-resolved in afterValidate) ──────────────────
+        if (isset($d['_category_id'])) {
+            $r->category_id = $d['_category_id'];
         }
-        if (isset($this->data['_resolved_brand_id'])) {
-            $record->brand_id = $this->data['_resolved_brand_id'];
-        }
-
-        // Booleans
-        if (isset($this->data['is_active'])) {
-            $record->is_active = $this->data['is_active'];
-        } elseif (!$record->exists) {
-            $record->is_active = true;
+        if (isset($d['_brand_id'])) {
+            $r->brand_id = $d['_brand_id'];
         }
 
-        if (isset($this->data['is_featured'])) {
-            $record->is_featured = $this->data['is_featured'];
+        // ── Booleans ───────────────────────────────────────────────────────
+        $r->is_active = $d['is_active'] ?? ($r->exists ? $r->is_active : true);
+        $r->is_featured = $d['is_featured'] ?? ($r->exists ? $r->is_featured : false);
+        $r->is_new = $d['is_new'] ?? ($r->exists ? $r->is_new : false);
+        $r->track_stock = $d['track_stock'] ?? ($r->exists ? $r->track_stock : true);
+        $r->allow_backorders = $d['allow_backorders'] ?? ($r->exists ? $r->allow_backorders : false);
+
+        // ── Slug (auto-generate if not set, Spatie handles uniqueness) ─────
+        if (empty($r->slug)) {
+            $base = Str::slug($d['name_en'] ?? $d['sku']);
+            $slug = $base;
+            $i = 1;
+            while (Product::withoutGlobalScopes()->where('slug', $slug)->where('id', '!=', $r->id ?? 0)->exists()) {
+                $slug = $base . '-' . $i++;
+            }
+            $r->slug = $slug;
         }
 
-        if (isset($this->data['is_new'])) {
-            $record->is_new = $this->data['is_new'];
-        }
-
-        if (isset($this->data['track_stock'])) {
-            $record->track_stock = $this->data['track_stock'];
-        } elseif (!$record->exists) {
-            $record->track_stock = true;
-        }
-
-        if (isset($this->data['allow_backorders'])) {
-            $record->allow_backorders = $this->data['allow_backorders'];
-        }
-
-        // Auto-generate slug from English name if not set
-        // (Product requires a unique slug — Spatie HasSlug will handle uniqueness)
-        if (empty($record->slug)) {
-            $record->slug = Str::slug($this->data['name_en'] ?? $record->sku);
-        }
-
-        // Translatable fields — must use setTranslation()
-        $translatableMap = [
+        // ── Translatable fields (Spatie HasTranslations) ───────────────────
+        $translations = [
             'name_en' => ['name', 'en'],
             'name_ar' => ['name', 'ar'],
             'short_description_en' => ['short_description', 'en'],
@@ -355,23 +318,25 @@ class ProductImporter extends Importer
             'description_ar' => ['description', 'ar'],
         ];
 
-        foreach ($translatableMap as $csvKey => [$field, $locale]) {
-            $value = $this->data[$csvKey] ?? null;
+        foreach ($translations as $col => [$field, $locale]) {
+            $value = $d[$col] ?? null;
             if ($value !== null && $value !== '') {
-                $record->setTranslation($field, $locale, $value);
+                $r->setTranslation($field, $locale, $value);
             }
         }
     }
 
+    // ─── Image Handling (runs after save so product has an ID) ────────────────
+
     public function afterSave(): void
     {
-        $urlsRaw = $this->data['image_urls'] ?? null;
+        $urlsRaw = trim($this->data['image_urls'] ?? '');
 
-        if (empty($urlsRaw)) {
+        if ($urlsRaw === '') {
             return;
         }
 
-        $urls = array_filter(array_map('trim', explode('|', $urlsRaw)));
+        $urls = array_values(array_filter(array_map('trim', explode('|', $urlsRaw))));
 
         if (empty($urls)) {
             return;
@@ -380,53 +345,62 @@ class ProductImporter extends Importer
         $product = $this->record;
         $replaceImages = (bool) ($this->data['replace_images'] ?? false);
 
-        // Optionally delete old images
+        // Delete old images if requested
         if ($replaceImages) {
-            foreach ($product->images as $oldImage) {
-                Storage::disk('public')->delete($oldImage->image_path);
+            foreach ($product->images()->get() as $old) {
+                Storage::disk('public')->delete($old->image_path);
             }
             $product->images()->delete();
         }
 
-        $existingSortMax = $product->images()->max('sort_order') ?? -1;
-        $sortOrder = $existingSortMax + 1;
-        $isPrimarySet = $product->images()->where('is_primary', true)->exists();
+        $sortOrder = (int) ($product->images()->max('sort_order') ?? -1) + 1;
+        $hasPrimary = $product->images()->where('is_primary', true)->exists();
 
         foreach ($urls as $index => $url) {
             try {
-                // Fetch image with a 15s timeout
-                $response = Http::timeout(15)->get($url);
+                $response = Http::withOptions(['verify' => false])
+                    ->timeout(20)
+                    ->get($url);
 
                 if (!$response->successful()) {
+                    Log::warning("ProductImporter: HTTP {$response->status()} for image URL: {$url}");
                     continue;
                 }
 
-                $contentType = $response->header('Content-Type');
+                // Detect extension from Content-Type first, then URL path
+                $contentType = strtolower($response->header('Content-Type') ?? '');
                 $extension = match (true) {
-                    str_contains($contentType, 'jpeg'), str_contains($contentType, 'jpg') => 'jpg',
+                    str_contains($contentType, 'jpeg'),
+                    str_contains($contentType, 'jpg') => 'jpg',
                     str_contains($contentType, 'png') => 'png',
                     str_contains($contentType, 'webp') => 'webp',
                     str_contains($contentType, 'gif') => 'gif',
-                    default => pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg',
+                    default => ltrim(pathinfo(parse_url($url, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION), '.') ?: 'jpg',
                 };
+
+                // Ensure products directory exists
+                Storage::disk('public')->makeDirectory('products');
 
                 $filename = 'products/' . Str::uuid() . '.' . $extension;
                 Storage::disk('public')->put($filename, $response->body());
 
+                $isPrimary = !$hasPrimary && $index === 0;
+
                 ProductImage::create([
                     'product_id' => $product->id,
                     'image_path' => $filename,
-                    'alt_text' => $product->getTranslation('name', 'en'),
+                    'alt_text' => $product->getTranslation('name', 'en', false) ?? '',
                     'sort_order' => $sortOrder++,
-                    'is_primary' => !$isPrimarySet && $index === 0,
+                    'is_primary' => $isPrimary,
                 ]);
 
-                if (!$isPrimarySet && $index === 0) {
-                    $isPrimarySet = true;
+                if ($isPrimary) {
+                    $hasPrimary = true;
                 }
             } catch (\Throwable $e) {
-                // Skip failed URL — don't break the entire import row
-                \Illuminate\Support\Facades\Log::warning('ProductImporter: failed to download image', [
+                // Log and skip — don't fail the entire row for a bad image URL
+                Log::warning('ProductImporter: failed to download image', [
+                    'product_id' => $product->id,
                     'url' => $url,
                     'error' => $e->getMessage(),
                 ]);
@@ -434,12 +408,68 @@ class ProductImporter extends Importer
         }
     }
 
+    // ─── Lookup Helpers ───────────────────────────────────────────────────────
+
+    /**
+     * Find a Category by its English name.
+     * Category.name is a Spatie translatable JSON column.
+     * Two-pass: fast LIKE match first, then PHP-side case-insensitive fallback.
+     */
+    protected function resolveCategoryByName(string $name): ?Category
+    {
+        // PDO binds the value safely — do NOT use addslashes() here.
+        // addslashes("Men' shoes") → "Men\' shoes" which breaks the JSON LIKE match
+        // because MySQL stores {"en":"Men' shoes"} not {"en":"Men\' shoes"}.
+
+        // Pass 1: exact JSON value match
+        $found = Category::withoutGlobalScopes()
+            ->where('name', 'like', '%"en":"' . $name . '"%')
+            ->orWhere('name', 'like', '%"en": "' . $name . '"%')
+            ->first();
+
+        if ($found) {
+            return $found;
+        }
+
+        // Pass 2: PHP-side case-insensitive fallback (handles all edge cases)
+        return Category::withoutGlobalScopes()
+            ->get()
+            ->first(
+                fn(Category $c) =>
+                mb_strtolower($c->getTranslation('name', 'en', false) ?? '') === mb_strtolower($name)
+            );
+    }
+
+    /**
+     * Find a Brand by name.
+     * IMPORTANT: Brand.name is a plain VARCHAR — NOT translatable JSON.
+     * Never use JSON_EXTRACT / JSON_UNQUOTE on this column.
+     */
+    protected function resolveBrandByName(string $name): ?Brand
+    {
+        $lower = mb_strtolower($name);
+
+        // Exact case-insensitive match first
+        $found = Brand::whereRaw('LOWER(name) = ?', [$lower])->first();
+
+        if ($found) {
+            return $found;
+        }
+
+        // Partial LIKE match as fallback (e.g. "Nike Zoom" matches brand "Nike Zoom Vomero")
+        return Brand::whereRaw('LOWER(name) LIKE ?', ['%' . $lower . '%'])->first();
+    }
+
+    // ─── Completion Notification ──────────────────────────────────────────────
+
     public static function getCompletedNotificationBody(Import $import): string
     {
-        $body = 'Your product import has completed. ' . number_format($import->successful_rows) . ' ' . str('row')->plural($import->successful_rows) . ' imported.';
+        $body = 'Your product import has completed. ' . number_format($import->successful_rows) . ' '
+            . str('row')->plural($import->successful_rows) . ' imported.';
 
         if ($failedRowsCount = $import->getFailedRowsCount()) {
-            $body .= ' ' . number_format($failedRowsCount) . ' ' . str('row')->plural($failedRowsCount) . ' failed to import.';
+            $body .= ' ' . number_format($failedRowsCount) . ' '
+                . str('row')->plural($failedRowsCount) . ' failed — download the failure report for details.';
         }
 
         return $body;

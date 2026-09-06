@@ -52,7 +52,9 @@ class CategoryExporter extends Exporter
 
     public static function modifyQuery(Builder $query): Builder
     {
-        return $query->withoutGlobalScope('active')->with('parent');
+        // withoutGlobalScopes() is more reliable than the string-based
+        // withoutGlobalScope('active') which silently fails if scope name differs.
+        return $query->withoutGlobalScopes()->with('parent');
     }
 
     public static function getCompletedNotificationBody(Export $export): string

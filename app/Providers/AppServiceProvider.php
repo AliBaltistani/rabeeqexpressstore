@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Setting;
+use App\Policies\ExportPolicy;
 use App\Policies\ImportPolicy;
+use Filament\Actions\Exports\Models\Export;
 use Filament\Actions\Imports\Models\Import;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Gate;
@@ -41,8 +43,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Allow admin users to download Filament import/export files.
         // Without this, Filament falls back to a strict user->is() identity
-        // check on the imports morph which fails with a 403.
+        // check on the imports/exports morph which fails with a 403.
         Gate::policy(Import::class, ImportPolicy::class);
+        Gate::policy(Export::class, ExportPolicy::class);
     }
 
     /**

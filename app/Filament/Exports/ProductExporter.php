@@ -24,22 +24,27 @@ class ProductExporter extends Exporter
 
             ExportColumn::make('name_en')
                 ->label('Name (EN)')
-                ->state(fn(Product $record): string => $record->getTranslation('name', 'en') ?? ''),
+                ->state(fn(Product $record): string => $record->getTranslation('name', 'en', false) ?? ''),
 
             ExportColumn::make('name_ar')
                 ->label('Name (AR)')
-                ->state(fn(Product $record): string => $record->getTranslation('name', 'ar') ?? ''),
+                ->state(fn(Product $record): string => $record->getTranslation('name', 'ar', false) ?? ''),
 
             ExportColumn::make('slug')
                 ->label('Slug'),
 
             ExportColumn::make('category_name')
                 ->label('Category')
-                ->state(fn(Product $record): string => $record->category?->getTranslation('name', 'en') ?? ''),
+                ->state(
+                    fn(Product $record): string =>
+                    $record->category?->getTranslation('name', 'en', false) ?? ''
+                ),
 
             ExportColumn::make('brand_name')
                 ->label('Brand')
-                ->state(fn(Product $record): string => $record->brand?->getTranslation('name', 'en') ?? ''),
+                // Brand.name is a plain VARCHAR — NOT translatable JSON.
+                // Must use ->name directly, NOT ->getTranslation().
+                ->state(fn(Product $record): string => $record->brand?->name ?? ''),
 
             ExportColumn::make('product_type')
                 ->label('Product Type'),
@@ -87,19 +92,31 @@ class ProductExporter extends Exporter
 
             ExportColumn::make('short_description_en')
                 ->label('Short Description (EN)')
-                ->state(fn(Product $record): string => $record->getTranslation('short_description', 'en') ?? ''),
+                ->state(
+                    fn(Product $record): string =>
+                    $record->getTranslation('short_description', 'en', false) ?? ''
+                ),
 
             ExportColumn::make('short_description_ar')
                 ->label('Short Description (AR)')
-                ->state(fn(Product $record): string => $record->getTranslation('short_description', 'ar') ?? ''),
+                ->state(
+                    fn(Product $record): string =>
+                    $record->getTranslation('short_description', 'ar', false) ?? ''
+                ),
 
             ExportColumn::make('description_en')
                 ->label('Description (EN)')
-                ->state(fn(Product $record): string => strip_tags($record->getTranslation('description', 'en') ?? '')),
+                ->state(
+                    fn(Product $record): string =>
+                    strip_tags($record->getTranslation('description', 'en', false) ?? '')
+                ),
 
             ExportColumn::make('description_ar')
                 ->label('Description (AR)')
-                ->state(fn(Product $record): string => strip_tags($record->getTranslation('description', 'ar') ?? '')),
+                ->state(
+                    fn(Product $record): string =>
+                    strip_tags($record->getTranslation('description', 'ar', false) ?? '')
+                ),
 
             ExportColumn::make('meta_title')
                 ->label('Meta Title'),
@@ -118,20 +135,29 @@ class ProductExporter extends Exporter
                         ->map(fn($img) => url(Storage::url($img->image_path)))
                         ->implode('|');
                 }),
+
+            ExportColumn::make('replace_images')
+                ->label('Replace Existing Images')
+                ->state(fn(): string => 'No'),
         ];
     }
 
     public static function modifyQuery(Builder $query): Builder
     {
-        return $query->withoutGlobalScope('active')->with(['category', 'brand']);
+        // withoutGlobalScopes() removes ALL global scopes (active, soft-delete, etc.)
+        // so every product — active or inactive — is included in the export.
+        return $query->withoutGlobalScopes()->with(['category', 'brand', 'images']);
     }
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'Your product export has completed. ' . number_format($export->successful_rows) . ' ' . str('row')->plural($export->successful_rows) . ' exported.';
+        $body = 'Your product export has completed. '
+            . number_format($export->successful_rows) . ' '
+            . str('row')->plural($export->successful_rows) . ' exported.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' ' . number_format($failedRowsCount) . ' ' . str('row')->plural($failedRowsCount) . ' failed to export.';
+            $body .= ' ' . number_format($failedRowsCount) . ' '
+                . str('row')->plural($failedRowsCount) . ' failed to export.';
         }
 
         return $body;

@@ -1,0 +1,6 @@
+name_en,name_ar,slug,parent_name,description_en,description_ar,is_active,sort_order
+Men's Running Shoes,أحذية الجري للرجال,mens-running-shoes,,Running shoes for men with superior cushioning and support.,أحذية جري للرجال بتخميد ودعم متفوق.,Yes,10
+Women's Running Shoes,أحذية الجري للنساء,womens-running-shoes,,Running shoes designed specifically for women.,أحذية جري مصممة خصيصاً للنساء.,Yes,11
+Kids Shoes,أحذية الأطفال,kids-shoes,,Comfortable and durable shoes for children.,أحذية مريحة ومتينة للأطفال.,Yes,15
+Sports Accessories,إكسسوارات رياضية,sports-accessories,,Sports bags socks insoles and other accessories.,"الحقائب الرياضية, الجوارب, النعلات وغيرها من الإكسسوارات.",Yes,20
+Sandals,صنادل,sandals,,Casual and sport sandals for all seasons.,صنادل كاجوال ورياضية لجميع المواسم.,Yes,25

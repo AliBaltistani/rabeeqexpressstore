@@ -102,10 +102,12 @@ class ProductResource extends Resource
                                                     ->required()
                                                     ->live()
                                                     ->afterStateUpdated(function (Schemas\Components\Utilities\Set $set, $state) {
-                                                        if (!$state) return;
+                                                        if (!$state)
+                                                            return;
                                                         $category = Category::withoutGlobalScope('active')->find($state);
-                                                        if (!$category) return;
-                                                        
+                                                        if (!$category)
+                                                            return;
+
                                                         // Explicitly initialize each attribute field as an empty array
                                                         // to prevent Livewire from treating them as boolean toggles.
                                                         foreach ($category->attributes()->get() as $attr) {
@@ -189,7 +191,7 @@ class ProductResource extends Resource
                                     ->schema([
                                         Schemas\Components\Grid::make(3)
                                             ->schema([
-                                                 Forms\Components\TextInput::make('price')
+                                                Forms\Components\TextInput::make('price')
                                                     ->label('Price')
                                                     ->required()
                                                     ->numeric()
@@ -238,7 +240,7 @@ class ProductResource extends Resource
                                                 Forms\Components\TextInput::make('low_stock_threshold')
                                                     ->label('Low Stock Threshold')
                                                     ->numeric()
-                                                    ->default(fn () => (int) setting('general.low_stock_threshold', 5))
+                                                    ->default(fn() => (int) setting('general.low_stock_threshold', 5))
                                                     ->minValue(0)
                                                     ->helperText('Leave at default to use global setting'),
 
@@ -297,10 +299,12 @@ class ProductResource extends Resource
                                     ->description(__('admin.product.attributes_help'))
                                     ->schema(function (Schemas\Components\Utilities\Get $get): array {
                                         $categoryId = $get('category_id');
-                                        if (!$categoryId) return [];
+                                        if (!$categoryId)
+                                            return [];
 
                                         $category = Category::withoutGlobalScope('active')->find($categoryId);
-                                        if (!$category) return [];
+                                        if (!$category)
+                                            return [];
 
                                         $attributes = $category->attributes()->with('values')->get();
                                         if ($attributes->isEmpty()) {
@@ -411,6 +415,7 @@ class ProductResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('id', 'desc')
             ->columns([
                 Tables\Columns\ImageColumn::make('primaryImage.image_path')
                     ->label('Image')
