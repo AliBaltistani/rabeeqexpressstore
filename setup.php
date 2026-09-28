@@ -71,8 +71,18 @@ try {
 //     echo '<pre style="color:red">Seeder error: ' . $e->getMessage() . '</pre>';
 // }
 
+// ─── 3. Verify Filament Import/Export Tables ────────────────────────────────
+echo '<h3>Step 3: Verifying Filament Import / Export Tables</h3>';
+$required = ['imports', 'exports', 'failed_import_rows'];
+echo '<pre>';
+foreach ($required as $table) {
+    $exists = \Illuminate\Support\Facades\Schema::hasTable($table);
+    echo ($exists ? '✅' : '❌') . ' Table `' . $table . '`: ' . ($exists ? 'OK' : 'MISSING — migration may have failed') . "\n";
+}
+echo '</pre>';
+
 // ─── 4. Storage Link ────────────────────────────────────────────────────────
-echo '<h3>Step 3: Creating Storage Symlink</h3>';
+echo '<h3>Step 4: Creating Storage Symlink</h3>';
 try {
     Artisan::call('storage:link');
     echo '<pre>' . htmlspecialchars(Artisan::output()) . '</pre>';
@@ -81,7 +91,7 @@ try {
 }
 
 // ─── 5. Optimize (cache config, routes, views) ──────────────────────────────
-echo '<h3>Step 4: Optimizing Application</h3>';
+echo '<h3>Step 5: Optimizing Application</h3>';
 Artisan::call('config:cache');
 Artisan::call('route:cache');
 Artisan::call('view:cache');
@@ -90,5 +100,6 @@ echo '<pre>✅ Config, Route, and View caches created.</pre>';
 // ─── Done ───────────────────────────────────────────────────────────────────
 echo '<br><p class="success">✅ Setup Complete! Your Rabeq Express Store is ready.</p>';
 echo '<p class="warning">⚠️ DELETE this setup.php file from your server NOW via File Manager!</p>';
+echo '<p style="color:#aaa">💡 For future migrations, upload <strong>migrate.php</strong> and run it via browser.</p>';
 
 echo '</body></html>';
