@@ -411,6 +411,10 @@
                 <img v-else-if="pm.id === 'tamara'" :src="tamaraImg" alt="Tamara" class="payment-brand-img" />
                 <!-- Tabby -->
                 <img v-else-if="pm.id === 'tabby'" :src="tabbyImg" alt="Tabby" class="payment-brand-img" />
+                <!-- PayPal -->
+                <img v-else-if="pm.id === 'paypal'" :src="paypalImg" alt="PayPal" class="payment-brand-img" />
+                <!-- Wallet fallback -->
+                <svg v-else-if="pm.id === 'wallet'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18-3a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3m18-3V6"/></svg>
               </div>
 
               <span class="payment-name-text">{{ pm.name }}</span>
@@ -452,6 +456,7 @@ import { ref, reactive, computed, onMounted, nextTick, onUnmounted, watch } from
 import creditCardImg from '@/assets/images/credit-card.png'
 import tabbyImg from '@/assets/images/tabby.png'
 import tamaraImg from '@/assets/images/tamara-icon.jpeg'
+import paypalImg from '@/assets/images/paypal.png'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cartStore'
 import { useAuthStore } from '@/stores/authStore'
