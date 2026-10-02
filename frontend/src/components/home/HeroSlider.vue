@@ -1,7 +1,7 @@
 <template>
   <div class="hero-slider-wrapper" :class="{ 'hero-slider--contained': sliderConfig.width === 'contained' }" @mouseenter="pauseAutoplay" @mouseleave="resumeAutoplay">
     <div class="hero-slider" ref="sliderEl" :style="heightStyle">
-      <div class="hero-slider__track" :style="{ transform: `translateX(-${currentSlide * 100}%)` }">
+      <div class="hero-slider__track" :style="{ transform: `translateX(${isRtl ? (currentSlide * 100) : -(currentSlide * 100)}%)` }">
         <div v-for="(slide, i) in slides" :key="i" class="hero-slider__slide">
           <router-link :to="slide.link" class="hero-slider__link">
             <img
@@ -58,6 +58,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 interface Slide {
   image: string
@@ -88,6 +89,9 @@ const props = withDefaults(defineProps<{
 })
 
 const sliderConfig = computed<SliderConfig>(() => props.config || {})
+
+const { locale } = useI18n()
+const isRtl = computed(() => locale.value === 'ar')
 
 const currentSlide = ref(0)
 let autoplayTimer: ReturnType<typeof setInterval> | null = null

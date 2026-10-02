@@ -67,6 +67,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 interface Review {
   name: string
@@ -93,6 +94,9 @@ const props = withDefaults(defineProps<{
 
 const trackRef = ref<HTMLElement | null>(null)
 
+const { locale } = useI18n()
+const isRtl = computed(() => locale.value === 'ar')
+
 // ─── Title config ───
 const showTitle = computed(() => props.config.show_title !== false)
 const titleAlignment = computed(() => props.config.title_alignment || 'center')
@@ -118,11 +122,13 @@ const arrowClasses = computed(() => {
 
 function scrollLeft() {
   if (!trackRef.value) return
-  trackRef.value.scrollBy({ left: -300, behavior: 'smooth' })
+  // In RTL, the visual "previous" scrolls in the opposite direction
+  trackRef.value.scrollBy({ left: isRtl.value ? 300 : -300, behavior: 'smooth' })
 }
 function scrollRight() {
   if (!trackRef.value) return
-  trackRef.value.scrollBy({ left: 300, behavior: 'smooth' })
+  // In RTL, the visual "next" scrolls in the opposite direction
+  trackRef.value.scrollBy({ left: isRtl.value ? -300 : 300, behavior: 'smooth' })
 }
 </script>
 

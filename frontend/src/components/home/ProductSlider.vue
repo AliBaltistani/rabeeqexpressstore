@@ -17,7 +17,7 @@
       <div
         class="product-slider__track"
         ref="trackRef"
-        :style="{ transform: `translateX(${currentTranslate}px)`, transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }"
+        :style="{ transform: `translateX(${isRtl ? -currentTranslate : currentTranslate}px)`, transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }"
       >
         <div
           v-for="product in products"
@@ -43,6 +43,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import SectionTitle from './SectionTitle.vue'
 import ProductCard from './ProductCard.vue'
 
@@ -70,6 +71,9 @@ const trackRef = ref<HTMLElement | null>(null)
 const currentIndex = ref(0)
 const currentTranslate = ref(0)
 const isDragging = ref(false)
+
+const { locale } = useI18n()
+const isRtl = computed(() => locale.value === 'ar')
 
 let autoplayTimer: ReturnType<typeof setInterval> | null = null
 let dragStartX = 0
@@ -143,7 +147,8 @@ function onDragStart(e: MouseEvent) {
 function onDragMove(e: MouseEvent) {
   if (!isDragging.value) return
   const diff = e.clientX - dragStartX
-  currentTranslate.value = dragStartTranslate + diff
+  const computedDiff = isRtl.value ? -diff : diff
+  currentTranslate.value = dragStartTranslate + computedDiff
 }
 
 function onDragEnd() {
@@ -164,7 +169,8 @@ function onTouchStart(e: TouchEvent) {
 function onTouchMove(e: TouchEvent) {
   if (!isDragging.value) return
   const diff = e.touches[0].clientX - dragStartX
-  currentTranslate.value = dragStartTranslate + diff
+  const computedDiff = isRtl.value ? -diff : diff
+  currentTranslate.value = dragStartTranslate + computedDiff
 }
 
 function onTouchEnd() {
